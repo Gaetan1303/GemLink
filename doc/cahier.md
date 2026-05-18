@@ -220,7 +220,7 @@ Système de points et niveaux, attribution automatique de badges par événement
 | CA-1 | Le formulaire de publication accepte un fichier média (obligatoire), un titre (optionnel), une description (optionnelle) et des tags manuels (optionnels). Tout post sans fichier média valide est rejeté. |
 | CA-2 | Les formats d'image acceptés sont `jpeg`, `png` et `webp`, avec une taille maximale de **10 Mo**. Les vidéos sont limitées au format `mp4`, d'une durée maximale de **60 secondes** et d'une taille maximale de **100 Mo**. Le type MIME est vérifié côté serveur par lecture des magic bytes, indépendamment de l'extension du fichier. |
 | CA-3 | Après validation, le fichier est transféré sur le CDN externe. Le post est créé immédiatement en base avec le statut `PENDING_ANALYSIS` et une analyse IA est déclenchée en tâche de fond, sans bloquer la réponse ni l'affichage du post. |
-| CA-4 | La suppression d'un post est réservée à son auteur, à un modérateur ou à un administrateur. Elle entraîne la suppression du fichier sur le CDN et la purge des données associées (embeddings, likes, commentaires) en cascade. |
+| CA-4 | La suppression d'un post est réservée à son auteur, à un modérateur ou à un administrateur. En production, privilégier un *soft delete* (`deleted_at`) pour la traçabilité ; la purge des entités associées (embeddings, likes, commentaires) doit être gérée explicitement dans la couche métier (ex. `PostService::softDelete()`) ou, si la politique de rétention/RGPD l'exige, effectuer un `DELETE` physique qui déclenchera les `ON DELETE CASCADE`. Voir `doc/bdd.md` pour la stratégie détaillée. |
 
 ---
 
@@ -232,7 +232,7 @@ Système de points et niveaux, attribution automatique de badges par événement
 |---|---|
 | CA-1 | Le feed est paginé en **cursor-based pagination** : l'utilisateur reçoit un curseur opaque pointant vers le dernier élément chargé, permettant de récupérer la page suivante de manière stable, même lors d'insertions concurrentes. La taille de page par défaut est de **20 posts**. |
 | CA-2 | Le feed accepte des filtres : par tag, par type de minéral identifié et par score de confiance IA minimum. |
-| CA-3 | Les résultats du feed global sont mis en cache avec une durée de vie de **5 minutes**. Le cache est invalidé lors de la publication d'un nouveau post. |
+| CA-3 | Les résultats du feed global sont mis en cache (TTL 5 minutes). Pour éviter les invalidations totales et le *cache stampede*, stocker les IDs récents dans une `Redis List` (LPUSH/LTRIM) et mettre à jour le feed de façon incrémentale ; utiliser `stale-while-revalidate` et un mutex de reconstruction si nécessaire. |
 | CA-4 | Un utilisateur authentifié peut accéder à un feed personnalisé, construit à partir de ses tags d'intérêt enregistrés dans son profil. |
 | CA-5 | Le frontend implémente un scroll infini : lorsque l'utilisateur approche du bas de la page, la page suivante se charge automatiquement. Pendant ce chargement, des **skeleton loaders** sont affichés à la place des futures cartes de post. |
 | CA-6 | Le temps de réponse du feed doit être inférieur à **200 ms** (p99) en cache chaud. |

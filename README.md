@@ -55,7 +55,7 @@ Ce projet est réalisé dans le cadre du titre professionnel RNCP31114 — Déve
 
 Les documents du projet sont disponibles dans le dossier `doc/` :
 - `doc/cahierdescharges.md`
-- `doc/idea.md`
+- `doc/technique.md`
 - `doc/resume.md`
 - `doc/domainemetier.md`
 - `doc/roadmap.md`
