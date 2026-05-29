@@ -1,4 +1,4 @@
-# GemLink / StoneLink
+# GemmeLink / StoneLink
 
 ## Projet de fin d'année — CDPI / RNCP31114
 
@@ -55,10 +55,17 @@ Ce projet est réalisé dans le cadre du titre professionnel RNCP31114 — Déve
 
 Les documents du projet sont disponibles dans le dossier `doc/` :
 - `doc/cahierdescharges.md`
-- `doc/idea.md`
+- `doc/technique.md`
 - `doc/resume.md`
 - `doc/domainemetier.md`
 - `doc/roadmap.md`
 - `doc/SQL.md`
 - `doc/bdd.md`
 
+## Maquette (Figma)
+
+La maquette du projet est disponible sur Figma :
+
+- [Voir la maquette Figma](https://www.figma.com/design/aUuzcybll0Xa1QnH8g92mW/GemLink?node-id=38-820&p=f&t=jih5HLkZO0blxZz5-0)
+
+Les captures d'écran de la maquette sont disponibles dans le dossier `doc/maquette/` 
