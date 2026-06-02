@@ -30,15 +30,49 @@ Le projet se distingue par un **système de confiance communautaire** qui améli
 
 ### Personas
 
-La plateforme articule les interactions entre quatre profils d'utilisateurs principaux :
+#### Persona 1 : Grand public curieux
 
-| Persona | Description | Besoins principaux |
-|---|---|---|
-| **Grand public curieux** | Utilisateur occasionnel ayant trouvé une pierre | Identification rapide, partage simple |
-| **Collectionneur passionné** | Utilisateur régulier avec une collection établie | Gestion de collections, comparaison, communauté |
-| **Expert minéralogiste** | Utilisateur à haute fiabilité, connaissances avancées | Validation IA, contribution au catalogue, réputation |
-| **Modérateur / Admin** | Gestionnaire de la plateforme | Dashboard, gestion des rôles, supervision |
+| Persona | Description |
+|---------|-------------|
+| **Nom** | Sophie, la découvreuse occasionnelle |
+| **Tranche Âge** | 25-55 ans |
+| **Profession** | Tout profil non spécialiste |
+| **Objectifs** | Identifier rapidement une pierre trouvée lors d'une promenade ou d'un voyage |
+| **Frustrations** | Difficulté à reconnaître les minéraux, informations techniques complexes |
+| **Comportements** | Utilise l'application ponctuellement, prend une photo et recherche une réponse rapide |
 
+#### Persona 2 : Collectionneur passionné
+
+| Persona | Description |
+|---------|-------------|
+| **Nom** | Marc, le collectionneur |
+| **Tranche Âge** | 30-65 ans |
+| **Profession** | Amateur éclairé, collectionneur de minéraux |
+| **Objectifs** | Cataloguer sa collection, comparer ses spécimens et échanger avec la communauté |
+| **Frustrations** | Manque d'outils d'organisation et de suivi des collections |
+| **Comportements** | Consulte régulièrement l'application, ajoute de nouvelles pièces et participe aux discussions |
+
+#### Persona 3 : Expert minéralogiste
+
+| Persona | Description |
+|---------|-------------|
+| **Nom** | Claire, l'experte minéralogiste |
+| **Tranche Âge** | 35-70 ans |
+| **Profession** | Géologue, minéralogiste ou chercheuse |
+| **Objectifs** | Vérifier les identifications, enrichir la base de connaissances et partager son expertise |
+| **Frustrations** | Résultats IA imprécis, manque de contrôle sur la qualité des données |
+| **Comportements** | Analyse les propositions d'identification, valide les contributions et participe à l'amélioration du catalogue |
+
+#### Persona 4 : Modérateur / Administrateur
+
+| Persona | Description |
+|---------|-------------|
+| **Nom** | Julien, l'administrateur |
+| **Tranche Âge** | 25-60 ans |
+| **Profession** | Gestionnaire de plateforme ou administrateur |
+| **Objectifs** | Assurer le bon fonctionnement de la plateforme et la qualité des contenus |
+| **Frustrations** | Contenus inappropriés, gestion manuelle chronophage |
+| **Comportements** | Surveille les activités, gère les rôles utilisateurs et traite les signalements |
 ### Fonctionnalités clés
 
 - **Reconnaissance** : analyse d'une image de pierre via un pipeline YOLO → ViT → CLIP, retournant un label de minéral, un score de confiance et des suggestions de posts similaires par recherche vectorielle (cosine similarity via pgvector).
