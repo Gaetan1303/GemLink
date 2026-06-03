@@ -124,3 +124,7 @@ PostgreSQL
 Cloudinary (médias)
         ↓
 Service IA Similarité Visuelle
+
+
+## Problématiques rencontrées
+
