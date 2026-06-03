@@ -1,0 +1,41 @@
+@use '@angular/material' as mat;
+@use 'sass:map';
+
+// ─────────────────────────────────────────────
+// palette de couleur du site : GEMLINK
+// ─────────────────────────────────────────────
+
+// Palette primaire — doré #C5A059
+$gemlink-primary-palette: (
+  50:  #fdf6e7, 
+  100: #f9e9c3,
+  200: #f0d08a,
+  300: #e0b45a,
+  400: #d4a043,
+  500: #C5A059,  // couleur principale
+  600: #b8873a,
+  700: #9e6e28,
+  800: #855819,
+  900: #6b430d,
+  
+  // Contraste pour material angular pour garantir la visibilité du texte sur les boutons et autres éléments utilisant cette palette
+  contrast: (
+    50:  #1A1625,
+    100: #1A1625,
+    200: #1A1625,
+    300: #1A1625,
+    400: #1A1625,
+    500: #1A1625,
+    600: #ffffff,
+    700: #ffffff,
+    800: #ffffff,
+    900: #ffffff,
+  )
+);
+
+// ─────────────────────────────────────────────
+// variables CSS avec le root
+// ─────────────────────────────────────────────
+:root {
+  color-scheme: dark;
+}
