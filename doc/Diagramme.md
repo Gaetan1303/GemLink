@@ -23,13 +23,13 @@
 
 ### Définition des rôles
 
-| Rôle | Description |
-|---|---|
-| **Visiteur** | Utilisateur non authentifié. Accès lecture seule aux contenus publics. |
-| **User** | Utilisateur inscrit et authentifié. Accès aux fonctionnalités sociales et de reconnaissance. |
-| **Client** | Professionnel (bijoutier, musée, revendeur…) disposant d'un espace de gestion de sa propre galerie et vitrine. Il gère ses propres utilisateurs (sa clientèle), ses collections et sa facturation. N'a pas accès à l'administration globale de la plateforme. |
-| **Modérateur** | Rôle attribué à un `User` par un Administrateur. Donne accès à un périmètre limité d'outils d'administration : modération des posts, commentaires et résultats de reconnaissance. Ne remplace pas l'Admin. |
-| **Administrateur** | Accès complet à l'ensemble de la plateforme. Gère tous les utilisateurs, contenus, paramètres IA, gamification, facturation et infrastructure. |
+| Rôle               | Description                                                                                                                                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Visiteur**       | Utilisateur non authentifié. Accès lecture seule aux contenus publics.                                                                                                                                                                                        |
+| **User**           | Utilisateur inscrit et authentifié. Accès aux fonctionnalités sociales et de reconnaissance.                                                                                                                                                                  |
+| **Client**         | Professionnel (bijoutier, musée, revendeur…) disposant d'un espace de gestion de sa propre galerie et vitrine. Il gère ses propres utilisateurs (sa clientèle), ses collections et sa facturation. N'a pas accès à l'administration globale de la plateforme. |
+| **Modérateur**     | Rôle attribué à un `User` par un Administrateur. Donne accès à un périmètre limité d'outils d'administration : modération des posts, commentaires et résultats de reconnaissance. Ne remplace pas l'Admin.                                                    |
+| **Administrateur** | Accès complet à l'ensemble de la plateforme. Gère tous les utilisateurs, contenus, paramètres IA, gamification, facturation et infrastructure.                                                                                                                |
 
 ---
 
@@ -155,152 +155,157 @@ graph TD
 
 ## 3. Diagrammes de cas d'utilisation (Use Case)
 
-### UC-1 — Authentification et Profil
-
-```mermaid
-flowchart LR
- Visiteur([" Visiteur"])
- User([" User"])
-
- Visiteur --> UC_Login["Se connecter"]
- Visiteur --> UC_Register["S'inscrire"]
- Visiteur --> UC_ForgotPwd["Réinitialiser mot de passe"]
-
- User --> UC_Logout["Se déconnecter"]
- User --> UC_EditProfile["Modifier son profil"]
- User --> UC_ViewProfile["Consulter un profil public"]
- User --> UC_ViewNotif["Consulter ses notifications"]
- User --> UC_ViewPoints["Consulter son historique de points"]
-
- UC_Login -.->|«include»| UC_ValidEmail["Valider email\n(token 1h)"]
- UC_Login -.->|«extend»| UC_RefreshToken["Renouveler le JWT\n(refresh token)"]
-```
+![visiteur](/doc/usecase/Visitor.png "Visiteur")
+![user](/doc/usecase/profil.png "Utilisateur")
+![client](/doc/usecase/client.png "Client")
+![feed](/doc/usecase/feed.png "Feed")
+![identification](/doc/usecase/identification.png "Identification")
+![collection](/doc/usecase/collection.png "Collection")
+![gestion](/doc/usecase/gestion_client.png "Gestion de contenu")
+![admin](/doc/usecase/admin.png "Administrateur")
+![moderateur](/doc/usecase/moderator.png "Modérateur")
 
 ---
 
-### UC-2 — Réseau social (User)
+
+
+### 4. MCD — Modèle Conceptuel de Données
 
 ```mermaid
-flowchart LR
- Visiteur([" Visiteur"])
- User([" User"])
+erDiagram
 
- Visiteur --> UC_Feed["Consulter le feed\nglobal"]
- Visiteur --> UC_ViewPost["Consulter un post"]
- Visiteur --> UC_ViewVitrine["Consulter une Vitrine\npublique"]
+    UTILISATEUR {
+        uuid id
+        string username
+        string email
+        int trust_score
+        int points
+        int level
+        string role
+    }
 
- User --> UC_CreatePost["Publier un post\n(image/vidéo)"]
- User --> UC_Like["Liker / Unliker"]
- User --> UC_Comment["Commenter"]
- User --> UC_Follow["Suivre un utilisateur"]
- User --> UC_FeedPerso["Consulter le feed\npersonnalisé"]
- User --> UC_Search["Rechercher\npar similarité"]
- User --> UC_Validate["Valider une\nidentification IA"]
- User --> UC_Report["Signaler un contenu"]
- User --> UC_CreateVitrine["Créer une Vitrine"]
- User --> UC_CreateGroup["Rejoindre / créer\nun groupe"]
+    PROFIL_CLIENT {
+        uuid id
+        string company_name
+        string siret
+        string subscription_plan
+    }
 
- UC_CreatePost -.->|«include»| UC_UploadMedia["Uploader un média\n(CDN)"]
- UC_CreatePost -.->|«include»| UC_TriggerIA["Déclencher l'analyse IA\n(async)"]
- UC_CreateVitrine -.->|«include»| UC_GenQR["Générer le QR code"]
+    PUBLICATION {
+        uuid id
+        string title
+        string description
+        string media_type
+        string status
+        boolean is_sponsored
+    }
+
+    COMMENTAIRE {
+        uuid id
+        string content
+        datetime created_at
+    }
+
+    PIERRE {
+        uuid id
+        string name
+        string category
+        float hardness
+    }
+
+    TAG {
+        uuid id
+        string name
+        string scope
+    }
+
+    VITRINE {
+        uuid id
+        string title
+        string slug
+        int view_count
+    }
+
+    BADGE {
+        uuid id
+        string name
+        string condition_type
+        int condition_value
+    }
+
+    NOTIFICATION {
+        uuid id
+        string type
+        boolean is_read
+    }
+
+    FACTURE {
+        uuid id
+        float amount
+        string status
+    }
+
+    VERSION_MODELE_IA {
+        uuid id
+        string name
+        string model_type
+        float accuracy
+    }
+
+    EMBEDDING {
+        uuid id
+        vector vector_data
+    }
+
+    JOB_FINE_TUNING {
+        uuid id
+        int min_trust_score
+        string status
+    }
+
+    AUDIT_LOG {
+        uuid id
+        string action
+        string target_type
+    }
+
+    GROUPE {
+        uuid id
+        string name
+        string visibility
+    }
+
+    %% Relations principales
+
+    UTILISATEUR ||--o{ PUBLICATION : publie
+    UTILISATEUR ||--o{ COMMENTAIRE : redige
+    PUBLICATION ||--o{ COMMENTAIRE : recoit
+
+    UTILISATEUR ||--o| PROFIL_CLIENT : possede
+
+    PROFIL_CLIENT ||--o{ FACTURE : recoit
+    PROFIL_CLIENT ||--o{ BADGE : cree
+
+    UTILISATEUR }o--o{ PUBLICATION : aime
+    UTILISATEUR }o--o{ PUBLICATION : valide
+    UTILISATEUR }o--o{ PUBLICATION : signale
+
+    PUBLICATION }o--o{ TAG : tagge
+    PUBLICATION }o--o{ PIERRE : identifie
+    UTILISATEUR ||--o{ VITRINE : cree
+    VITRINE }o--o{ PUBLICATION : contient
+    UTILISATEUR }o--o{ BADGE : obtient
+    UTILISATEUR ||--o{ NOTIFICATION : recoit
+    UTILISATEUR ||--o{ AUDIT_LOG : genere
+    VERSION_MODELE_IA ||--o{ EMBEDDING : produit
+    PUBLICATION ||--|| EMBEDDING : genere
+    VERSION_MODELE_IA ||--o{ JOB_FINE_TUNING : versionne
+    UTILISATEUR }o--o{ GROUPE : appartient
+    PROFIL_CLIENT }o--o{ UTILISATEUR : gere_clients
 ```
-
 ---
 
-### UC-3 — Reconnaissance IA (User + Plateforme)
-
-```mermaid
-flowchart LR
- User([" User"])
- Platform(["️ Plateforme"])
- ServiceIA([" Service IA\n(FastAPI)"])
-
- User --> UC_IdentifyStone["Identifier une pierre\n(upload image)"]
- User --> UC_ViewSimilar["Voir les posts similaires"]
- User --> UC_ValidateIA["Confirmer / Corriger\nl'identification IA"]
-
- Platform --> UC_PublishQueue["Publier message\ndans la queue Redis"]
- Platform --> UC_StoreEmbedding["Stocker l'embedding\n(pgvector)"]
- Platform --> UC_NotifyUser["Notifier l'utilisateur\n(analyse terminée)"]
-
- ServiceIA --> UC_YOLO["Détecter la pierre\n(YOLO v8)"]
- ServiceIA --> UC_ViT["Classifier le minéral\n(ViT fine-tuné)"]
- ServiceIA --> UC_CLIP["Générer l'embedding\n(CLIP 512D)"]
-
- UC_IdentifyStone -.->|«include»| UC_PublishQueue
- UC_PublishQueue -.->|«include»| UC_YOLO
- UC_YOLO -.->|«include»| UC_ViT
- UC_ViT -.->|«include»| UC_CLIP
- UC_CLIP -.->|«include»| UC_StoreEmbedding
- UC_StoreEmbedding -.->|«include»| UC_NotifyUser
-```
-
----
-
-### UC-4 — Client
-
-```mermaid
-flowchart LR
- Client([" Client"])
-
- Client --> UC_Dashboard["Consulter son dashboard"]
- Client --> UC_ManageGalerie["Gérer sa Galerie et Vitrine"]
- Client --> UC_ManageCollections["Gérer ses Collections"]
- Client --> UC_ManagePosts["Gérer ses Posts"]
- Client --> UC_ManageTags["Gérer ses Tags et catégories"]
- Client --> UC_ManageUsers["Gérer ses utilisateurs (clientèle)"]
- Client --> UC_CustomBadge["Créer des badges personnalisés"]
- Client --> UC_Mailing["Envoyer des mailings à sa clientèle"]
- Client --> UC_Facturation["Gérer sa facturation et abonnement"]
- Client --> UC_Stats["Consulter ses statistiques"]
-```
-
----
-
-### UC-5 — Modérateur
-
-```mermaid
-flowchart LR
- Moderateur(["️ Modérateur"])
-
- Moderateur --> UC_ViewReports["Consulter les signalements en attente"]
- Moderateur --> UC_ResolveReport["Accepter / Rejeter un signalement"]
- Moderateur --> UC_HidePost["Masquer / Supprimer un post"]
- Moderateur --> UC_DeleteComment["Supprimer un commentaire"]
- Moderateur --> UC_CorrectIA["Corriger une identification IA signalée"]
-
- UC_ResolveReport -.->|«include»| UC_AuditLog["Tracer dans l'audit log immuable"]
- UC_HidePost -.->|«include»| UC_AuditLog
- UC_DeleteComment -.->|«include»| UC_AuditLog
-```
-
----
-
-### UC-6 — Administrateur
-
-```mermaid
-flowchart LR
- Admin([" Admin"])
-
- Admin --> UC_ManageUsers["Gérer tous les utilisateurs"]
- Admin --> UC_ManageRoles["Gérer les rôles (user/expert/moderator/client)"]
- Admin --> UC_BanUser["Bannir / Suspendre un utilisateur"]
- Admin --> UC_ManageContent["Gérer posts, commentaires, collections"]
- Admin --> UC_ManageGamif["Gérer la Gamification (barèmes, niveaux, badges)"]
- Admin --> UC_ManageTrustScore["Configurer le Trust Score"]
- Admin --> UC_FineTune["Déclencher le fine-tuning IA"]
- Admin --> UC_RollbackModel["Activer / Rollback un modèle IA"]
- Admin --> UC_ManageAds["Gérer la publicité et partenariats"]
- Admin --> UC_ManageCMS["Gérer le CMS"]
- Admin --> UC_ManageSecurity["Gérer la sécurité (rate limiting, blocklist)"]
- Admin --> UC_GlobalStats["Consulter les KPIs globaux"]
- Admin --> UC_ManageFacturation["Gérer la facturation globale"]
- Admin --> UC_Newsletter["Envoyer une Newsletter"]
-```
-
----
-
-## 4. MCD — Modèle Conceptuel de Données
+## 5. MLD — Modèle Logique de Données
 
 ```mermaid
 erDiagram
@@ -585,291 +590,6 @@ erDiagram
 
 ---
 
-## 5. MLD — Modèle Logique de Données
-
-> Le MLD traduit le MCD en tables relationnelles avec les types SQL concrets, les contraintes et les index.
-
-```
-USER(
- id UUID PK DEFAULT gen_random_uuid(),
- username VARCHAR(30) NOT NULL UNIQUE,
- email VARCHAR(255) NOT NULL UNIQUE,
- password_hash VARCHAR(255) NOT NULL,
- avatar_url TEXT,
- bio VARCHAR(500),
- trust_score SMALLINT NOT NULL DEFAULT 0 CHECK (trust_score BETWEEN 0 AND 100),
- role VARCHAR(20) NOT NULL DEFAULT 'user'
- CHECK (role IN ('user','expert','moderator','client','admin')),
- points INTEGER NOT NULL DEFAULT 0,
- level SMALLINT NOT NULL DEFAULT 1,
- status VARCHAR(25) NOT NULL DEFAULT 'PENDING_VALIDATION'
- CHECK (status IN ('PENDING_VALIDATION','ACTIVE','BANNED')),
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-INDEX: idx_user_email, idx_user_role, idx_user_status
-
-CLIENT_PROFILE(
- id UUID PK DEFAULT gen_random_uuid(),
- user_id UUID NOT NULL UNIQUE REFERENCES USER(id) ON DELETE CASCADE,
- company_name VARCHAR(150) NOT NULL,
- siret VARCHAR(14),
- address TEXT,
- subscription_plan VARCHAR(50),
- subscription_expires_at TIMESTAMPTZ,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-
-CLIENT_CUSTOMER(
- client_id UUID NOT NULL REFERENCES CLIENT_PROFILE(id) ON DELETE CASCADE,
- customer_user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- PRIMARY KEY (client_id, customer_user_id)
-)
-INDEX: idx_client_customer_client_id
-
-POST(
- id UUID PK DEFAULT gen_random_uuid(),
- user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- stone_id UUID REFERENCES STONE(id) ON DELETE SET NULL,
- title VARCHAR(200),
- description TEXT,
- media_url TEXT NOT NULL,
- media_type VARCHAR(10) NOT NULL CHECK (media_type IN ('image','video')),
- status VARCHAR(20) NOT NULL DEFAULT 'PENDING_ANALYSIS'
- CHECK (status IN ('PENDING_ANALYSIS','ANALYZED','ANALYSIS_FAILED',
- 'AUTO_HIDDEN','PUBLISHED')),
- is_sponsored BOOLEAN NOT NULL DEFAULT FALSE,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- deleted_at TIMESTAMPTZ
-)
-INDEX: idx_post_user_id, idx_post_status, idx_post_created_at DESC,
- idx_post_deleted_at (partial WHERE deleted_at IS NULL)
-
-COMMENT(
- id UUID PK DEFAULT gen_random_uuid(),
- post_id UUID NOT NULL REFERENCES POST(id) ON DELETE CASCADE,
- user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- content VARCHAR(1000) NOT NULL,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- deleted_at TIMESTAMPTZ
-)
-INDEX: idx_comment_post_id, idx_comment_user_id
-
-LIKE(
- id UUID PK DEFAULT gen_random_uuid(),
- post_id UUID NOT NULL REFERENCES POST(id) ON DELETE CASCADE,
- user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- UNIQUE (post_id, user_id)
-)
-INDEX: idx_like_post_id, idx_like_user_id
-
-TAG(
- id UUID PK DEFAULT gen_random_uuid(),
- owner_id UUID REFERENCES USER(id) ON DELETE SET NULL,
- name VARCHAR(50) NOT NULL,
- scope VARCHAR(20) NOT NULL DEFAULT 'global'
- CHECK (scope IN ('global','client','user'))
-)
-INDEX: idx_tag_name, idx_tag_owner_id
-
-POST_TAG(
- post_id UUID NOT NULL REFERENCES POST(id) ON DELETE CASCADE,
- tag_id UUID NOT NULL REFERENCES TAG(id) ON DELETE CASCADE,
- PRIMARY KEY (post_id, tag_id)
-)
-
-STONE(
- id UUID PK DEFAULT gen_random_uuid(),
- name VARCHAR(100) NOT NULL UNIQUE,
- category VARCHAR(100),
- hardness NUMERIC(4,2),
- crystal_system VARCHAR(50),
- composition TEXT,
- description TEXT
-)
-INDEX: idx_stone_name, idx_stone_category
-
-EMBEDDING(
- id UUID PK DEFAULT gen_random_uuid(),
- post_id UUID NOT NULL UNIQUE REFERENCES POST(id) ON DELETE CASCADE,
- model_version_id UUID NOT NULL REFERENCES AI_MODEL_VERSION(id),
- vector_data vector(512) NOT NULL,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-INDEX: idx_embedding_vector (hnsw) /* hnsw recommandé — vector_cosine_ops */
-
-VALIDATION(
- id UUID PK DEFAULT gen_random_uuid(),
- post_id UUID NOT NULL REFERENCES POST(id) ON DELETE CASCADE,
- user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- action VARCHAR(10) NOT NULL CHECK (action IN ('confirm','correct','reject')),
- proposed_label VARCHAR(100),
- trust_score_snapshot SMALLINT NOT NULL,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- UNIQUE (post_id, user_id)
-)
-INDEX: idx_validation_post_id, idx_validation_user_id
-
-VITRINE(
- id UUID PK DEFAULT gen_random_uuid(),
- user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- title VARCHAR(100) NOT NULL,
- description VARCHAR(500),
- slug VARCHAR(150) NOT NULL UNIQUE,
- qr_code_url TEXT,
- view_count INTEGER NOT NULL DEFAULT 0,
- is_sponsored BOOLEAN NOT NULL DEFAULT FALSE,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-INDEX: idx_vitrine_slug, idx_vitrine_user_id
-
-VITRINE_ITEM(
- id UUID PK DEFAULT gen_random_uuid(),
- vitrine_id UUID NOT NULL REFERENCES VITRINE(id) ON DELETE CASCADE,
- post_id UUID NOT NULL REFERENCES POST(id) ON DELETE CASCADE,
- position INTEGER NOT NULL DEFAULT 0,
- UNIQUE (vitrine_id, post_id)
-)
-INDEX: idx_vitrine_item_vitrine_id
-
-BADGE(
- id UUID PK DEFAULT gen_random_uuid(),
- created_by UUID REFERENCES USER(id) ON DELETE SET NULL,
- name VARCHAR(100) NOT NULL,
- description TEXT,
- icon_url TEXT,
- condition_type VARCHAR(30) NOT NULL
- CHECK (condition_type IN ('POST_COUNT','VALIDATION_COUNT',
- 'TRUST_SCORE_THRESHOLD','LEVEL_REACHED')),
- condition_value INTEGER NOT NULL,
- is_custom BOOLEAN NOT NULL DEFAULT FALSE
-)
-
-USER_BADGE(
- user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- badge_id UUID NOT NULL REFERENCES BADGE(id) ON DELETE CASCADE,
- earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- PRIMARY KEY (user_id, badge_id)
-)
-
-REPORT(
- id UUID PK DEFAULT gen_random_uuid(),
- post_id UUID NOT NULL REFERENCES POST(id) ON DELETE CASCADE,
- reporter_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- reason_type VARCHAR(40) NOT NULL
- CHECK (reason_type IN ('INAPPROPRIATE_CONTENT','WRONG_IDENTIFICATION',
- 'SPAM','HARASSMENT')),
- description TEXT,
- status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
- CHECK (status IN ('PENDING','ACCEPTED','REJECTED')),
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- UNIQUE (post_id, reporter_id)
-)
-INDEX: idx_report_status, idx_report_post_id
-
-NOTIFICATION(
- id UUID PK DEFAULT gen_random_uuid(),
- user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- type VARCHAR(50) NOT NULL,
- content TEXT NOT NULL,
- is_read BOOLEAN NOT NULL DEFAULT FALSE,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-INDEX: idx_notification_user_id, idx_notification_is_read
-
-POINT_TRANSACTION(
- id UUID PK DEFAULT gen_random_uuid(),
- user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- action_type VARCHAR(30) NOT NULL,
- amount SMALLINT NOT NULL,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-INDEX: idx_point_transaction_user_id
-
-REFRESH_TOKEN(
- id UUID PK DEFAULT gen_random_uuid(),
- user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- token_hash VARCHAR(64) NOT NULL UNIQUE,
- expires_at TIMESTAMPTZ NOT NULL,
- revoked_at TIMESTAMPTZ,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-INDEX: idx_refresh_token_hash, idx_refresh_token_user_id
-
-AI_MODEL_VERSION(
- id UUID PK DEFAULT gen_random_uuid(),
- name VARCHAR(50) NOT NULL UNIQUE,
- model_type VARCHAR(10) NOT NULL CHECK (model_type IN ('YOLO','VIT','CLIP')),
- accuracy NUMERIC(5,4),
- f1_score NUMERIC(5,4),
- status VARCHAR(15) NOT NULL DEFAULT 'TRAINING'
- CHECK (status IN ('TRAINING','ACTIVE','DEPRECATED')),
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-
-FINE_TUNE_JOB(
- id UUID PK DEFAULT gen_random_uuid(),
- model_version_id UUID NOT NULL REFERENCES AI_MODEL_VERSION(id),
- min_trust_score SMALLINT NOT NULL,
- status VARCHAR(15) NOT NULL DEFAULT 'PENDING'
- CHECK (status IN ('PENDING','RUNNING','COMPLETED','FAILED')),
- progress SMALLINT NOT NULL DEFAULT 0 CHECK (progress BETWEEN 0 AND 100),
- logs TEXT,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-
-AUDIT_LOG(
- id UUID PK DEFAULT gen_random_uuid(),
- actor_id UUID NOT NULL REFERENCES USER(id) ON DELETE RESTRICT,
- action VARCHAR(50) NOT NULL,
- target_type VARCHAR(50) NOT NULL,
- target_id UUID NOT NULL,
- reason TEXT,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
- -- Aucun UPDATE ni DELETE autorisé sur cette table (permission PostgreSQL)
-)
-INDEX: idx_audit_log_actor_id, idx_audit_log_created_at
-
-GROUP_ENTITY(
- id UUID PK DEFAULT gen_random_uuid(),
- owner_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- name VARCHAR(100) NOT NULL,
- description TEXT,
- visibility VARCHAR(10) NOT NULL DEFAULT 'public'
- CHECK (visibility IN ('public','private')),
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-
-GROUP_MEMBER(
- group_id UUID NOT NULL REFERENCES GROUP_ENTITY(id) ON DELETE CASCADE,
- user_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- role VARCHAR(20) NOT NULL DEFAULT 'member'
- CHECK (role IN ('owner','admin','member')),
- joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- PRIMARY KEY (group_id, user_id)
-)
-
-INVOICE(
- id UUID PK DEFAULT gen_random_uuid(),
- client_id UUID NOT NULL REFERENCES CLIENT_PROFILE(id) ON DELETE RESTRICT,
- amount NUMERIC(10,2) NOT NULL,
- status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
- CHECK (status IN ('PENDING','PAID','CANCELLED')),
- issued_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- paid_at TIMESTAMPTZ
-)
-
-FOLLOW(
- follower_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- followed_id UUID NOT NULL REFERENCES USER(id) ON DELETE CASCADE,
- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- PRIMARY KEY (follower_id, followed_id),
- CHECK (follower_id <> followed_id)
-)
-```
-
----
 
 **Note technique — Soft Delete vs ON DELETE CASCADE**
 
@@ -1372,42 +1092,44 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
- actor U as User
- participant FE as Angular Frontend
- participant API as Symfony API
- participant CDN as Cloudinary/S3
- participant DB as PostgreSQL
- participant Q as Redis Queue
- participant W as Worker Symfony
- participant IA as FastAPI Service IA
+actor U as User
+participant FE as Angular Frontend
+participant API as Symfony API
+participant CDN as Cloudinary/S3
+participant DB as PostgreSQL
+participant Q as Redis Queue
+participant W as Worker Symfony
+participant IA as FastAPI Service IA
 
- U->>FE: Sélectionne une image + remplit le formulaire
- FE->>API: POST /posts (multipart: media + metadata)
- API->>API: Valide MIME (magic bytes), taille, format
- API->>CDN: Upload du fichier
- CDN-->>API: media_url
- API->>DB: INSERT POST (status=PENDING_ANALYSIS, media_url)
- API->>Q: Publie AnalyzeImageMessage {post_id, media_url}
- API-->>FE: 201 Created {post}
- FE-->>U: Affiche le post avec "Analyse en cours..."
+U->>FE: Sélectionne une image + remplit le formulaire
+FE->>API: POST /posts (multipart: media + metadata)
+API->>API: Valide MIME (magic bytes), taille, format
+API->>CDN: Upload du fichier
+CDN-->>API: media_url
+API->>DB: INSERT POST (status=PENDING_ANALYSIS, media_url)
+API->>Q: Publie AnalyzeImageMessage {post_id, media_url}
+API-->>FE: 201 Created {post}
+FE-->>U: Affiche le post avec "Analyse en cours..."
 
- W->>Q: Consomme AnalyzeImageMessage
- W->>IA: POST /analyze {media_url, media_type, post_id}
- IA->>IA: Prétraitement média — si `media_type == 'video'` extraire keyframes (ffmpeg/opencv) ou échantillonner toutes les Xs ; choisir la frame la plus nette (variance de Laplacian) ou agréger embeddings par frame.
- IA->>IA: YOLO — Détecte et croppe la pierre (par frame)
- IA->>IA: ViT — Classifie le type de minéral (par crop)
- IA->>IA: CLIP — Génère embedding float32[512] (par crop), agrégation possible (moyenne / max-pooling)
- IA-->>W: {label, confidence, embedding, model_version}
+W->>Q: Consomme AnalyzeImageMessage
+W->>IA: POST /analyze {media_url, media_type, post_id}
+IA->>IA: "Prétraitement média - si media_type = video, extraire keyframes (ffmpeg/opencv)"
+IA->>IA: "Choisir la frame la plus nette (variance de Laplacian) ou agréger embeddings"
+IA->>IA: "YOLO - Détecte et croppe la pierre (par frame)"
+IA->>IA: "ViT - Classifie le type de minéral (par crop)"
+IA->>IA: "CLIP - Génère embedding float32[512], agrégation moyenne ou max-pooling"
+IA-->>W: {label, confidence, embedding, model_version}
 
- alt Succès
- W->>DB: INSERT EMBEDDING (vector_data)
- W->>DB: UPDATE POST (status=ANALYZED, stone_id?)
- W->>Q: Publie NotifyUser {user_id, post_id}
- FE-->>U: Mise à jour automatique du post (polling/WS)
- else Échec (3 tentatives épuisées)
- W->>DB: UPDATE POST (status=ANALYSIS_FAILED)
- W->>Q: Publie AlertAdmin {post_id, error}
- end
+alt Succès
+    W->>DB: INSERT EMBEDDING (vector_data)
+    W->>DB: UPDATE POST (status=ANALYZED, stone_id)
+    W->>Q: Publie NotifyUser {user_id, post_id}
+    FE-->>U: Mise à jour automatique du post (polling/WS)
+else Échec (3 tentatives épuisées)
+    W->>DB: UPDATE POST (status=ANALYSIS_FAILED)
+    W->>Q: Publie AlertAdmin {post_id, error}
+end
+
 ```
 
 ---
@@ -1578,113 +1300,113 @@ graph TB
 
 ### Fonctionnalités publiques et sociales
 
-| Fonctionnalité | Visiteur | User | Client | Modérateur | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Consulter le feed global / Galerie | o | o | o | o | o |
-| Consulter une Vitrine publique | o | o | o | o | o |
-| Consulter un profil public | o | o | o | o | o |
-| S'inscrire | o | x | x | x | x |
-| Se connecter / Déconnexion | o | o | o | o | o |
-| Réinitialiser son mot de passe | o | o | o | o | o |
-| Modifier son profil | x | o | o | o | o |
-| Consulter ses notifications | x | o | o | o | o |
+| Fonctionnalité                     | Visiteur | User  | Client | Modérateur | Admin |
+| ---------------------------------- | :------: | :---: | :----: | :--------: | :---: |
+| Consulter le feed global / Galerie |    o     |   o   |   o    |     o      |   o   |
+| Consulter une Vitrine publique     |    o     |   o   |   o    |     o      |   o   |
+| Consulter un profil public         |    o     |   o   |   o    |     o      |   o   |
+| S'inscrire                         |    o     |   x   |   x    |     x      |   x   |
+| Se connecter / Déconnexion         |    o     |   o   |   o    |     o      |   o   |
+| Réinitialiser son mot de passe     |    o     |   o   |   o    |     o      |   o   |
+| Modifier son profil                |    x     |   o   |   o    |     o      |   o   |
+| Consulter ses notifications        |    x     |   o   |   o    |     o      |   o   |
 
 ### Posts et interactions
 
-| Fonctionnalité | Visiteur | User | Client | Modérateur | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Publier un post | x | o | o | o | o |
-| Modifier son propre post | x | o | o | o | o |
-| Supprimer son propre post | x | o | o | o | o |
-| Liker / Unliker un post | x | o | o | o | o |
-| Commenter un post | x | o | o | o | o |
-| Supprimer son commentaire | x | o | o | o | o |
-| Suivre un utilisateur | x | o | o | o | o |
-| Signaler un contenu | x | o | o | o | o |
+| Fonctionnalité            | Visiteur | User  | Client | Modérateur | Admin |
+| ------------------------- | :------: | :---: | :----: | :--------: | :---: |
+| Publier un post           |    x     |   o   |   o    |     o      |   o   |
+| Modifier son propre post  |    x     |   o   |   o    |     o      |   o   |
+| Supprimer son propre post |    x     |   o   |   o    |     o      |   o   |
+| Liker / Unliker un post   |    x     |   o   |   o    |     o      |   o   |
+| Commenter un post         |    x     |   o   |   o    |     o      |   o   |
+| Supprimer son commentaire |    x     |   o   |   o    |     o      |   o   |
+| Suivre un utilisateur     |    x     |   o   |   o    |     o      |   o   |
+| Signaler un contenu       |    x     |   o   |   o    |     o      |   o   |
 
 ### Reconnaissance IA et similarité
 
-| Fonctionnalité | Visiteur | User | Client | Modérateur | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Identifier une pierre (upload) | x | o | o | o | o |
-| Voir le résultat IA d'un post | o | o | o | o | o |
-| Voir les posts similaires | o | o | o | o | o |
-| Valider / Corriger une identification | x | o | o | o | o |
-| Contribuer au dataset fine-tuning | x | o | o | o | o |
-| Déclencher un cycle de fine-tuning | x | x | x | x | o |
-| Gérer les versions de modèles IA | x | x | x | x | o |
-| Corriger une identification signalée | x | x | x | o | o |
+| Fonctionnalité                        | Visiteur | User  | Client | Modérateur | Admin |
+| ------------------------------------- | :------: | :---: | :----: | :--------: | :---: |
+| Identifier une pierre (upload)        |    x     |   o   |   o    |     o      |   o   |
+| Voir le résultat IA d'un post         |    o     |   o   |   o    |     o      |   o   |
+| Voir les posts similaires             |    o     |   o   |   o    |     o      |   o   |
+| Valider / Corriger une identification |    x     |   o   |   o    |     o      |   o   |
+| Contribuer au dataset fine-tuning     |    x     |   o   |   o    |     o      |   o   |
+| Déclencher un cycle de fine-tuning    |    x     |   x   |   x    |     x      |   o   |
+| Gérer les versions de modèles IA      |    x     |   x   |   x    |     x      |   o   |
+| Corriger une identification signalée  |    x     |   x   |   x    |     o      |   o   |
 
 ### Collections (Vitrines)
 
-| Fonctionnalité | Visiteur | User | Client | Modérateur | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Créer une Vitrine | x | o | o | o | o |
-| Gérer sa propre Vitrine | x | o | o | o | o |
-| Gérer toutes les Vitrines | x | x | x | x | o |
-| Télécharger le QR code | x | o | o | o | o |
-| Voir le compteur de vues | x | o | o | o | o |
+| Fonctionnalité            | Visiteur | User  | Client | Modérateur | Admin |
+| ------------------------- | :------: | :---: | :----: | :--------: | :---: |
+| Créer une Vitrine         |    x     |   o   |   o    |     o      |   o   |
+| Gérer sa propre Vitrine   |    x     |   o   |   o    |     o      |   o   |
+| Gérer toutes les Vitrines |    x     |   x   |   x    |     x      |   o   |
+| Télécharger le QR code    |    x     |   o   |   o    |     o      |   o   |
+| Voir le compteur de vues  |    x     |   o   |   o    |     o      |   o   |
 
 ### Gamification et Trust Score
 
-| Fonctionnalité | Visiteur | User | Client | Modérateur | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Gagner des points | x | o | o | o | o |
-| Progresser en niveaux | x | o | o | o | o |
-| Recevoir des badges | x | o | o | o | o |
-| Créer des badges personnalisés | x | x | o | x | o |
-| Consulter le leaderboard | o | o | o | o | o |
-| Consulter son Trust Score | x | o | o | o | o |
-| Configurer les seuils Trust Score | x | x | x | x | o |
-| Modifier les barèmes de points | x | x | x | x | o |
+| Fonctionnalité                    | Visiteur | User  | Client | Modérateur | Admin |
+| --------------------------------- | :------: | :---: | :----: | :--------: | :---: |
+| Gagner des points                 |    x     |   o   |   o    |     o      |   o   |
+| Progresser en niveaux             |    x     |   o   |   o    |     o      |   o   |
+| Recevoir des badges               |    x     |   o   |   o    |     o      |   o   |
+| Créer des badges personnalisés    |    x     |   x   |   o    |     x      |   o   |
+| Consulter le leaderboard          |    o     |   o   |   o    |     o      |   o   |
+| Consulter son Trust Score         |    x     |   o   |   o    |     o      |   o   |
+| Configurer les seuils Trust Score |    x     |   x   |   x    |     x      |   o   |
+| Modifier les barèmes de points    |    x     |   x   |   x    |     x      |   o   |
 
 ### Groupes
 
-| Fonctionnalité | Visiteur | User | Client | Modérateur | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Consulter les groupes publics | o | o | o | o | o |
-| Créer / Rejoindre un groupe | x | o | o | o | o |
-| Gérer son groupe | x | o | o | o | o |
-| Gérer tous les groupes | x | x | x | x | o |
+| Fonctionnalité                | Visiteur | User  | Client | Modérateur | Admin |
+| ----------------------------- | :------: | :---: | :----: | :--------: | :---: |
+| Consulter les groupes publics |    o     |   o   |   o    |     o      |   o   |
+| Créer / Rejoindre un groupe   |    x     |   o   |   o    |     o      |   o   |
+| Gérer son groupe              |    x     |   o   |   o    |     o      |   o   |
+| Gérer tous les groupes        |    x     |   x   |   x    |     x      |   o   |
 
 ### Modération
 
-| Fonctionnalité | Visiteur | User | Client | Modérateur | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Voir les signalements en attente | x | x | x | o | o |
-| Traiter un signalement | x | x | x | o | o |
-| Masquer / Supprimer tout post | x | x | x | o | o |
-| Supprimer tout commentaire | x | x | x | o | o |
-| Consulter l'audit log | x | x | x | o | o |
-| Bannir / Suspendre un utilisateur | x | x | x | x | o |
-| Gérer les reports / tickets | x | x | x | o | o |
+| Fonctionnalité                    | Visiteur | User  | Client | Modérateur | Admin |
+| --------------------------------- | :------: | :---: | :----: | :--------: | :---: |
+| Voir les signalements en attente  |    x     |   x   |   x    |     o      |   o   |
+| Traiter un signalement            |    x     |   x   |   x    |     o      |   o   |
+| Masquer / Supprimer tout post     |    x     |   x   |   x    |     o      |   o   |
+| Supprimer tout commentaire        |    x     |   x   |   x    |     o      |   o   |
+| Consulter l'audit log             |    x     |   x   |   x    |     o      |   o   |
+| Bannir / Suspendre un utilisateur |    x     |   x   |   x    |     x      |   o   |
+| Gérer les reports / tickets       |    x     |   x   |   x    |     o      |   o   |
 
 ### Espace Client
 
-| Fonctionnalité | Visiteur | User | Client | Modérateur | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Accéder au dashboard Client | x | x | o | x | o |
-| Gérer sa Galerie / Vitrine Client | x | x | o | x | o |
-| Gérer ses posts et collections | x | x | o | x | o |
-| Gérer ses tags et catégories | x | x | o | x | o |
-| Gérer ses utilisateurs (clientèle) | x | x | o | x | o |
-| Envoyer un mailing à sa clientèle | x | x | o | x | o |
-| Consulter ses statistiques | x | x | o | x | o |
-| Gérer sa facturation | x | x | o | x | o |
+| Fonctionnalité                     | Visiteur | User  | Client | Modérateur | Admin |
+| ---------------------------------- | :------: | :---: | :----: | :--------: | :---: |
+| Accéder au dashboard Client        |    x     |   x   |   o    |     x      |   o   |
+| Gérer sa Galerie / Vitrine Client  |    x     |   x   |   o    |     x      |   o   |
+| Gérer ses posts et collections     |    x     |   x   |   o    |     x      |   o   |
+| Gérer ses tags et catégories       |    x     |   x   |   o    |     x      |   o   |
+| Gérer ses utilisateurs (clientèle) |    x     |   x   |   o    |     x      |   o   |
+| Envoyer un mailing à sa clientèle  |    x     |   x   |   o    |     x      |   o   |
+| Consulter ses statistiques         |    x     |   x   |   o    |     x      |   o   |
+| Gérer sa facturation               |    x     |   x   |   o    |     x      |   o   |
 
 ### Administration globale
 
-| Fonctionnalité | Visiteur | User | Client | Modérateur | Admin |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Dashboard Admin + KPIs globaux | x | x | x | x | o |
-| Gérer tous les utilisateurs | x | x | x | x | o |
-| Gérer les rôles | x | x | x | x | o |
-| Gérer la facturation globale | x | x | x | x | o |
-| Gérer la publicité / sponsoring | x | x | x | x | o |
-| Gérer les partenariats | x | x | x | x | o |
-| Gérer le CMS | x | x | x | x | o |
-| Envoyer la Newsletter | x | x | x | x | o |
-| Gérer la messagerie interne | x | x | x | x | o |
-| Gérer la sécurité (rate limiting) | x | x | x | x | o |
-| Gérer l'API (clés, quotas) | x | x | x | x | o |
-| Dashboard ticketing | x | x | x | o | o |
+| Fonctionnalité                    | Visiteur | User  | Client | Modérateur | Admin |
+| --------------------------------- | :------: | :---: | :----: | :--------: | :---: |
+| Dashboard Admin + KPIs globaux    |    x     |   x   |   x    |     x      |   o   |
+| Gérer tous les utilisateurs       |    x     |   x   |   x    |     x      |   o   |
+| Gérer les rôles                   |    x     |   x   |   x    |     x      |   o   |
+| Gérer la facturation globale      |    x     |   x   |   x    |     x      |   o   |
+| Gérer la publicité / sponsoring   |    x     |   x   |   x    |     x      |   o   |
+| Gérer les partenariats            |    x     |   x   |   x    |     x      |   o   |
+| Gérer le CMS                      |    x     |   x   |   x    |     x      |   o   |
+| Envoyer la Newsletter             |    x     |   x   |   x    |     x      |   o   |
+| Gérer la messagerie interne       |    x     |   x   |   x    |     x      |   o   |
+| Gérer la sécurité (rate limiting) |    x     |   x   |   x    |     x      |   o   |
+| Gérer l'API (clés, quotas)        |    x     |   x   |   x    |     x      |   o   |
+| Dashboard ticketing               |    x     |   x   |   x    |     o      |   o   |
