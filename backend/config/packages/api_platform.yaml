@@ -1,0 +1,7 @@
+api_platform:
+    title: GemLink API
+    version: 0.1.0
+    defaults:
+        stateless: true
+        cache_headers:
+            vary: ['Content-Type', 'Authorization', 'Origin']
