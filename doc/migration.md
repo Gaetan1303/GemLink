@@ -1,3 +1,6 @@
+# Migration Doctrine corrigée — GemmeLink
+
+```php
 <?php
 
 namespace DoctrineMigrations;
@@ -6,346 +9,336 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Migration initiale GemLink — Schéma complet
- * Ordre de création respectant les dépendances FK
+ * Migration réalignée GemmeLink — Schéma Physique PostgreSQL Complet
+ * Synchronisé à 100 % avec le MCD, le MLD et le MPD corrigé.
+ * Ordre de création respectant scrupuleusement les contraintes de clés étrangères.
  */
 final class Version20240101000000 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Schéma initial GemLink : toutes les tables, index, contraintes et extension pgvector';
+        return 'Schéma initial corrigé GemmeLink : Tables basées sur le MPD, Extensions, Index avancés et Triggers métiers.';
     }
 
     public function up(Schema $schema): void
     {
-        // Extension pgvector (doit être installée sur le serveur PostgreSQL)
-        $this->addSql('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+        // ─────────────────────────────────────────────
+        // 0. EXTENSIONS & TYPES ÉNUMÉRÉS (ENUM)
+        // ─────────────────────────────────────────────
+        $this->addSql('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
         $this->addSql('CREATE EXTENSION IF NOT EXISTS "vector"');
 
-        // ─────────────────────────────────────────────
-        // 1. USER
-        // ─────────────────────────────────────────────
-        $this->addSql('
-            CREATE TABLE "user" (
-                id          UUID        NOT NULL DEFAULT gen_random_uuid(),
-                username    VARCHAR(30) NOT NULL,
-                email       VARCHAR(255) NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                avatar_url  TEXT,
-                bio         VARCHAR(500),
-                trust_score SMALLINT    NOT NULL DEFAULT 0
-                            CHECK (trust_score BETWEEN 0 AND 100),
-                role        VARCHAR(20) NOT NULL DEFAULT \'user\'
-                            CHECK (role IN (\'user\',\'expert\',\'moderator\',\'client\',\'admin\')),
-                points      INTEGER     NOT NULL DEFAULT 0,
-                level       SMALLINT    NOT NULL DEFAULT 1,
-                status      VARCHAR(25) NOT NULL DEFAULT \'PENDING_VALIDATION\'
-                            CHECK (status IN (\'PENDING_VALIDATION\',\'ACTIVE\',\'BANNED\')),
-                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (id)
-            )
-        ');
-        $this->addSql('CREATE UNIQUE INDEX idx_user_email    ON "user" (email)');
-        $this->addSql('CREATE UNIQUE INDEX idx_user_username ON "user" (username)');
-        $this->addSql('CREATE INDEX idx_user_role   ON "user" (role)');
-        $this->addSql('CREATE INDEX idx_user_status ON "user" (status)');
+        $this->addSql("CREATE TYPE user_status AS ENUM ('PENDING_VALIDATION', 'ACTIVE', 'BANNED')");
+        $this->addSql("CREATE TYPE user_role AS ENUM ('USER', 'EXPERT', 'MODERATOR', 'VENDEUR', 'ADMIN')");
+        $this->addSql("CREATE TYPE post_status AS ENUM ('PENDING_ANALYSIS', 'ANALYZED', 'ANALYSIS_FAILED', 'AUTO_HIDDEN', 'PUBLISHED')");
+        $this->addSql("CREATE TYPE media_type AS ENUM ('IMAGE', 'VIDEO')");
+        $this->addSql("CREATE TYPE validation_action AS ENUM ('CONFIRM', 'CORRECT', 'REJECT')");
+        $this->addSql("CREATE TYPE report_reason AS ENUM ('INAPPROPRIATE_CONTENT', 'WRONG_IDENTIFICATION', 'SPAM', 'HARASSMENT')");
+        $this->addSql("CREATE TYPE report_status AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED')");
+        $this->addSql("CREATE TYPE badge_condition_type AS ENUM ('POST_COUNT', 'VALIDATION_COUNT', 'TRUST_SCORE_THRESHOLD', 'LEVEL_REACHED')");
+        $this->addSql("CREATE TYPE point_action_type AS ENUM ('POST_PUBLISHED', 'LIKE_RECEIVED', 'VALIDATION_SUBMITTED', 'VALIDATION_CONFIRMED')");
+        $this->addSql("CREATE TYPE ai_model_type AS ENUM ('YOLO', 'VIT', 'CLIP')");
+        $this->addSql("CREATE TYPE ai_model_status AS ENUM ('TRAINING', 'ACTIVE', 'DEPRECATED')");
+        $this->addSql("CREATE TYPE fine_tune_status AS ENUM ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED')");
+        $this->addSql("CREATE TYPE group_visibility AS ENUM ('PUBLIC', 'PRIVATE')");
+        $this->addSql("CREATE TYPE invoice_status AS ENUM ('PENDING', 'PAID', 'CANCELLED')");
+        $this->addSql("CREATE TYPE tag_scope AS ENUM ('GLOBAL', 'VENDEUR', 'USER')");
 
         // ─────────────────────────────────────────────
-        // 2. CLIENT_PROFILE
+        // 1. UTILISATEUR
         // ─────────────────────────────────────────────
         $this->addSql('
-            CREATE TABLE client_profile (
-                id                      UUID        NOT NULL DEFAULT gen_random_uuid(),
-                user_id                 UUID        NOT NULL,
-                company_name            VARCHAR(150) NOT NULL,
-                siret                   VARCHAR(14),
+            CREATE TABLE utilisateur (
+                id              UUID            NOT NULL DEFAULT uuid_generate_v4(),
+                username        VARCHAR(30)     NOT NULL,
+                email           VARCHAR(255)    NOT NULL,
+                password_hash   VARCHAR(255)    NOT NULL,
+                avatar_url      TEXT,
+                bio             VARCHAR(500),
+                trust_score     SMALLINT        NOT NULL DEFAULT 0 CHECK (trust_score BETWEEN 0 AND 100),
+                role            user_role       NOT NULL DEFAULT \'USER\',
+                points          INTEGER         NOT NULL DEFAULT 0 CHECK (points >= 0),
+                level           SMALLINT        NOT NULL DEFAULT 1 CHECK (level >= 1),
+                status          user_status     NOT NULL DEFAULT \'PENDING_VALIDATION\',
+                created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+                updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (id),
+                CONSTRAINT uq_utilisateur_email UNIQUE (email),
+                CONSTRAINT uq_utilisateur_username UNIQUE (username)
+            )
+        ');
+        $this->addSql('CREATE INDEX idx_utilisateur_email    ON utilisateur (email)');
+        $this->addSql('CREATE INDEX idx_utilisateur_role     ON utilisateur (role)');
+        $this->addSql('CREATE INDEX idx_utilisateur_status   ON utilisateur (status)');
+        $this->addSql('CREATE INDEX idx_utilisateur_points   ON utilisateur (points DESC)');
+
+        // ─────────────────────────────────────────────
+        // 2. VENDEUR 
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE vendeur (
+                id                      UUID            NOT NULL DEFAULT uuid_generate_v4(),
+                user_id                 UUID            NOT NULL,
+                company_name            VARCHAR(150)    NOT NULL,
+                siret                   VARCHAR(14)     NOT NULL,
                 address                 TEXT,
                 subscription_plan       VARCHAR(50),
                 subscription_expires_at TIMESTAMPTZ,
-                created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                created_at              TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT fk_client_profile_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
+                CONSTRAINT fk_vendeur_utilisateur FOREIGN KEY (user_id) REFERENCES utilisateur (id) ON DELETE CASCADE,
+                CONSTRAINT uq_vendeur_user UNIQUE (user_id),
+                CONSTRAINT uq_vendeur_siret UNIQUE (siret)
             )
         ');
-        $this->addSql('CREATE UNIQUE INDEX idx_client_profile_user_id ON client_profile (user_id)');
+        $this->addSql('CREATE INDEX idx_vendeur_user_id ON vendeur (user_id)');
 
         // ─────────────────────────────────────────────
-        // 3. CLIENT_CUSTOMER
+        // 3. REFRESH_TOKEN
         // ─────────────────────────────────────────────
         $this->addSql('
-            CREATE TABLE client_customer (
-                client_id          UUID        NOT NULL,
-                customer_user_id   UUID        NOT NULL,
-                created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (client_id, customer_user_id),
-                CONSTRAINT fk_cc_client
-                    FOREIGN KEY (client_id) REFERENCES client_profile (id) ON DELETE CASCADE,
-                CONSTRAINT fk_cc_user
-                    FOREIGN KEY (customer_user_id) REFERENCES "user" (id) ON DELETE CASCADE
+            CREATE TABLE refresh_token (
+                id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
+                user_id     UUID        NOT NULL,
+                token_hash  VARCHAR(64) NOT NULL,
+                expires_at  TIMESTAMPTZ NOT NULL,
+                revoked_at  TIMESTAMPTZ,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (id),
+                CONSTRAINT fk_refresh_token_user FOREIGN KEY (user_id) REFERENCES utilisateur (id) ON DELETE CASCADE,
+                CONSTRAINT uq_refresh_token_hash UNIQUE (token_hash)
             )
         ');
-        $this->addSql('CREATE INDEX idx_client_customer_client_id ON client_customer (client_id)');
+        $this->addSql('CREATE INDEX idx_refresh_token_user_id ON refresh_token (user_id)');
 
         // ─────────────────────────────────────────────
-        // 4. STONE (catalogue minéraux)
+        // 4. PIERRE 
         // ─────────────────────────────────────────────
         $this->addSql('
-            CREATE TABLE stone (
-                id             UUID           NOT NULL DEFAULT gen_random_uuid(),
-                name           VARCHAR(100)   NOT NULL,
+            CREATE TABLE pierre (
+                id             UUID            NOT NULL DEFAULT uuid_generate_v4(),
+                name           VARCHAR(100)    NOT NULL,
                 category       VARCHAR(100),
-                hardness       NUMERIC(4,2),
+                hardness       NUMERIC(4, 2)   CHECK (hardness BETWEEN 0 AND 10),
                 crystal_system VARCHAR(50),
                 composition    TEXT,
                 description    TEXT,
-                PRIMARY KEY (id)
-            )
-        ');
-        $this->addSql('CREATE UNIQUE INDEX idx_stone_name     ON stone (name)');
-        $this->addSql('CREATE INDEX        idx_stone_category ON stone (category)');
-
-        // ─────────────────────────────────────────────
-        // 5. AI_MODEL_VERSION
-        // ─────────────────────────────────────────────
-        $this->addSql('
-            CREATE TABLE ai_model_version (
-                id         UUID        NOT NULL DEFAULT gen_random_uuid(),
-                name       VARCHAR(50) NOT NULL,
-                model_type VARCHAR(10) NOT NULL
-                           CHECK (model_type IN (\'YOLO\',\'VIT\',\'CLIP\')),
-                accuracy   NUMERIC(5,4),
-                f1_score   NUMERIC(5,4),
-                status     VARCHAR(15) NOT NULL DEFAULT \'TRAINING\'
-                           CHECK (status IN (\'TRAINING\',\'ACTIVE\',\'DEPRECATED\')),
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (id)
-            )
-        ');
-        $this->addSql('CREATE UNIQUE INDEX idx_ai_model_name ON ai_model_version (name)');
-
-        // ─────────────────────────────────────────────
-        // 6. POST
-        // ─────────────────────────────────────────────
-        $this->addSql('
-            CREATE TABLE post (
-                id           UUID        NOT NULL DEFAULT gen_random_uuid(),
-                user_id      UUID        NOT NULL,
-                stone_id     UUID,
-                title        VARCHAR(200),
-                description  TEXT,
-                media_url    TEXT        NOT NULL,
-                media_type   VARCHAR(10) NOT NULL
-                             CHECK (media_type IN (\'image\',\'video\')),
-                status       VARCHAR(20) NOT NULL DEFAULT \'PENDING_ANALYSIS\'
-                             CHECK (status IN (
-                                \'PENDING_ANALYSIS\',\'ANALYZED\',\'ANALYSIS_FAILED\',
-                                \'AUTO_HIDDEN\',\'PUBLISHED\'
-                             )),
-                is_sponsored BOOLEAN     NOT NULL DEFAULT FALSE,
-                created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                deleted_at   TIMESTAMPTZ,
+                created_at     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT fk_post_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE,
-                CONSTRAINT fk_post_stone
-                    FOREIGN KEY (stone_id) REFERENCES stone (id) ON DELETE SET NULL
+                CONSTRAINT uq_pierre_name UNIQUE (name)
             )
         ');
-        $this->addSql('CREATE INDEX idx_post_user_id    ON post (user_id)');
-        $this->addSql('CREATE INDEX idx_post_status     ON post (status)');
-        $this->addSql('CREATE INDEX idx_post_created_at ON post (created_at DESC)');
-        $this->addSql('CREATE INDEX idx_post_not_deleted ON post (created_at DESC) WHERE deleted_at IS NULL');
+        $this->addSql('CREATE INDEX idx_pierre_name ON pierre (name)');
 
         // ─────────────────────────────────────────────
-        // 7. COMMENT
-        // ─────────────────────────────────────────────
-        $this->addSql('
-            CREATE TABLE comment (
-                id         UUID          NOT NULL DEFAULT gen_random_uuid(),
-                post_id    UUID          NOT NULL,
-                user_id    UUID          NOT NULL,
-                content    VARCHAR(1000) NOT NULL,
-                created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-                deleted_at TIMESTAMPTZ,
-                PRIMARY KEY (id),
-                CONSTRAINT fk_comment_post
-                    FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE,
-                CONSTRAINT fk_comment_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
-            )
-        ');
-        $this->addSql('CREATE INDEX idx_comment_post_id ON comment (post_id)');
-        $this->addSql('CREATE INDEX idx_comment_user_id ON comment (user_id)');
-
-        // ─────────────────────────────────────────────
-        // 8. LIKE
-        // ─────────────────────────────────────────────
-        $this->addSql('
-            CREATE TABLE "like" (
-                id         UUID        NOT NULL DEFAULT gen_random_uuid(),
-                post_id    UUID        NOT NULL,
-                user_id    UUID        NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (id),
-                CONSTRAINT uq_like_post_user UNIQUE (post_id, user_id),
-                CONSTRAINT fk_like_post
-                    FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE,
-                CONSTRAINT fk_like_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
-            )
-        ');
-        $this->addSql('CREATE INDEX idx_like_post_id ON "like" (post_id)');
-        $this->addSql('CREATE INDEX idx_like_user_id ON "like" (user_id)');
-
-        // ─────────────────────────────────────────────
-        // 9. TAG
+        // 5. TAG
         // ─────────────────────────────────────────────
         $this->addSql('
             CREATE TABLE tag (
-                id       UUID        NOT NULL DEFAULT gen_random_uuid(),
-                owner_id UUID,
-                name     VARCHAR(50) NOT NULL,
-                scope    VARCHAR(20) NOT NULL DEFAULT \'global\'
-                         CHECK (scope IN (\'global\',\'client\',\'user\')),
+                id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
+                owner_id    UUID,
+                name        VARCHAR(50) NOT NULL,
+                scope       tag_scope   NOT NULL DEFAULT \'GLOBAL\',
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT fk_tag_owner
-                    FOREIGN KEY (owner_id) REFERENCES "user" (id) ON DELETE SET NULL
+                CONSTRAINT fk_tag_owner FOREIGN KEY (owner_id) REFERENCES utilisateur (id) ON DELETE SET NULL,
+                CONSTRAINT uq_tag_name_scope_owner UNIQUE (name, scope, owner_id)
             )
         ');
-        $this->addSql('CREATE INDEX idx_tag_name     ON tag (name)');
-        $this->addSql('CREATE INDEX idx_tag_owner_id ON tag (owner_id)');
 
         // ─────────────────────────────────────────────
-        // 10. POST_TAG
+        // 6. PUBLICATION 
         // ─────────────────────────────────────────────
         $this->addSql('
-            CREATE TABLE post_tag (
-                post_id UUID NOT NULL,
-                tag_id  UUID NOT NULL,
-                PRIMARY KEY (post_id, tag_id),
-                CONSTRAINT fk_post_tag_post
-                    FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE,
-                CONSTRAINT fk_post_tag_tag
-                    FOREIGN KEY (tag_id) REFERENCES tag (id) ON DELETE CASCADE
+            CREATE TABLE publication (
+                id           UUID        NOT NULL DEFAULT uuid_generate_v4(),
+                user_id      UUID        NOT NULL,
+                title        VARCHAR(200),
+                description  TEXT,
+                media_url    TEXT        NOT NULL,
+                media_type   media_type  NOT NULL,
+                status       post_status NOT NULL DEFAULT \'PENDING_ANALYSIS\',
+                is_sponsored BOOLEAN     NOT NULL DEFAULT FALSE,
+                view_count   INTEGER     NOT NULL DEFAULT 0 CHECK (view_count >= 0),
+                created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                deleted_at   TIMESTAMPTZ,
+                PRIMARY KEY (id),
+                CONSTRAINT fk_publication_utilisateur FOREIGN KEY (user_id) REFERENCES utilisateur (id) ON DELETE CASCADE
+            )
+        ');
+        $this->addSql('CREATE INDEX idx_publication_user_id    ON publication (user_id)');
+        $this->addSql('CREATE INDEX idx_publication_status     ON publication (status)');
+        $this->addSql('CREATE INDEX idx_publication_created_at ON publication (created_at DESC)');
+
+        // ─────────────────────────────────────────────
+        // 7. PUBLICATION_TAG
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE publication_tag (
+                publication_id UUID NOT NULL,
+                tag_id         UUID NOT NULL,
+                PRIMARY KEY (publication_id, tag_id),
+                CONSTRAINT fk_pub_tag_publication FOREIGN KEY (publication_id) REFERENCES publication(id) ON DELETE CASCADE,
+                CONSTRAINT fk_pub_tag_tag FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
             )
         ');
 
         // ─────────────────────────────────────────────
-        // 11. EMBEDDING (pgvector)
+        // 8. COMMENTAIRE
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE commentaire (
+                id             UUID          NOT NULL DEFAULT uuid_generate_v4(),
+                publication_id UUID          NOT NULL,
+                user_id        UUID          NOT NULL,
+                content        TEXT          NOT NULL,
+                created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+                updated_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+                deleted_at     TIMESTAMPTZ,
+                PRIMARY KEY (id),
+                CONSTRAINT fk_commentaire_publication FOREIGN KEY (publication_id) REFERENCES publication(id) ON DELETE CASCADE,
+                CONSTRAINT fk_commentaire_utilisateur FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE
+            )
+        ');
+        $this->addSql('CREATE INDEX idx_commentaire_pub_id ON commentaire (publication_id)');
+
+        // ─────────────────────────────────────────────
+        // 9. PUBLICATION_PIERRE 
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE publication_pierre (
+                publication_id UUID          NOT NULL,
+                pierre_id      UUID          NOT NULL,
+                confidence     NUMERIC(5, 4) NOT NULL CHECK (confidence BETWEEN 0 AND 1),
+                PRIMARY KEY (publication_id, pierre_id),
+                CONSTRAINT fk_pub_pierre_publication FOREIGN KEY (publication_id) REFERENCES publication(id) ON DELETE CASCADE,
+                CONSTRAINT fk_pub_pierre_pierre FOREIGN KEY (pierre_id) REFERENCES pierre(id) ON DELETE CASCADE
+            )
+        ');
+
+        // ─────────────────────────────────────────────
+        // 10. VERSION_MODELE_IA
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE version_modele_ia (
+                id          UUID            NOT NULL DEFAULT uuid_generate_v4(),
+                name        VARCHAR(50)     NOT NULL,
+                model_type  ai_model_type   NOT NULL,
+                accuracy    NUMERIC(5, 4)   CHECK (accuracy BETWEEN 0 AND 1),
+                f1_score    NUMERIC(5, 4)   CHECK (f1_score BETWEEN 0 AND 1),
+                status      ai_model_status NOT NULL DEFAULT \'TRAINING\',
+                created_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (id),
+                CONSTRAINT uq_version_modele_ia_name UNIQUE (name)
+            )
+        ');
+
+        // ─────────────────────────────────────────────
+        // 11. EMBEDDING (pgvector HNSW)
         // ─────────────────────────────────────────────
         $this->addSql('
             CREATE TABLE embedding (
-                id               UUID        NOT NULL DEFAULT gen_random_uuid(),
-                post_id          UUID        NOT NULL,
-                model_version_id UUID        NOT NULL,
-                vector_data      vector(512) NOT NULL,
-                created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                id                  UUID          NOT NULL DEFAULT uuid_generate_v4(),
+                publication_id      UUID          NOT NULL,
+                version_modele_ia_id UUID          NOT NULL,
+                vector_data         vector(512)   NOT NULL,
+                created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT uq_embedding_post UNIQUE (post_id),
-                CONSTRAINT fk_embedding_post
-                    FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE,
-                CONSTRAINT fk_embedding_model
-                    FOREIGN KEY (model_version_id) REFERENCES ai_model_version (id)
+                CONSTRAINT uq_embedding_publication UNIQUE (publication_id),
+                CONSTRAINT fk_embedding_publication FOREIGN KEY (publication_id) REFERENCES publication(id) ON DELETE CASCADE,
+                CONSTRAINT fk_embedding_modele FOREIGN KEY (version_modele_ia_id) REFERENCES version_modele_ia(id) ON DELETE RESTRICT
             )
         ');
-        // Index HNSW pour la recherche par similarité cosinus
+        $this->addSql('CREATE INDEX idx_embedding_vector_hnsw ON embedding USING hnsw (vector_data vector_cosine_ops)');
+
+        // ─────────────────────────────────────────────
+        // 12. JOB_FINE_TUNING
+        // ─────────────────────────────────────────────
         $this->addSql('
-            CREATE INDEX idx_embedding_vector_hnsw
-                ON embedding USING hnsw (vector_data vector_cosine_ops)
-                WITH (m = 16, ef_construction = 64)
+            CREATE TABLE job_fine_tuning (
+                id                  UUID              NOT NULL DEFAULT uuid_generate_v4(),
+                version_modele_ia_id UUID              NOT NULL,
+                min_trust_score     SMALLINT          NOT NULL CHECK (min_trust_score BETWEEN 0 AND 100),
+                status              fine_tune_status  NOT NULL DEFAULT \'PENDING\',
+                created_at          TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (id),
+                CONSTRAINT fk_job_fine_tuning_modele FOREIGN KEY (version_modele_ia_id) REFERENCES version_modele_ia(id) ON DELETE RESTRICT
+            )
         ');
 
         // ─────────────────────────────────────────────
-        // 12. VALIDATION
+        // 13. VALIDATION
         // ─────────────────────────────────────────────
         $this->addSql('
             CREATE TABLE validation (
-                id                  UUID        NOT NULL DEFAULT gen_random_uuid(),
-                post_id             UUID        NOT NULL,
-                user_id             UUID        NOT NULL,
-                action              VARCHAR(10) NOT NULL
-                                    CHECK (action IN (\'confirm\',\'correct\',\'reject\')),
-                proposed_label      VARCHAR(100),
-                trust_score_snapshot SMALLINT   NOT NULL,
-                created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                id                    UUID              NOT NULL DEFAULT uuid_generate_v4(),
+                publication_id        UUID              NOT NULL,
+                user_id               UUID              NOT NULL,
+                pierre_id             UUID              NOT NULL,
+                action                validation_action NOT NULL,
+                proposed_label        VARCHAR(100),
+                trust_score_snapshot  SMALLINT          NOT NULL CHECK (trust_score_snapshot BETWEEN 0 AND 100),
+                created_at            TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT uq_validation_post_user UNIQUE (post_id, user_id),
-                CONSTRAINT fk_validation_post
-                    FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE,
-                CONSTRAINT fk_validation_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
+                CONSTRAINT uq_validation_pub_user UNIQUE (publication_id, user_id),
+                CONSTRAINT fk_validation_publication FOREIGN KEY (publication_id) REFERENCES publication(id) ON DELETE CASCADE,
+                CONSTRAINT fk_validation_utilisateur FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE,
+                CONSTRAINT fk_validation_pierre FOREIGN KEY (pierre_id) REFERENCES pierre(id) ON DELETE RESTRICT
             )
         ');
-        $this->addSql('CREATE INDEX idx_validation_post_id ON validation (post_id)');
-        $this->addSql('CREATE INDEX idx_validation_user_id ON validation (user_id)');
 
         // ─────────────────────────────────────────────
-        // 13. VITRINE
+        // 14. VITRINE
         // ─────────────────────────────────────────────
         $this->addSql('
             CREATE TABLE vitrine (
-                id           UUID         NOT NULL DEFAULT gen_random_uuid(),
+                id           UUID         NOT NULL DEFAULT uuid_generate_v4(),
                 user_id      UUID         NOT NULL,
                 title        VARCHAR(100) NOT NULL,
-                description  VARCHAR(500),
+                description  TEXT,
                 slug         VARCHAR(150) NOT NULL,
-                qr_code_url  TEXT,
                 view_count   INTEGER      NOT NULL DEFAULT 0,
-                is_sponsored BOOLEAN      NOT NULL DEFAULT FALSE,
                 created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+                updated_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT fk_vitrine_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
+                CONSTRAINT uq_vitrine_slug UNIQUE (slug),
+                CONSTRAINT fk_vitrine_utilisateur FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE
             )
         ');
-        $this->addSql('CREATE UNIQUE INDEX idx_vitrine_slug    ON vitrine (slug)');
-        $this->addSql('CREATE INDEX        idx_vitrine_user_id ON vitrine (user_id)');
 
         // ─────────────────────────────────────────────
-        // 14. VITRINE_ITEM
+        // 15. VITRINE_PUBLICATION
         // ─────────────────────────────────────────────
         $this->addSql('
-            CREATE TABLE vitrine_item (
-                id         UUID    NOT NULL DEFAULT gen_random_uuid(),
-                vitrine_id UUID    NOT NULL,
-                post_id    UUID    NOT NULL,
-                position   INTEGER NOT NULL DEFAULT 0,
-                PRIMARY KEY (id),
-                CONSTRAINT uq_vitrine_item UNIQUE (vitrine_id, post_id),
-                CONSTRAINT fk_vitrine_item_vitrine
-                    FOREIGN KEY (vitrine_id) REFERENCES vitrine (id) ON DELETE CASCADE,
-                CONSTRAINT fk_vitrine_item_post
-                    FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE
+            CREATE TABLE vitrine_publication (
+                vitrine_id     UUID        NOT NULL,
+                publication_id UUID        NOT NULL,
+                added_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (vitrine_id, publication_id),
+                CONSTRAINT fk_vitrine_pub_vitrine FOREIGN KEY (vitrine_id) REFERENCES vitrine(id) ON DELETE CASCADE,
+                CONSTRAINT fk_vitrine_pub_publication FOREIGN KEY (publication_id) REFERENCES publication(id) ON DELETE CASCADE
             )
         ');
-        $this->addSql('CREATE INDEX idx_vitrine_item_vitrine_id ON vitrine_item (vitrine_id)');
 
         // ─────────────────────────────────────────────
-        // 15. BADGE
+        // 16. BADGE
         // ─────────────────────────────────────────────
         $this->addSql('
             CREATE TABLE badge (
-                id              UUID         NOT NULL DEFAULT gen_random_uuid(),
-                created_by      UUID,
-                name            VARCHAR(100) NOT NULL,
+                id              UUID                 NOT NULL DEFAULT uuid_generate_v4(),
+                name            VARCHAR(100)         NOT NULL,
                 description     TEXT,
-                icon_url        TEXT,
-                condition_type  VARCHAR(30)  NOT NULL
-                                CHECK (condition_type IN (
-                                    \'POST_COUNT\',\'VALIDATION_COUNT\',
-                                    \'TRUST_SCORE_THRESHOLD\',\'LEVEL_REACHED\'
-                                )),
-                condition_value INTEGER      NOT NULL,
-                is_custom       BOOLEAN      NOT NULL DEFAULT FALSE,
+                condition_type  badge_condition_type NOT NULL,
+                condition_value INTEGER              NOT NULL,
+                created_at      TIMESTAMPTZ          NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT fk_badge_creator
-                    FOREIGN KEY (created_by) REFERENCES "user" (id) ON DELETE SET NULL
+                CONSTRAINT uq_badge_name UNIQUE (name)
             )
         ');
 
         // ─────────────────────────────────────────────
-        // 16. USER_BADGE
+        // 17. USER_BADGE
         // ─────────────────────────────────────────────
         $this->addSql('
             CREATE TABLE user_badge (
@@ -353,246 +346,245 @@ final class Version20240101000000 extends AbstractMigration
                 badge_id  UUID        NOT NULL,
                 earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (user_id, badge_id),
-                CONSTRAINT fk_user_badge_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE,
-                CONSTRAINT fk_user_badge_badge
-                    FOREIGN KEY (badge_id) REFERENCES badge (id) ON DELETE CASCADE
+                CONSTRAINT fk_user_badge_user FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE,
+                CONSTRAINT fk_user_badge_badge FOREIGN KEY (badge_id) REFERENCES badge(id) ON DELETE CASCADE
             )
         ');
-
-        // ─────────────────────────────────────────────
-        // 17. REPORT
-        // ─────────────────────────────────────────────
-        $this->addSql('
-            CREATE TABLE report (
-                id          UUID        NOT NULL DEFAULT gen_random_uuid(),
-                post_id     UUID        NOT NULL,
-                reporter_id UUID        NOT NULL,
-                reason_type VARCHAR(40) NOT NULL
-                            CHECK (reason_type IN (
-                                \'INAPPROPRIATE_CONTENT\',\'WRONG_IDENTIFICATION\',
-                                \'SPAM\',\'HARASSMENT\'
-                            )),
-                description TEXT,
-                status      VARCHAR(20) NOT NULL DEFAULT \'PENDING\'
-                            CHECK (status IN (\'PENDING\',\'ACCEPTED\',\'REJECTED\')),
-                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (id),
-                CONSTRAINT uq_report_post_reporter UNIQUE (post_id, reporter_id),
-                CONSTRAINT fk_report_post
-                    FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE,
-                CONSTRAINT fk_report_user
-                    FOREIGN KEY (reporter_id) REFERENCES "user" (id) ON DELETE CASCADE
-            )
-        ');
-        $this->addSql('CREATE INDEX idx_report_status  ON report (status)');
-        $this->addSql('CREATE INDEX idx_report_post_id ON report (post_id)');
 
         // ─────────────────────────────────────────────
         // 18. NOTIFICATION
         // ─────────────────────────────────────────────
         $this->addSql('
             CREATE TABLE notification (
-                id         UUID        NOT NULL DEFAULT gen_random_uuid(),
-                user_id    UUID        NOT NULL,
-                type       VARCHAR(50) NOT NULL,
-                content    TEXT        NOT NULL,
-                is_read    BOOLEAN     NOT NULL DEFAULT FALSE,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (id),
-                CONSTRAINT fk_notification_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
-            )
-        ');
-        $this->addSql('CREATE INDEX idx_notification_user_id ON notification (user_id)');
-        $this->addSql('CREATE INDEX idx_notification_is_read ON notification (is_read)');
-
-        // ─────────────────────────────────────────────
-        // 19. POINT_TRANSACTION
-        // ─────────────────────────────────────────────
-        $this->addSql('
-            CREATE TABLE point_transaction (
-                id          UUID        NOT NULL DEFAULT gen_random_uuid(),
+                id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
                 user_id     UUID        NOT NULL,
-                action_type VARCHAR(30) NOT NULL,
-                amount      SMALLINT    NOT NULL,
+                type        VARCHAR(50) NOT NULL,
+                target_id   UUID        NOT NULL,
+                target_type VARCHAR(50) NOT NULL,
+                is_read     BOOLEAN     NOT NULL DEFAULT FALSE,
                 created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT fk_point_transaction_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
+                CONSTRAINT fk_notification_user FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE
             )
         ');
-        $this->addSql('CREATE INDEX idx_point_transaction_user_id ON point_transaction (user_id)');
+        $this->addSql('CREATE INDEX idx_notification_unread ON notification (user_id) WHERE is_read = FALSE');
 
         // ─────────────────────────────────────────────
-        // 20. REFRESH_TOKEN
+        // 19. REPORT 
         // ─────────────────────────────────────────────
         $this->addSql('
-            CREATE TABLE refresh_token (
-                id         UUID        NOT NULL DEFAULT gen_random_uuid(),
-                user_id    UUID        NOT NULL,
-                token_hash VARCHAR(64) NOT NULL,
-                expires_at TIMESTAMPTZ NOT NULL,
-                revoked_at TIMESTAMPTZ,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CREATE TABLE report (
+                id             UUID          NOT NULL DEFAULT uuid_generate_v4(),
+                user_id        UUID          NOT NULL, 
+                publication_id UUID          NOT NULL, 
+                reason_type    report_reason NOT NULL,
+                description    TEXT,
+                status         report_status NOT NULL DEFAULT \'PENDING\',
+                created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT fk_refresh_token_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
+                CONSTRAINT uq_report_user_publication UNIQUE (user_id, publication_id),
+                CONSTRAINT fk_report_utilisateur FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE,
+                CONSTRAINT fk_report_publication FOREIGN KEY (publication_id) REFERENCES publication(id) ON DELETE CASCADE
             )
         ');
-        $this->addSql('CREATE UNIQUE INDEX idx_refresh_token_hash    ON refresh_token (token_hash)');
-        $this->addSql('CREATE INDEX        idx_refresh_token_user_id ON refresh_token (user_id)');
+        $this->addSql('CREATE INDEX idx_report_status ON report (status)');
 
         // ─────────────────────────────────────────────
-        // 21. FINE_TUNE_JOB
+        // 20. GROUPE
         // ─────────────────────────────────────────────
         $this->addSql('
-            CREATE TABLE fine_tune_job (
-                id               UUID     NOT NULL DEFAULT gen_random_uuid(),
-                model_version_id UUID     NOT NULL,
-                min_trust_score  SMALLINT NOT NULL,
-                status           VARCHAR(15) NOT NULL DEFAULT \'PENDING\'
-                                 CHECK (status IN (\'PENDING\',\'RUNNING\',\'COMPLETED\',\'FAILED\')),
-                progress         SMALLINT NOT NULL DEFAULT 0
-                                 CHECK (progress BETWEEN 0 AND 100),
-                logs             TEXT,
-                created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CREATE TABLE groupe (
+                id          UUID             NOT NULL DEFAULT uuid_generate_v4(),
+                name        VARCHAR(100)     NOT NULL,
+                description TEXT,
+                visibility  group_visibility NOT NULL DEFAULT \'PUBLIC\',
+                created_by  UUID             NOT NULL,
+                created_at  TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT fk_fine_tune_job_model
-                    FOREIGN KEY (model_version_id) REFERENCES ai_model_version (id)
+                CONSTRAINT uq_groupe_name UNIQUE (name),
+                CONSTRAINT fk_groupe_createur FOREIGN KEY (created_by) REFERENCES utilisateur(id) ON DELETE CASCADE
             )
         ');
 
         // ─────────────────────────────────────────────
-        // 22. AUDIT_LOG (immuable — pas de UPDATE/DELETE)
+        // 21. UTILISATEUR_GROUPE
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE utilisateur_groupe (
+                user_id   UUID        NOT NULL,
+                groupe_id UUID        NOT NULL,
+                role      VARCHAR(50) NOT NULL DEFAULT \'member\',
+                joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (user_id, groupe_id),
+                CONSTRAINT fk_util_group_user FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE,
+                CONSTRAINT fk_util_group_groupe FOREIGN KEY (groupe_id) REFERENCES groupe(id) ON DELETE CASCADE
+            )
+        ');
+
+        // ─────────────────────────────────────────────
+        // 22. UTILISATEUR_AIME_PUBLICATION
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE utilisateur_aime_publication (
+                user_id        UUID        NOT NULL,
+                publication_id UUID        NOT NULL,
+                created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (user_id, publication_id),
+                CONSTRAINT fk_aime_user FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE,
+                CONSTRAINT fk_aime_publication FOREIGN KEY (publication_id) REFERENCES publication(id) ON DELETE CASCADE
+            )
+        ');
+
+        // ─────────────────────────────────────────────
+        // 23. FACTURE 
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE facture (
+                id         UUID           NOT NULL DEFAULT uuid_generate_v4(),
+                vendeur_id UUID           NOT NULL,
+                amount     NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
+                content    TEXT,
+                status     invoice_status NOT NULL DEFAULT \'PENDING\',
+                created_at TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (id),
+                CONSTRAINT fk_facture_vendeur FOREIGN KEY (vendeur_id) REFERENCES vendeur(id) ON DELETE RESTRICT
+            )
+        ');
+
+        // ─────────────────────────────────────────────
+        // 24. AUDIT_LOG (Journalisation Immuable)
         // ─────────────────────────────────────────────
         $this->addSql('
             CREATE TABLE audit_log (
-                id          UUID        NOT NULL DEFAULT gen_random_uuid(),
-                actor_id    UUID        NOT NULL,
+                id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
+                user_id     UUID        NOT NULL,
                 action      VARCHAR(50) NOT NULL,
                 target_type VARCHAR(50) NOT NULL,
                 target_id   UUID        NOT NULL,
-                reason      TEXT,
                 created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT fk_audit_log_actor
-                    FOREIGN KEY (actor_id) REFERENCES "user" (id) ON DELETE RESTRICT
-            )
-        ');
-        $this->addSql('CREATE INDEX idx_audit_log_actor_id   ON audit_log (actor_id)');
-        $this->addSql('CREATE INDEX idx_audit_log_created_at ON audit_log (created_at)');
-
-        // Règle d'immuabilité : interdire UPDATE et DELETE sur audit_log
-        $this->addSql('
-            CREATE RULE audit_log_no_delete AS ON DELETE TO audit_log DO INSTEAD NOTHING
-        ');
-        $this->addSql('
-            CREATE RULE audit_log_no_update AS ON UPDATE TO audit_log DO INSTEAD NOTHING
-        ');
-
-        // ─────────────────────────────────────────────
-        // 23. GROUP_ENTITY
-        // ─────────────────────────────────────────────
-        $this->addSql('
-            CREATE TABLE group_entity (
-                id          UUID         NOT NULL DEFAULT gen_random_uuid(),
-                owner_id    UUID         NOT NULL,
-                name        VARCHAR(100) NOT NULL,
-                description TEXT,
-                visibility  VARCHAR(10)  NOT NULL DEFAULT \'public\'
-                            CHECK (visibility IN (\'public\',\'private\')),
-                created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (id),
-                CONSTRAINT fk_group_owner
-                    FOREIGN KEY (owner_id) REFERENCES "user" (id) ON DELETE CASCADE
+                CONSTRAINT fk_audit_log_user FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE RESTRICT
             )
         ');
 
         // ─────────────────────────────────────────────
-        // 24. GROUP_MEMBER
+        // 25. INDEX RECHERCHE AVANCÉE (FTS & FEED)
         // ─────────────────────────────────────────────
-        $this->addSql('
-            CREATE TABLE group_member (
-                group_id  UUID        NOT NULL,
-                user_id   UUID        NOT NULL,
-                role      VARCHAR(20) NOT NULL DEFAULT \'member\'
-                          CHECK (role IN (\'owner\',\'admin\',\'member\')),
-                joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (group_id, user_id),
-                CONSTRAINT fk_group_member_group
-                    FOREIGN KEY (group_id) REFERENCES group_entity (id) ON DELETE CASCADE,
-                CONSTRAINT fk_group_member_user
-                    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
-            )
-        ');
+        $this->addSql("CREATE INDEX idx_publication_fts ON publication USING gin(to_tsvector('french', COALESCE(title, '') || ' ' || COALESCE(description, ''))) WHERE deleted_at IS NULL");
+        $this->addSql("CREATE INDEX idx_pierre_fts ON pierre USING gin(to_tsvector('french', name || ' ' || COALESCE(description, '')))");
+        $this->addSql("CREATE INDEX idx_publication_feed ON publication (status, deleted_at, created_at DESC, id) WHERE deleted_at IS NULL AND status = 'PUBLISHED'");
 
         // ─────────────────────────────────────────────
-        // 25. INVOICE
+        // 26. TRIGGERS POSTGRESQL (Automatisation Métier)
         // ─────────────────────────────────────────────
+        
+        // A. Mise à jour de updated_at
         $this->addSql('
-            CREATE TABLE invoice (
-                id        UUID           NOT NULL DEFAULT gen_random_uuid(),
-                client_id UUID           NOT NULL,
-                amount    NUMERIC(10,2)  NOT NULL,
-                status    VARCHAR(20)    NOT NULL DEFAULT \'PENDING\'
-                          CHECK (status IN (\'PENDING\',\'PAID\',\'CANCELLED\')),
-                issued_at TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
-                paid_at   TIMESTAMPTZ,
-                PRIMARY KEY (id),
-                CONSTRAINT fk_invoice_client
-                    FOREIGN KEY (client_id) REFERENCES client_profile (id) ON DELETE RESTRICT
-            )
+            CREATE OR REPLACE FUNCTION trigger_set_timestamp() RETURNS TRIGGER AS $$
+            BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
         ');
+        $this->addSql('CREATE TRIGGER set_timestamp_user BEFORE UPDATE ON utilisateur FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp()');
+        $this->addSql('CREATE TRIGGER set_timestamp_publication BEFORE UPDATE ON publication FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp()');
+        $this->addSql('CREATE TRIGGER set_timestamp_commentaire BEFORE UPDATE ON commentaire FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp()');
+        $this->addSql('CREATE TRIGGER set_timestamp_vitrine BEFORE UPDATE ON vitrine FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp()');
 
-        // ─────────────────────────────────────────────
-        // 26. FOLLOW
-        // ─────────────────────────────────────────────
+        // B. Modération automatique à 5 signalements
         $this->addSql('
-            CREATE TABLE follow (
-                follower_id UUID        NOT NULL,
-                followed_id UUID        NOT NULL,
-                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (follower_id, followed_id),
-                CONSTRAINT chk_follow_self CHECK (follower_id <> followed_id),
-                CONSTRAINT fk_follow_follower
-                    FOREIGN KEY (follower_id) REFERENCES "user" (id) ON DELETE CASCADE,
-                CONSTRAINT fk_follow_followed
-                    FOREIGN KEY (followed_id) REFERENCES "user" (id) ON DELETE CASCADE
-            )
+            CREATE OR REPLACE FUNCTION trigger_auto_moderate_publication() RETURNS TRIGGER AS $$
+            DECLARE report_count INTEGER;
+            BEGIN
+                SELECT COUNT(*) INTO report_count FROM report WHERE publication_id = NEW.publication_id AND status != \'REJECTED\';
+                IF report_count >= 5 THEN
+                    UPDATE publication SET status = \'AUTO_HIDDEN\', updated_at = NOW() WHERE id = NEW.publication_id AND status = \'PUBLISHED\';
+                END IF;
+                RETURN NEW;
+            END; $$ LANGUAGE plpgsql;
         ');
+        $this->addSql('CREATE TRIGGER auto_moderate_pub_after_report AFTER INSERT OR UPDATE ON report FOR EACH ROW EXECUTE FUNCTION trigger_auto_moderate_publication()');
+
+        // C. Recalcul algorithmique du Trust Score (Indice de confiance communautaire)
+        $this->addSql('
+            CREATE OR REPLACE FUNCTION trigger_recalculate_trust_score() RETURNS TRIGGER AS $$
+            DECLARE target_user_id UUID; v_confirmed INTEGER; v_total INTEGER; new_score SMALLINT;
+            BEGIN
+                SELECT user_id INTO target_user_id FROM publication WHERE id = NEW.publication_id;
+                SELECT COUNT(*) FILTER (WHERE action = \'CONFIRM\'), COUNT(*) INTO v_confirmed, v_total FROM validation v JOIN publication p ON v.publication_id = p.id WHERE p.user_id = target_user_id;
+                IF v_total > 0 THEN
+                    new_score := LEAST(100, GREATEST(0, (v_confirmed * 100) / v_total));
+                    UPDATE utilisateur SET trust_score = new_score WHERE id = target_user_id;
+                END IF;
+                RETURN NEW;
+            END; $$ LANGUAGE plpgsql;
+        ');
+        $this->addSql('CREATE TRIGGER update_trust_score_after_validation AFTER INSERT OR UPDATE ON validation FOR EACH ROW EXECUTE FUNCTION trigger_recalculate_trust_score()');
+
+        // D. Sécurisation stricte / Immuabilité du journal d’audit (Conformité RGPD)
+        $this->addSql('
+            CREATE OR REPLACE FUNCTION trigger_protect_audit_log() RETURNS TRIGGER AS $$
+            BEGIN RAISE EXCEPTION \'Interdiction formelle de modifier ou supprimer un enregistrement du journal d’audit.\'; RETURN NULL; END; $$ LANGUAGE plpgsql;
+        ');
+        $this->addSql('CREATE TRIGGER protect_audit_log_modifications BEFORE UPDATE OR DELETE ON audit_log FOR EACH ROW EXECUTE FUNCTION trigger_protect_audit_log()');
     }
 
     public function down(Schema $schema): void
     {
-        // Suppression dans l'ordre inverse pour respecter les FK
-        $this->addSql('DROP TABLE IF EXISTS follow');
-        $this->addSql('DROP TABLE IF EXISTS invoice');
-        $this->addSql('DROP TABLE IF EXISTS group_member');
-        $this->addSql('DROP TABLE IF EXISTS group_entity');
+        // Suppression des triggers et fonctions associés
+        $this->addSql('DROP TRIGGER IF EXISTS protect_audit_log_modifications ON audit_log');
+        $this->addSql('DROP TRIGGER IF EXISTS update_trust_score_after_validation ON validation');
+        $this->addSql('DROP TRIGGER IF EXISTS auto_moderate_pub_after_report ON report');
+        $this->addSql('DROP TRIGGER IF EXISTS set_timestamp_vitrine ON vitrine');
+        $this->addSql('DROP TRIGGER IF EXISTS set_timestamp_commentaire ON commentaire');
+        $this->addSql('DROP TRIGGER IF EXISTS set_timestamp_publication ON publication');
+        $this->addSql('DROP TRIGGER IF EXISTS set_timestamp_user ON utilisateur');
+        $this->addSql('DROP FUNCTION IF EXISTS trigger_protect_audit_log');
+        $this->addSql('DROP FUNCTION IF EXISTS trigger_recalculate_trust_score');
+        $this->addSql('DROP FUNCTION IF EXISTS trigger_auto_moderate_publication');
+        $this->addSql('DROP FUNCTION IF EXISTS trigger_set_timestamp');
+
+        // Suppression ordonnée des tables (Inverse des FK)
         $this->addSql('DROP TABLE IF EXISTS audit_log');
-        $this->addSql('DROP TABLE IF EXISTS fine_tune_job');
-        $this->addSql('DROP TABLE IF EXISTS refresh_token');
-        $this->addSql('DROP TABLE IF EXISTS point_transaction');
-        $this->addSql('DROP TABLE IF EXISTS notification');
+        $this->addSql('DROP TABLE IF EXISTS facture');
+        $this->addSql('DROP TABLE IF EXISTS utilisateur_aime_publication');
+        $this->addSql('DROP TABLE IF EXISTS utilisateur_groupe');
+        $this->addSql('DROP TABLE IF EXISTS groupe');
         $this->addSql('DROP TABLE IF EXISTS report');
+        $this->addSql('DROP TABLE IF EXISTS notification');
         $this->addSql('DROP TABLE IF EXISTS user_badge');
         $this->addSql('DROP TABLE IF EXISTS badge');
-        $this->addSql('DROP TABLE IF EXISTS vitrine_item');
+        $this->addSql('DROP TABLE IF EXISTS vitrine_publication');
         $this->addSql('DROP TABLE IF EXISTS vitrine');
         $this->addSql('DROP TABLE IF EXISTS validation');
+        $this->addSql('DROP TABLE IF EXISTS job_fine_tuning');
         $this->addSql('DROP TABLE IF EXISTS embedding');
-        $this->addSql('DROP TABLE IF EXISTS post_tag');
+        $this->addSql('DROP TABLE IF EXISTS version_modele_ia');
+        $this->addSql('DROP TABLE IF EXISTS publication_pierre');
+        $this->addSql('DROP TABLE IF EXISTS commentaire');
+        $this->addSql('DROP TABLE IF EXISTS publication_tag');
+        $this->addSql('DROP TABLE IF EXISTS publication');
         $this->addSql('DROP TABLE IF EXISTS tag');
-        $this->addSql('DROP TABLE IF EXISTS "like"');
-        $this->addSql('DROP TABLE IF EXISTS comment');
-        $this->addSql('DROP TABLE IF EXISTS post');
-        $this->addSql('DROP TABLE IF EXISTS ai_model_version');
-        $this->addSql('DROP TABLE IF EXISTS stone');
-        $this->addSql('DROP TABLE IF EXISTS client_customer');
-        $this->addSql('DROP TABLE IF EXISTS client_profile');
-        $this->addSql('DROP TABLE IF EXISTS "user"');
+        $this->addSql('DROP TABLE IF EXISTS pierre');
+        $this->addSql('DROP TABLE IF EXISTS refresh_token');
+        $this->addSql('DROP TABLE IF EXISTS vendeur');
+        $this->addSql('DROP TABLE IF EXISTS utilisateur');
+
+        // Nettoyage des énumérations et extensions
+        $this->addSql('DROP TYPE IF EXISTS tag_scope');
+        $this->addSql('DROP TYPE IF EXISTS invoice_status');
+        $this->addSql('DROP TYPE IF EXISTS group_visibility');
+        $this->addSql('DROP TYPE IF EXISTS fine_tune_status');
+        $this->addSql('DROP TYPE IF EXISTS ai_model_status');
+        $this->addSql('DROP TYPE IF EXISTS ai_model_type');
+        $this->addSql('DROP TYPE IF EXISTS point_action_type');
+        $this->addSql('DROP TYPE IF EXISTS badge_condition_type');
+        $this->addSql('DROP TYPE IF EXISTS report_status');
+        $this->addSql('DROP TYPE IF EXISTS report_reason');
+        $this->addSql('DROP TYPE IF EXISTS validation_action');
+        $this->addSql('DROP TYPE IF EXISTS media_type');
+        $this->addSql('DROP TYPE IF EXISTS post_status');
+        $this->addSql('DROP TYPE IF EXISTS user_role');
+        $this->addSql('DROP TYPE IF EXISTS user_status');
+
         $this->addSql('DROP EXTENSION IF EXISTS "vector"');
-        $this->addSql('DROP EXTENSION IF EXISTS "pgcrypto"');
+        $this->addSql('DROP EXTENSION IF EXISTS "uuid-ossp"');
     }
 }

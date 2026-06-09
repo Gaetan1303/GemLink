@@ -13,7 +13,7 @@
   - [2. Types énumérés (ENUM)](#2-types-énumérés-enum)
   - [3. Tables](#3-tables)
     - [3.1 USER](#31-user)
-    - [3.2 CLIENT\_PROFILE](#32-client_profile)
+    - [3.2 VENDEUR](#32-vendeur)
     - [3.3 REFRESH\_TOKEN](#33-refresh_token)
     - [3.4 STONE](#34-stone)
     - [3.5 TAG](#35-tag)
@@ -226,10 +226,10 @@ COMMENT ON COLUMN "user".status      IS 'Cycle de vie du compte : PENDING_VALIDA
 
 ---
 
-### 3.2 CLIENT_PROFILE
+### 3.2 VENDEUR
 
 ```sql
-CREATE TABLE client_profile (
+CREATE TABLE vendeur (
     id                      UUID            PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id                 UUID            NOT NULL,
     company_name            VARCHAR(150)    NOT NULL,
@@ -240,17 +240,17 @@ CREATE TABLE client_profile (
     created_at              TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     updated_at              TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT fk_client_profile_user
+    CONSTRAINT fk_vendeur_user
         FOREIGN KEY (user_id) REFERENCES "user"(id)
         ON DELETE CASCADE,
-    CONSTRAINT uq_client_profile_user UNIQUE (user_id)
+    CONSTRAINT uq_vendeur_user UNIQUE (user_id)
 );
 
-CREATE INDEX idx_client_profile_user_id ON client_profile (user_id);
+CREATE INDEX idx_vendeur_user_id ON vendeur (user_id);
 
-COMMENT ON TABLE  client_profile                      IS 'Profil étendu pour les utilisateurs ayant le rôle client (professionnels).';
-COMMENT ON COLUMN client_profile.siret                IS 'Numéro SIRET (14 chiffres), optionnel pour les auto-entrepreneurs.';
-COMMENT ON COLUMN client_profile.subscription_plan    IS 'Plan d''abonnement actif (ex : starter, pro, enterprise).';
+COMMENT ON TABLE  vendeur                      IS 'Profil étendu pour les utilisateurs ayant le rôle vendeur (professionnels).';
+COMMENT ON COLUMN vendeur.siret                IS 'Numéro SIRET (14 chiffres), optionnel pour les auto-entrepreneurs.';
+COMMENT ON COLUMN vendeur.subscription_plan    IS 'Plan d''abonnement actif (ex : starter, pro, enterprise).';
 ```
 
 ---
@@ -349,6 +349,8 @@ CREATE TABLE post (
     media_url    TEXT        NOT NULL,
     media_type   media_type  NOT NULL,
     status       post_status NOT NULL DEFAULT 'PENDING_ANALYSIS',
+    view_count   INTEGER     NOT NULL DEFAULT 0
+                                    CONSTRAINT chk_post_view_count CHECK (view_count >= 0),
     is_sponsored BOOLEAN     NOT NULL DEFAULT FALSE,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -369,6 +371,7 @@ CREATE INDEX idx_post_created_at ON post (created_at DESC);
 CREATE INDEX idx_post_active     ON post (created_at DESC)
     WHERE deleted_at IS NULL AND status = 'PUBLISHED';
 CREATE INDEX idx_post_sponsored  ON post (is_sponsored) WHERE is_sponsored = TRUE;
+CREATE INDEX idx_post_view_count  ON post (view_count DESC);
 
 COMMENT ON TABLE  post             IS 'Publications des utilisateurs contenant un média (image ou vidéo) d''une pierre.';
 COMMENT ON COLUMN post.status      IS 'Cycle de vie : PENDING_ANALYSIS → ANALYZED / ANALYSIS_FAILED → PUBLISHED / AUTO_HIDDEN.';
@@ -871,7 +874,7 @@ CREATE TABLE invoice (
     paid_at     TIMESTAMPTZ,
 
     CONSTRAINT fk_invoice_client
-        FOREIGN KEY (client_id) REFERENCES client_profile(id)
+        FOREIGN KEY (client_id) REFERENCES vendeur(id)
         ON DELETE RESTRICT
 );
 
@@ -996,8 +999,8 @@ CREATE TRIGGER trg_fine_tune_job_updated_at
     BEFORE UPDATE ON fine_tune_job
     FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 
-CREATE TRIGGER trg_client_profile_updated_at
-    BEFORE UPDATE ON client_profile
+CREATE TRIGGER trg_vendeur_updated_at
+    BEFORE UPDATE ON vendeur
     FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 ```
 
@@ -1132,7 +1135,7 @@ CREATE POLICY policy_invoice_own
     TO gemlink_app
     USING (
         client_id IN (
-            SELECT id FROM client_profile
+            SELECT id FROM vendeur
             WHERE user_id = current_setting('app.current_user_id')::UUID
         )
     );
@@ -1147,7 +1150,7 @@ ALTER ROLE gemlink_admin BYPASSRLS;
 
 | Table source | Colonne FK | Table cible | Cardinalité | ON DELETE |
 |---|---|---|---|---|
-| `client_profile` | `user_id` | `user` | 1–1 | CASCADE |
+| `vendeur` | `user_id` | `user` | 1–1 | CASCADE |
 | `refresh_token` | `user_id` | `user` | N–1 | CASCADE |
 | `post` | `user_id` | `user` | N–1 | CASCADE |
 | `post` | `stone_id` | `stone` | N–0..1 | SET NULL |
@@ -1177,5 +1180,5 @@ ALTER ROLE gemlink_admin BYPASSRLS;
 | `group_member` | `user_id` | `user` | N–1 | CASCADE |
 | `follow` | `follower_id` | `user` | N–1 | CASCADE |
 | `follow` | `followed_id` | `user` | N–1 | CASCADE |
-| `invoice` | `client_id` | `client_profile` | N–1 | RESTRICT |
+| `invoice` | `client_id` | `vendeur` | N–1 | RESTRICT |
 | `audit_log` | `actor_id` | `user` | N–1 | RESTRICT |
