@@ -1,7 +1,7 @@
 
 services:
   database:
-    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    image: pgvector/pgvector:pg16
     container_name: gemlink_postgres
 
     environment:

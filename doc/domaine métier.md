@@ -35,8 +35,8 @@
     - [BC-6 — Modération](#bc-6--modération)
       - [Agrégat : `Signalement`](#agrégat--signalement)
       - [Règles métier du contexte](#règles-métier-du-contexte-5)
-    - [BC-7 — Espace Client](#bc-7--espace-client)
-      - [Agrégat : `GalerieClient`](#agrégat--galerieclient)
+    - [BC-7 — Espace Vendeur](#bc-7--espace-vendeur)
+      - [Agrégat : `GalerieVendeur`](#agrégat--galerievendeur)
       - [Règles métier du contexte](#règles-métier-du-contexte-6)
   - [5. Événements du domaine (Domain Events)](#5-événements-du-domaine-domain-events)
     - [Catalogue des événements](#catalogue-des-événements)
@@ -64,7 +64,7 @@ GemLink est une plateforme de **partage communautaire et de reconnaissance de pi
 | **Visiteur** | Consulte le contenu public sans interagir. |
 | **User** | Publie, interagit, identifie des pierres et contribue à la validation communautaire. |
 | **Expert** | User à Trust Score élevé dont les validations ont un poids maximal dans le consensus. |
-| **Client** | Professionnel gérant sa propre galerie, vitrine et clientèle. |
+| **Vendeur** | Professionnel gérant sa propre galerie, vitrine et clientèle. |
 | **Modérateur** | User mandaté pour traiter les signalements et maintenir la qualité du contenu. |
 | **Administrateur** | Supervise l'ensemble du domaine, configure les paramètres métier et pilote l'IA. |
 
@@ -76,7 +76,7 @@ GemLink est une plateforme de **partage communautaire et de reconnaissance de pi
 graph TB
     subgraph BC1["BC-1 · Identité et Accès"]
         direction TB
-        A1["Aggregate : Compte\n──────────────────\nUser · ClientProfile\nRefreshToken"]
+        A1["Aggregate : Compte\n──────────────────\nUser · VendeurProfile\nRefreshToken"]
     end
 
     subgraph BC2["BC-2 · Réseau Social"]
@@ -106,9 +106,9 @@ graph TB
         A8["Aggregate : Signalement\n──────────────────\nReport · AuditLog"]
     end
 
-    subgraph BC7["BC-7 · Espace Client"]
+    subgraph BC7["BC-7 · Espace Vendeur"]
         direction TB
-        A9["Aggregate : GalerieClient\n──────────────────\nGalerie · Abonnement\nFacture · Mailing"]
+        A9["Aggregate : GalerieVendeur\n──────────────────\nGalerie · Abonnement\nFacture · Mailing"]
     end
 
     BC1 --> BC2
@@ -137,7 +137,7 @@ graph LR
     BC4(["BC-4\nCollections"])
     BC5(["BC-5\nGamification"])
     BC6(["BC-6\nModération"])
-    BC7(["BC-7\nEspace Client"])
+    BC7(["BC-7\nEspace Vendeur"])
 
     BC1 -- "U/D — fournit l'identité" --> BC2
     BC1 -- "U/D — fournit l'identité" --> BC3
@@ -180,10 +180,10 @@ Compte (Aggregate Root)
 │   ├── Value Object : Email          (format RFC 5322, unicité)
 │   ├── Value Object : PasswordHash   (Argon2id, non exposable)
 │   ├── Value Object : TrustScore     (0–100, calculé, immuable depuis l'extérieur)
-│   ├── Value Object : Role           (user | expert | moderator | client | admin)
+│   ├── Value Object : Role           (user | expert | moderator | vendeur | admin)
 │   └── Value Object : AccountStatus  (PENDING_VALIDATION | ACTIVE | BANNED)
 │
-├── Entité : ClientProfile            (uniquement si Role = client)
+├── Entité : VendeurProfile           (uniquement si Role = vendeur)
 │   ├── Value Object : Siret          (14 chiffres, optionnel)
 │   └── Value Object : SubscriptionPlan
 │
@@ -202,7 +202,7 @@ Compte (Aggregate Root)
 | IAC-4 | Le rôle `admin` ne peut être attribué que par un autre `admin`. |
 | IAC-5 | Un ban révoque immédiatement tous les `RefreshToken` actifs du compte. |
 | IAC-6 | La rotation de `RefreshToken` est obligatoire à chaque renouvellement de JWT. |
-| IAC-7 | Un `ClientProfile` ne peut exister que si `User.role = 'client'`. |
+| IAC-7 | Un `VendeurProfile` ne peut exister que si `User.role = 'vendeur'`. |
 | IAC-8 | Le `TrustScore` est calculé automatiquement. Il ne peut jamais être modifié manuellement, même par un admin. |
 
 ---
@@ -252,7 +252,7 @@ Groupe (Aggregate Root)
 | RSC-5 | Un utilisateur ne peut pas s'abonner à lui-même. |
 | RSC-6 | Un post supprimé (soft delete) reste en base pour l'audit mais n'est plus exposé dans les feeds. |
 | RSC-7 | La suppression d'un post entraîne la purge de ses médias sur le CDN, ses likes, ses commentaires et son embedding en cascade. |
-| RSC-8 | Un `Tag` de portée `client` n'est visible que dans l'espace de ce Client. |
+| RSC-8 | Un `Tag` de portée `vendeur` n'est visible que dans l'espace de ce Vendeur. |
 
 ---
 
@@ -390,7 +390,7 @@ Badge (Agrégat de référence)
 | GAM-5 | Les conditions de badge sont évaluées automatiquement par des Event Listeners après chaque action concernée. |
 | GAM-6 | Le `Leaderboard` Redis est mis à jour en temps réel. Une synchronisation complète depuis PostgreSQL est exécutée quotidiennement. |
 | GAM-7 | Le `TrustScore` est calculé par le BC-3 et consommé en lecture seule par le BC-5. |
-| GAM-8 | Un Client peut créer des badges personnalisés (`is_custom = true`) pour sa propre galerie. Ces badges n'apparaissent pas dans le leaderboard global. |
+| GAM-8 | Un Vendeur peut créer des badges personnalisés (`is_custom = true`) pour sa propre galerie. Ces badges n'apparaissent pas dans le leaderboard global. |
 
 ---
 
@@ -427,14 +427,14 @@ AuditLog (Entité immuable)
 
 ---
 
-### BC-7 — Espace Client
+### BC-7 — Espace Vendeur
 
 > Responsabilité : fournir aux professionnels (bijoutiers, musées, revendeurs) un espace de gestion de leur galerie, clientèle et facturation.
 
-#### Agrégat : `GalerieClient`
+#### Agrégat : `GalerieVendeur`
 
 ```
-GalerieClient (Aggregate Root — lié à ClientProfile)
+GalerieVendeur (Aggregate Root — lié à VendeurProfile)
 │
 ├── Value Object : PlanAbonnement     (starter | pro | enterprise)
 ├── Value Object : DateExpiration     (TTL de l'abonnement)
@@ -443,18 +443,18 @@ GalerieClient (Aggregate Root — lié à ClientProfile)
 │   ├── Value Object : Montant        (NUMERIC(10,2), > 0)
 │   └── Value Object : StatutFacture  (PENDING | PAID | CANCELLED)
 │
-└── Service : Mailing                 (envoi ciblé à la clientèle du Client)
+└── Service : Mailing                 (envoi ciblé à la clientèle du Vendeur)
 ```
 
 #### Règles métier du contexte
 
 | ID | Règle |
 |---|---|
-| CLI-1 | Un `ClientProfile` ne peut exister que pour un `User` avec `role = 'client'`. |
-| CLI-2 | Les tags créés par un Client ont une portée `client` : visibles uniquement dans son espace. |
-| CLI-3 | Les badges personnalisés créés par un Client n'apparaissent que dans sa galerie. |
-| CLI-4 | Un `ClientProfile` lié à des `Facture` ne peut pas être supprimé (`ON DELETE RESTRICT`). |
-| CLI-5 | Le mailing est limité à la clientèle propre du Client. Il ne peut pas cibler les utilisateurs d'autres Clients ou l'ensemble de la plateforme. |
+| CLI-1 | Un `VendeurProfile` ne peut exister que pour un `User` avec `role = 'vendeur'`. |
+| CLI-2 | Les tags créés par un Vendeur ont une portée `vendeur` : visibles uniquement dans son espace. |
+| CLI-3 | Les badges personnalisés créés par un Vendeur n'apparaissent que dans sa galerie. |
+| CLI-4 | Un `VendeurProfile` lié à des `Facture` ne peut pas être supprimé (`ON DELETE RESTRICT`). |
+| CLI-5 | Le mailing est limité à la clientèle propre du Vendeur. Il ne peut pas cibler les utilisateurs d'autres Vendeurs ou l'ensemble de la plateforme. |
 | CLI-6 | La facturation est déclenchée automatiquement lors du renouvellement ou de l'upgrade de l'abonnement. |
 
 ---
@@ -572,7 +572,7 @@ Ces règles s'appliquent transversalement à tous les Bounded Contexts.
 | **Embedding** | Représentation vectorielle d'une image (512 dimensions) permettant la recherche de similarité. |
 | **Similarité** | Proximité cosinus entre deux embeddings. Utilisée pour suggérer des posts de pierres visuellement proches. |
 | **Vitrine** | Collection publique de posts organisés par un utilisateur, partageable via URL et QR code. |
-| **Galerie** | Espace public de contenu d'un utilisateur ou d'un Client, regroupant ses posts et Vitrines. |
+| **Galerie** | Espace public de contenu d'un utilisateur ou d'un Vendeur, regroupant ses posts et Vitrines. |
 | **Soft delete** | Suppression logique : l'enregistrement reste en base (`deleted_at` renseigné) mais n'est plus exposé. |
 | **Worker** | Processus de fond consommant des messages d'une file Redis pour exécuter des tâches asynchrones. |
 | **Aggregate Root** | Entité principale d'un agrégat DDD, seul point d'entrée pour modifier l'état de l'agrégat. |

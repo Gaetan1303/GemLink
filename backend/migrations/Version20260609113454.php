@@ -1,6 +1,3 @@
-# Migration Doctrine — GemLink
-
-```php
 <?php
 
 namespace DoctrineMigrations;
@@ -8,7 +5,7 @@ namespace DoctrineMigrations;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-final class Version20240101000000 extends AbstractMigration
+final class Version20260609113454 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -211,10 +208,10 @@ final class Version20240101000000 extends AbstractMigration
         ');
 
         // ─────────────────────────────────────────────
-        // 10. VERSION_MODELE_IA
+        // 10. AI_MODEL_VERSION
         // ─────────────────────────────────────────────
         $this->addSql('
-            CREATE TABLE version_modele_ia (
+            CREATE TABLE ai_model_version (
                 id          UUID            NOT NULL DEFAULT uuid_generate_v4(),
                 name        VARCHAR(50)     NOT NULL,
                 model_type  ai_model_type   NOT NULL,
@@ -223,7 +220,7 @@ final class Version20240101000000 extends AbstractMigration
                 status      ai_model_status NOT NULL DEFAULT \'TRAINING\',
                 created_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT uq_version_modele_ia_name UNIQUE (name)
+                CONSTRAINT uq_ai_model_version_name UNIQUE (name)
             )
         ');
 
@@ -240,7 +237,7 @@ final class Version20240101000000 extends AbstractMigration
                 PRIMARY KEY (id),
                 CONSTRAINT uq_embedding_publication UNIQUE (publication_id),
                 CONSTRAINT fk_embedding_publication FOREIGN KEY (publication_id) REFERENCES publication(id) ON DELETE CASCADE,
-                CONSTRAINT fk_embedding_modele FOREIGN KEY (version_modele_ia_id) REFERENCES version_modele_ia(id) ON DELETE RESTRICT
+                CONSTRAINT fk_embedding_modele FOREIGN KEY (version_modele_ia_id) REFERENCES ai_model_version(id) ON DELETE RESTRICT
             )
         ');
         $this->addSql('CREATE INDEX idx_embedding_vector_hnsw ON embedding USING hnsw (vector_data vector_cosine_ops)');
@@ -256,7 +253,7 @@ final class Version20240101000000 extends AbstractMigration
                 status              fine_tune_status  NOT NULL DEFAULT \'PENDING\',
                 created_at          TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
-                CONSTRAINT fk_job_fine_tuning_modele FOREIGN KEY (version_modele_ia_id) REFERENCES version_modele_ia(id) ON DELETE RESTRICT
+                CONSTRAINT fk_job_fine_tuning_modele FOREIGN KEY (version_modele_ia_id) REFERENCES ai_model_version(id) ON DELETE RESTRICT
             )
         ');
 
@@ -568,7 +565,7 @@ final class Version20240101000000 extends AbstractMigration
         $this->addSql('DROP TABLE IF EXISTS validation');
         $this->addSql('DROP TABLE IF EXISTS job_fine_tuning');
         $this->addSql('DROP TABLE IF EXISTS embedding');
-        $this->addSql('DROP TABLE IF EXISTS version_modele_ia');
+        $this->addSql('DROP TABLE IF EXISTS ai_model_version');
         $this->addSql('DROP TABLE IF EXISTS publication_pierre');
         $this->addSql('DROP TABLE IF EXISTS commentaire');
         $this->addSql('DROP TABLE IF EXISTS publication_tag');
