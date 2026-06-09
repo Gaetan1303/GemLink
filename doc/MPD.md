@@ -9,10 +9,6 @@
 
 - [MPD — Modèle Physique des Données — GemLink](#mpd--modèle-physique-des-données--gemlink)
   - [Table des matières](#table-des-matières)
-  - [1. Extensions et configuration](#1-extensions-et-configuration)
-  - [2. Types énumérés (ENUM)](#2-types-énumérés-enum)
-  - [3. Tables](#3-tables)
-    - [3.1 USER](#31-user)
     - [3.2 VENDEUR](#32-vendeur)
     - [3.3 REFRESH\_TOKEN](#33-refresh_token)
     - [3.4 STONE](#34-stone)
@@ -46,25 +42,9 @@
   - [6. Politique de sécurité (Row Level Security)](#6-politique-de-sécurité-row-level-security)
   - [7. Résumé des relations](#7-résumé-des-relations)
 
----
-
-## 1. Extensions et configuration
-
 ```sql
--- Extensions obligatoires
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";     -- Génération d'UUID v4
-CREATE EXTENSION IF NOT EXISTS "pgvector";       -- Stockage et requêtes vectorielles
 
--- Paramètres de session recommandés
-SET default_text_search_config = 'french';
-SET timezone = 'Europe/Paris';
-```
 
----
-
-## 2. Types énumérés (ENUM)
-
-```sql
 -- Statut du compte utilisateur
 CREATE TYPE user_status AS ENUM (
     'PENDING_VALIDATION',
@@ -72,13 +52,13 @@ CREATE TYPE user_status AS ENUM (
     'BANNED'
 );
 
--- Rôle RBAC de l'utilisateur
+-- Rôle RBAC de l'utilisateur (valeurs en MAJUSCULES dans la migration)
 CREATE TYPE user_role AS ENUM (
-    'user',
-    'expert',
-    'moderator',
-    'client',
-    'admin'
+    'USER',
+    'EXPERT',
+    'MODERATOR',
+    'VENDEUR',
+    'ADMIN'
 );
 
 -- Statut d'un post
@@ -92,15 +72,15 @@ CREATE TYPE post_status AS ENUM (
 
 -- Type de média d'un post
 CREATE TYPE media_type AS ENUM (
-    'image',
-    'video'
+    'IMAGE',
+    'VIDEO'
 );
 
 -- Action de validation IA
 CREATE TYPE validation_action AS ENUM (
-    'confirm',
-    'correct',
-    'reject'
+    'CONFIRM',
+    'CORRECT',
+    'REJECT'
 );
 
 -- Motif de signalement
@@ -156,15 +136,36 @@ CREATE TYPE fine_tune_status AS ENUM (
     'FAILED'
 );
 
--- Visibilité d'un groupe
+-- Visibilité d'un groupe (valeurs en MAJ dans la migration)
 CREATE TYPE group_visibility AS ENUM (
-    'public',
-    'private'
+    'PUBLIC',
+    'PRIVATE'
 );
 
 -- Rôle dans un groupe
 CREATE TYPE group_member_role AS ENUM (
-    'owner',
+    'OWNER',
+    'ADMIN',
+    'MEMBER'
+);
+
+-- Statut d'une facture
+CREATE TYPE invoice_status AS ENUM (
+    'PENDING',
+    'PAID',
+    'CANCELLED'
+);
+
+-- Portée d'un tag (alignée sur la migration)
+CREATE TYPE tag_scope AS ENUM (
+    'GLOBAL',
+    'VENDEUR',
+    'USER'
+);
+```
+
+-- Remarque: les valeurs utilitaires (user_role, media_type, group_visibility, tag_scope, etc.) sont intentionallement en MAJUSCULES
+-- pour correspondre à la migration PHP générée et appliquée dans `backend/migrations/Version20260609113454.php`.
     'admin',
     'member'
 );
