@@ -13,11 +13,11 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
-#[ORM\Table(name: '`user`')]
-#[ORM\UniqueConstraint(name: 'idx_user_email', fields: ['email'])]
-#[ORM\UniqueConstraint(name: 'idx_user_username', fields: ['username'])]
-#[ORM\Index(name: 'idx_user_role', fields: ['role'])]
-#[ORM\Index(name: 'idx_user_status', fields: ['status'])]
+#[ORM\Table(name: 'utilisateur')]
+#[ORM\UniqueConstraint(name: 'uq_utilisateur_email', fields: ['email'])]
+#[ORM\UniqueConstraint(name: 'uq_utilisateur_username', fields: ['username'])]
+#[ORM\Index(name: 'idx_utilisateur_role', fields: ['role'])]
+#[ORM\Index(name: 'idx_utilisateur_status', fields: ['status'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     private const ROLES_AUTORISES = ['user', 'expert', 'moderator', 'client', 'admin'];

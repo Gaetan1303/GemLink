@@ -1,6 +1,27 @@
 doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
+        mapping_types:
+            ai_model_status: string
+            ai_model_type: string
+            badge_condition_type: string
+            fine_tune_status: string
+            group_visibility: string
+            invoice_status: string
+            media_type: string
+            point_action_type: string
+            post_status: string
+            report_reason: string
+            report_status: string
+            tag_scope: string
+            user_role: string
+            user_status: string
+            validation_action: string
+            vector: vector
+        types:
+            vector: Pgvector\Doctrine\VectorType
+            halfvec: Pgvector\Doctrine\HalfVectorType
+            sparsevec: Pgvector\Doctrine\SparseVectorType
 
         # IMPORTANT: You MUST configure your server version,
         # either here or in the DATABASE_URL env var (see .env file)
