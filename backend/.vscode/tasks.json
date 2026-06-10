@@ -1,0 +1,21 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "phpunit-auth-registration-test",
+			"type": "shell",
+			"command": "php",
+			"args": [
+				"bin/phpunit",
+				"--filter",
+				"InscriptionValidatorTest",
+				"--colors=always"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$phpunit"
+			],
+			"group": "test"
+		}
+	]
+}

@@ -175,133 +175,156 @@ graph TD
 erDiagram
 
     UTILISATEUR {
-        uuid id
+        uuid id PK
         string username
         string email
+        string password_hash
         int trust_score
         int points
         int level
-        string role
+        enum role
     }
 
-    PROFIL_CLIENT {
-        uuid id
+    VENDEUR {
+        uuid id PK
         string company_name
         string siret
         string subscription_plan
     }
 
     PUBLICATION {
-        uuid id
+        uuid id PK
         string title
-        string description
+        text description
         string media_type
-        string status
+        enum status
         boolean is_sponsored
+        int view_count
+    }
+
+    REPORT {
+        uuid id PK
+        string reason_type
+        text description
+        enum status
     }
 
     COMMENTAIRE {
-        uuid id
-        string content
-        datetime created_at
+        uuid id PK
+        text content
     }
 
     PIERRE {
-        uuid id
+        uuid id PK
         string name
         string category
         float hardness
+        text description
     }
 
     TAG {
-        uuid id
+        uuid id PK
         string name
         string scope
     }
 
     VITRINE {
-        uuid id
+        uuid id PK
         string title
         string slug
+        text description
         int view_count
     }
 
     BADGE {
-        uuid id
+        uuid id PK
         string name
+        text description
         string condition_type
         int condition_value
     }
 
     NOTIFICATION {
-        uuid id
+        uuid id PK
         string type
+        uuid target_id
+        string target_type
         boolean is_read
     }
 
     FACTURE {
-        uuid id
+        uuid id PK
         float amount
-        string status
+        text content
+        enum status
     }
 
     VERSION_MODELE_IA {
-        uuid id
+        uuid id PK
         string name
         string model_type
         float accuracy
+        text description
     }
 
     EMBEDDING {
-        uuid id
+        uuid id PK
         vector vector_data
     }
 
     JOB_FINE_TUNING {
-        uuid id
+        uuid id PK
         int min_trust_score
-        string status
+        enum status
     }
 
     AUDIT_LOG {
-        uuid id
+        uuid id PK
         string action
         string target_type
+        uuid target_id
     }
 
     GROUPE {
-        uuid id
+        uuid id PK
         string name
+        text description
         string visibility
     }
 
-    %% Relations principales
 
+    %% Relations d'héritage / extension de profil (One-to-One)
+    UTILISATEUR ||--o| VENDEUR : possede
+
+    %% Relations structures Un-à-Plusieurs (One-to-Many)
     UTILISATEUR ||--o{ PUBLICATION : publie
     UTILISATEUR ||--o{ COMMENTAIRE : redige
-    PUBLICATION ||--o{ COMMENTAIRE : recoit
-
-    UTILISATEUR ||--o| PROFIL_CLIENT : possede
-
-    PROFIL_CLIENT ||--o{ FACTURE : recoit
-    PROFIL_CLIENT ||--o{ BADGE : cree
-
-    UTILISATEUR }o--o{ PUBLICATION : aime
-    UTILISATEUR }o--o{ PUBLICATION : valide
-    UTILISATEUR }o--o{ PUBLICATION : signale
-
-    PUBLICATION }o--o{ TAG : tagge
-    PUBLICATION }o--o{ PIERRE : identifie
     UTILISATEUR ||--o{ VITRINE : cree
-    VITRINE }o--o{ PUBLICATION : contient
-    UTILISATEUR }o--o{ BADGE : obtient
     UTILISATEUR ||--o{ NOTIFICATION : recoit
     UTILISATEUR ||--o{ AUDIT_LOG : genere
+    UTILISATEUR ||--o{ GROUPE : "cree (proprietaire)"
+    PUBLICATION ||--o{ COMMENTAIRE : recoit
+    PUBLICATION ||--o{ EMBEDDING : genere
+
+    %% Câblage de l'Entité Métier REPORT
+    UTILISATEUR ||--o{ REPORT : emet
+    PUBLICATION ||--o{ REPORT : "fait l'objet de"
+    VENDEUR ||--o{ FACTURE : recoit
+    VENDEUR ||--o{ BADGE : "finance / cree"
     VERSION_MODELE_IA ||--o{ EMBEDDING : produit
-    PUBLICATION ||--|| EMBEDDING : genere
     VERSION_MODELE_IA ||--o{ JOB_FINE_TUNING : versionne
-    UTILISATEUR }o--o{ GROUPE : appartient
-    PROFIL_CLIENT }o--o{ UTILISATEUR : gere_clients
+
+    %% Associations Plusieurs-à-Plusieurs (Many-to-Many) porteuses de données
+    UTILISATEUR }o--o{ PUBLICATION : "aime (datetime created_at)"
+    UTILISATEUR }o--o{ BADGE : "obtient (datetime earned_at)"
+    PUBLICATION }o--o{ TAG : tagge
+    
+    %% Association porteuse de l'indice de confiance généré par l'IA
+    PUBLICATION }o--o{ PIERRE : "identifie (float confidence)"
+    VITRINE }o--o{ PUBLICATION : "contient (datetime added_at)"
+    UTILISATEUR }o--o{ GROUPE : "appartient (enum role, datetime joined_at)"
+    UTILISATEUR ||--o{ PUBLICATION : "effectue_validation (validation_action action, string proposed_label, int trust_score_snapshot)"
+    PIERRE ||--o{ PUBLICATION : "est_proposee_dans_validation"
 ```
 ---
 
@@ -309,283 +332,250 @@ erDiagram
 
 ```mermaid
 erDiagram
+    %% -- Tables principales --
+    UTILISATEUR {
+        uuid id PK
+        string username UK
+        string email UK
+        string password_hash
+        int trust_score
+        int points
+        int level
+        user_role role
+        datetime created_at
+        datetime updated_at
+    }
 
- USER {
- uuid id PK
- string username
- string email
- string password_hash
- string avatar_url
- string bio
- int trust_score
- string role
- int points
- int level
- string status
- timestamp created_at
- }
+    VENDEUR {
+        uuid id PK
+        uuid user_id UK,FK
+        string company_name
+        string siret UK
+        string subscription_plan
+        datetime created_at
+    }
 
- CLIENT_PROFILE {
- uuid id PK
- uuid user_id FK
- string company_name
- string siret
- string address
- string subscription_plan
- timestamp subscription_expires_at
- timestamp created_at
- }
+    PUBLICATION {
+        uuid id PK
+        uuid user_id FK
+        string title
+        text description
+        media_type media_type
+        publication_status status
+        boolean is_sponsored
+        datetime created_at
+        datetime updated_at
+        int view_count
+    }
 
- CLIENT_CUSTOMER {
- uuid client_id FK
- uuid customer_user_id FK
- timestamp created_at
- }
+    VALIDATION {
+        uuid id PK
+        uuid user_id FK
+        uuid publication_id FK
+        uuid pierre_id FK
+        validation_action action
+        string proposed_label
+        int trust_score_snapshot
+        datetime created_at
+    }
 
- POST {
- uuid id PK
- uuid user_id FK
- uuid stone_id FK
- string title
- string description
- string media_url
- string media_type
- string status
- boolean is_sponsored
- timestamp created_at
- timestamp deleted_at
- }
+    COMMENTAIRE {
+        uuid id PK
+        uuid user_id FK
+        uuid publication_id FK
+        text content
+        datetime created_at
+        datetime updated_at
+    }
 
- COMMENT {
- uuid id PK
- uuid post_id FK
- uuid user_id FK
- string content
- timestamp created_at
- timestamp deleted_at
- }
+    PIERRE {
+        uuid id PK
+        string name UK
+        string category
+        float hardness
+        text description
+        datetime created_at
+    }
 
- LIKE {
- uuid id PK
- uuid post_id FK
- uuid user_id FK
- timestamp created_at
- }
+    TAG {
+        uuid id PK
+        string name UK
+        string scope
+        datetime created_at
+    }
 
- TAG {
- uuid id PK
- uuid owner_id FK
- string name
- string scope
- }
+    VITRINE {
+        uuid id PK
+        uuid user_id FK
+        string title
+        string slug UK
+        text description
+        int view_count
+        datetime created_at
+        datetime updated_at
+    }
 
- POST_TAG {
- uuid post_id FK
- uuid tag_id FK
- }
+    REPORT {
+        uuid id PK
+        uuid user_id FK
+        uuid publication_id FK
+        report_reason_type reason_type
+        text description
+        report_status status
+        datetime created_at
+    }
 
- STONE {
- uuid id PK
- string name
- string category
- float hardness
- string crystal_system
- string composition
- string description
- }
+    BADGE {
+        uuid id PK
+        string name UK
+        text description
+        string condition_type
+        int condition_value
+        datetime created_at
+    }
 
- EMBEDDING {
- uuid id PK
- uuid post_id FK
- uuid model_version_id FK
- vector vector_data
- timestamp created_at
- }
+    NOTIFICATION {
+        uuid id PK
+        uuid user_id FK
+        notification_type type
+        uuid target_id
+        string target_type
+        boolean is_read
+        datetime created_at
+    }
 
- VALIDATION {
- uuid id PK
- uuid post_id FK
- uuid user_id FK
- string action
- string proposed_label
- int trust_score_snapshot
- timestamp created_at
- }
+    FACTURE {
+        uuid id PK
+        uuid client_id FK
+        float amount
+        text content
+        invoice_status status
+        datetime created_at
+        datetime paid_at
+    }
 
- VITRINE {
- uuid id PK
- uuid user_id FK
- string title
- string description
- string slug
- string qr_code_url
- int view_count
- boolean is_sponsored
- timestamp created_at
- }
+    VERSION_MODELE_IA {
+        uuid id PK
+        string name UK
+        model_type model_type
+        float accuracy
+        text description
+        datetime created_at
+    }
 
- VITRINE_ITEM {
- uuid id PK
- uuid vitrine_id FK
- uuid post_id FK
- int position
- }
+    EMBEDDING {
+        uuid id PK
+        uuid publication_id FK
+        uuid version_modele_ia_id FK
+        vector vector_data
+        datetime created_at
+    }
 
- BADGE {
- uuid id PK
- uuid created_by FK
- string name
- string description
- string icon_url
- string condition_type
- int condition_value
- boolean is_custom
- }
+    JOB_FINE_TUNING {
+        uuid id PK
+        uuid version_modele_ia_id FK
+        int min_trust_score
+        job_status status
+        datetime created_at
+        datetime started_at
+        datetime completed_at
+    }
 
- USER_BADGE {
- uuid user_id FK
- uuid badge_id FK
- timestamp earned_at
- }
+    AUDIT_LOG {
+        uuid id PK
+        uuid user_id FK
+        string action
+        string target_type
+        uuid target_id
+        datetime created_at
+    }
 
- REPORT {
- uuid id PK
- uuid post_id FK
- uuid reporter_id FK
- string reason_type
- string description
- string status
- timestamp created_at
- }
+    GROUPE {
+        uuid id PK
+        string name UK
+        text description
+        group_visibility visibility
+        datetime created_at
+        uuid created_by FK
+    }
 
- NOTIFICATION {
- uuid id PK
- uuid user_id FK
- string type
- string content
- boolean is_read
- timestamp created_at
- }
+    %% -- Tables de jointure --
+    UTILISATEUR_AIME_PUBLICATION {
+        uuid user_id PK,FK
+        uuid publication_id PK,FK
+        datetime created_at
+    }
 
- POINT_TRANSACTION {
- uuid id PK
- uuid user_id FK
- string action_type
- int amount
- timestamp created_at
- }
+    PUBLICATION_TAG {
+        uuid publication_id PK,FK
+        uuid tag_id PK,FK
+    }
 
- REFRESH_TOKEN {
- uuid id PK
- uuid user_id FK
- string token_hash
- timestamp expires_at
- timestamp revoked_at
- timestamp created_at
- }
+    PUBLICATION_PIERRE {
+        uuid publication_id PK,FK
+        uuid pierre_id PK,FK
+        float confidence
+    }
 
- AI_MODEL_VERSION {
- uuid id PK
- string name
- string model_type
- float accuracy
- float f1_score
- string status
- timestamp created_at
- }
+    VITRINE_PUBLICATION {
+        uuid vitrine_id PK,FK
+        uuid publication_id PK,FK
+        datetime added_at
+    }
 
- FINE_TUNE_JOB {
- uuid id PK
- uuid model_version_id FK
- int min_trust_score
- string status
- int progress
- string logs
- timestamp created_at
- }
+    UTILISATEUR_BADGE {
+        uuid user_id PK,FK
+        uuid badge_id PK,FK
+        datetime earned_at
+    }
 
- AUDIT_LOG {
- uuid id PK
- uuid actor_id FK
- string action
- string target_type
- uuid target_id
- string reason
- timestamp created_at
- }
+    UTILISATEUR_GROUPE {
+        uuid user_id PK,FK
+        uuid groupe_id PK,FK
+        string role
+        datetime joined_at
+    }
 
- GROUP_ENTITY {
- uuid id PK
- uuid owner_id FK
- string name
- string description
- string visibility
- timestamp created_at
- }
+    %% -- Relations principales --
+    UTILISATEUR ||--|| VENDEUR : possede
+    UTILISATEUR ||--o{ PUBLICATION : publie
+    UTILISATEUR ||--o{ COMMENTAIRE : redige
+    UTILISATEUR ||--o{ VITRINE : cree
+    UTILISATEUR ||--o{ NOTIFICATION : recoit
+    UTILISATEUR ||--o{ AUDIT_LOG : genere
+    UTILISATEUR ||--o{ VALIDATION : effectue
+    UTILISATEUR ||--o{ REPORT : signale
+    UTILISATEUR ||--o{ GROUPE : "cree (created_by)"
 
- GROUP_MEMBER {
- uuid group_id FK
- uuid user_id FK
- string role
- timestamp joined_at
- }
+    PUBLICATION ||--o{ COMMENTAIRE : recoit
+    PUBLICATION ||--o{ REPORT : est_signalee
+    PUBLICATION ||--o{ EMBEDDING : genere
+    PUBLICATION ||--o{ VALIDATION : subit
 
- INVOICE {
- uuid id PK
- uuid client_id FK
- float amount
- string status
- timestamp issued_at
- timestamp paid_at
- }
+    PIERRE ||--o{ VALIDATION : "est proposee"
+    VENDEUR ||--o{ FACTURE : recoit
+    VENDEUR ||--o{ BADGE : "finance / cree"
+    VERSION_MODELE_IA ||--o{ EMBEDDING : produit
+    VERSION_MODELE_IA ||--o{ JOB_FINE_TUNING : "est ameliore par"
 
- FOLLOW {
- uuid follower_id FK
- uuid followed_id FK
- timestamp created_at
- }
+    %% Câblage des relations Many-to-Many via les tables de jointure
+    UTILISATEUR ||--o{ UTILISATEUR_AIME_PUBLICATION : "ajoute mention j'aime"
+    PUBLICATION ||--o{ UTILISATEUR_AIME_PUBLICATION : "recoit mention j'aime"
 
- %% ── RELATIONS ─────────────────────────────────────────────────
+    PUBLICATION ||--o{ PUBLICATION_TAG : comporte
+    TAG ||--o{ PUBLICATION_TAG : associe
 
- USER ||--o{ POST : "publie"
- USER ||--o{ COMMENT : "rédige"
- USER ||--o{ LIKE : "effectue"
- USER ||--o{ VALIDATION : "soumet"
- USER ||--o{ VITRINE : "crée"
- USER ||--o{ USER_BADGE : "reçoit"
- USER ||--o{ REPORT : "signale"
- USER ||--o{ NOTIFICATION : "reçoit"
- USER ||--o{ POINT_TRANSACTION : "accumule"
- USER ||--o{ REFRESH_TOKEN : "possède"
- USER ||--o{ AUDIT_LOG : "génère"
- USER ||--o{ GROUP_MEMBER : "rejoint"
- USER ||--o{ FOLLOW : "suit (follower)"
- USER ||--o{ FOLLOW : "est suivi (followed)"
- USER ||--o| CLIENT_PROFILE : "possède"
+    PUBLICATION ||--o{ PUBLICATION_PIERRE : analyse
+    PIERRE ||--o{ PUBLICATION_PIERRE : reference
 
- CLIENT_PROFILE ||--o{ CLIENT_CUSTOMER : "gère"
- CLIENT_CUSTOMER }o--o| USER : "est client de"
+    VITRINE ||--o{ VITRINE_PUBLICATION : affiche
+    PUBLICATION ||--o{ VITRINE_PUBLICATION : "est exposee dans"
 
- CLIENT_PROFILE ||--o{ INVOICE : "reçoit"
- CLIENT_PROFILE ||--o{ BADGE : "crée"
+    UTILISATEUR ||--o{ UTILISATEUR_BADGE : decroche
+    BADGE ||--o{ UTILISATEUR_BADGE : attribue
 
- POST ||--o{ COMMENT : "reçoit"
- POST ||--o{ LIKE : "reçoit"
- POST ||--o{ VALIDATION : "reçoit"
- POST ||--o{ REPORT : "fait l'objet de"
- POST ||--o{ VITRINE_ITEM : "référencé dans"
- POST ||--o{ POST_TAG : "taggué par"
- POST ||--o| EMBEDDING : "génère"
- POST }o--o| STONE : "identifié comme"
-
- TAG ||--o{ POST_TAG : "associé à"
- VITRINE ||--o{ VITRINE_ITEM : "contient"
- BADGE ||--o{ USER_BADGE : "attribué via"
-
- AI_MODEL_VERSION ||--o{ EMBEDDING : "produit"
- AI_MODEL_VERSION ||--o{ FINE_TUNE_JOB : "versionnée par"
-
- GROUP_ENTITY ||--o{ GROUP_MEMBER : "compose"
+    UTILISATEUR ||--o{ UTILISATEUR_GROUPE : rejoint
+    GROUPE ||--o{ UTILISATEUR_GROUPE : "est compose de"
 ```
 
 ---
@@ -650,10 +640,10 @@ classDiagram
  +isActive() bool
  +isModerator() bool
  +isAdmin() bool
- +isClient() bool
+ +isVendeur() bool
  }
 
- class ClientProfile {
+ class Vendeur {
  -Uuid id
  -string companyName
  -string siret
@@ -672,21 +662,17 @@ classDiagram
  -MediaType mediaType
  -PostStatus status
  -bool isSponsored
- -DateTime deletedAt
+ -int viewCount
  +setStatus(status PostStatus) void
  +isAnalyzed() bool
  +isPendingAnalysis() bool
- +softDelete() void
  +getLikesCount() int
  +getCommentsCount() int
  }
 
  class Comment {
  -Uuid id
- -string content
- -DateTime deletedAt
- +softDelete() void
- +isDeleted() bool
+ -text content
  }
 
  class Like {
@@ -711,8 +697,7 @@ classDiagram
 
  class Embedding {
  -Uuid id
- -array vectorData
- -DateTime createdAt
+ -vector vectorData
  +computeCosineSimilarity(other Embedding) float
  }
 
@@ -818,7 +803,6 @@ classDiagram
  -string targetType
  -Uuid targetId
  -string reason
- -DateTime createdAt
  }
 
  class Group {
@@ -848,7 +832,7 @@ classDiagram
  USER
  EXPERT
  MODERATOR
- CLIENT
+ VENDEUR
  ADMIN
  }
 
@@ -937,7 +921,7 @@ classDiagram
  class TagScope {
  <<enumeration>>
  GLOBAL
- CLIENT
+ VENDEUR
  USER
  }
 
@@ -954,63 +938,68 @@ classDiagram
  CANCELLED
  }
 
- %% Implémentations
+ %% Implémentations et Compositions des Traits
  User ..|> UserInterface
- User ..> TimestampableTrait
- Post ..> TimestampableTrait
- Post ..> SoftDeletableTrait
- Comment ..> TimestampableTrait
- Comment ..> SoftDeletableTrait
- AuditLog ..> TimestampableTrait
+ User --> TimestampableTrait
+ Post --> TimestampableTrait
+ Post --> SoftDeletableTrait
+ Comment --> TimestampableTrait
+ Comment --> SoftDeletableTrait
+ AuditLog --> TimestampableTrait
+ Report --> TimestampableTrait
+ Invoice --> TimestampableTrait
+ Vendeur --> TimestampableTrait
+ Embedding --> TimestampableTrait
+ FineTuneJob --> TimestampableTrait
 
- %% Enums
- User ..> UserRole
- User ..> UserStatus
- Post ..> PostStatus
- Post ..> MediaType
- Validation ..> ValidationAction
- Report ..> ReportReason
- Report ..> ReportStatus
- Badge ..> ConditionType
- PointTransaction ..> PointActionType
- AiModelVersion ..> ModelType
- AiModelVersion ..> ModelStatus
- FineTuneJob ..> JobStatus
- Tag ..> TagScope
- Group ..> GroupVisibility
- Invoice ..> InvoiceStatus
+ %% Typage via Enums
+ User --> UserRole
+ User --> UserStatus
+ Post --> PostStatus
+ Post --> MediaType
+ Validation --> ValidationAction
+ Report --> ReportReason
+ Report --> ReportStatus
+ Badge --> ConditionType
+ PointTransaction --> PointActionType
+ AiModelVersion --> ModelType
+ AiModelVersion --> ModelStatus
+ FineTuneJob --> JobStatus
+ Tag --> TagScope
+ Group --> GroupVisibility
+ Invoice --> InvoiceStatus
 
- %% Associations
- User "1" o-- "0..*" Post : publie
- User "1" o-- "0..*" Comment : rédige
- User "1" o-- "0..*" Like : effectue
- User "1" o-- "0..*" Validation : soumet
- User "1" o-- "0..*" Vitrine : crée
- User "1" o-- "0..*" Badge : reçoit
- User "1" o-- "0..*" Report : signale
- User "1" o-- "0..*" Notification : reçoit
- User "1" o-- "0..*" PointTransaction : accumule
- User "1" o-- "0..*" RefreshToken : possède
- User "1" o-- "0..*" AuditLog : génère
- User "1" o-- "0..1" ClientProfile : possède
- User "0..*" o-- "0..*" Group : rejoint
+ 
+ User "1" o-- "*" Post : publie
+ User "1" o-- "*" Comment : rédige
+ User "1" o-- "*" Like : effectue
+ User "1" o-- "*" Validation : soumet
+ User "1" o-- "*" Vitrine : crée
+ User "1" o-- "*" Badge : reçoit
+ User "1" o-- "*" Report : signale
+ User "1" o-- "*" Notification : reçoit
+ User "1" o-- "*" PointTransaction : accumule
+ User "1" o-- "*" RefreshToken : possède
+ User "1" o-- "*" AuditLog : génère
+ User "1" o-- "0..1" Vendeur : possède
+ User "*" o-- "*" Group : rejoint
 
- ClientProfile "1" o-- "0..*" Invoice : reçoit
- ClientProfile "1" o-- "0..*" Badge : crée
+ Vendeur "1" o-- "*" Invoice : reçoit
+ Vendeur "1" o-- "*" Badge : crée
 
- Post "1" o-- "0..*" Comment : reçoit
- Post "1" o-- "0..*" Like : reçoit
- Post "1" o-- "0..*" Validation : reçoit
- Post "1" o-- "0..*" Report : reçoit
+ Post "1" o-- "*" Comment : reçoit
+ Post "1" o-- "*" Like : reçoit
+ Post "1" o-- "*" Validation : subit
+ Post "1" o-- "*" Report : reçoit
  Post "1" o-- "0..1" Embedding : génère
- Post "0..*" o-- "0..1" Stone : identifié comme
- Post "0..*" o-- "0..*" Tag : taggué par
+ Post "*" o-- "0..1" Stone : identifié comme
+ Post "*" o-- "*" Tag : taggué par
 
- Vitrine "1" *-- "0..*" VitrineItem : contient
- Post "1" o-- "0..*" VitrineItem : référencé par
+ Vitrine "1" *-- "*" VitrineItem : contient
+ Post "1" o-- "*" VitrineItem : référencé par
 
- AiModelVersion "1" o-- "0..*" Embedding : produit
- AiModelVersion "1" o-- "0..*" FineTuneJob : versionnée par
+ AiModelVersion "1" o-- "*" Embedding : produit
+ AiModelVersion "1" o-- "*" FineTuneJob : versionnée par
 ```
 
 ---
@@ -1300,7 +1289,7 @@ graph TB
 
 ### Fonctionnalités publiques et sociales
 
-| Fonctionnalité                     | Visiteur | User  | Client | Modérateur | Admin |
+| Fonctionnalité                     | Visiteur | User  | Vendeur | Modérateur | Admin |
 | ---------------------------------- | :------: | :---: | :----: | :--------: | :---: |
 | Consulter le feed global / Galerie |    o     |   o   |   o    |     o      |   o   |
 | Consulter une Vitrine publique     |    o     |   o   |   o    |     o      |   o   |
@@ -1313,7 +1302,7 @@ graph TB
 
 ### Posts et interactions
 
-| Fonctionnalité            | Visiteur | User  | Client | Modérateur | Admin |
+| Fonctionnalité            | Visiteur | User  | Vendeur | Modérateur | Admin |
 | ------------------------- | :------: | :---: | :----: | :--------: | :---: |
 | Publier un post           |    x     |   o   |   o    |     o      |   o   |
 | Modifier son propre post  |    x     |   o   |   o    |     o      |   o   |
@@ -1326,7 +1315,7 @@ graph TB
 
 ### Reconnaissance IA et similarité
 
-| Fonctionnalité                        | Visiteur | User  | Client | Modérateur | Admin |
+| Fonctionnalité                        | Visiteur | User  | Vendeur | Modérateur | Admin |
 | ------------------------------------- | :------: | :---: | :----: | :--------: | :---: |
 | Identifier une pierre (upload)        |    x     |   o   |   o    |     o      |   o   |
 | Voir le résultat IA d'un post         |    o     |   o   |   o    |     o      |   o   |
@@ -1339,7 +1328,7 @@ graph TB
 
 ### Collections (Vitrines)
 
-| Fonctionnalité            | Visiteur | User  | Client | Modérateur | Admin |
+| Fonctionnalité            | Visiteur | User  | Vendeur | Modérateur | Admin |
 | ------------------------- | :------: | :---: | :----: | :--------: | :---: |
 | Créer une Vitrine         |    x     |   o   |   o    |     o      |   o   |
 | Gérer sa propre Vitrine   |    x     |   o   |   o    |     o      |   o   |
@@ -1349,7 +1338,7 @@ graph TB
 
 ### Gamification et Trust Score
 
-| Fonctionnalité                    | Visiteur | User  | Client | Modérateur | Admin |
+| Fonctionnalité                    | Visiteur | User  | Vendeur | Modérateur | Admin |
 | --------------------------------- | :------: | :---: | :----: | :--------: | :---: |
 | Gagner des points                 |    x     |   o   |   o    |     o      |   o   |
 | Progresser en niveaux             |    x     |   o   |   o    |     o      |   o   |
@@ -1362,7 +1351,7 @@ graph TB
 
 ### Groupes
 
-| Fonctionnalité                | Visiteur | User  | Client | Modérateur | Admin |
+| Fonctionnalité                | Visiteur | User  | Vendeur | Modérateur | Admin |
 | ----------------------------- | :------: | :---: | :----: | :--------: | :---: |
 | Consulter les groupes publics |    o     |   o   |   o    |     o      |   o   |
 | Créer / Rejoindre un groupe   |    x     |   o   |   o    |     o      |   o   |
@@ -1371,7 +1360,7 @@ graph TB
 
 ### Modération
 
-| Fonctionnalité                    | Visiteur | User  | Client | Modérateur | Admin |
+| Fonctionnalité                    | Visiteur | User  | Vendeur | Modérateur | Admin |
 | --------------------------------- | :------: | :---: | :----: | :--------: | :---: |
 | Voir les signalements en attente  |    x     |   x   |   x    |     o      |   o   |
 | Traiter un signalement            |    x     |   x   |   x    |     o      |   o   |
@@ -1381,12 +1370,12 @@ graph TB
 | Bannir / Suspendre un utilisateur |    x     |   x   |   x    |     x      |   o   |
 | Gérer les reports / tickets       |    x     |   x   |   x    |     o      |   o   |
 
-### Espace Client
+### Espace Vendeur
 
-| Fonctionnalité                     | Visiteur | User  | Client | Modérateur | Admin |
+| Fonctionnalité                     | Visiteur | User  | Vendeur | Modérateur | Admin |
 | ---------------------------------- | :------: | :---: | :----: | :--------: | :---: |
-| Accéder au dashboard Client        |    x     |   x   |   o    |     x      |   o   |
-| Gérer sa Galerie / Vitrine Client  |    x     |   x   |   o    |     x      |   o   |
+| Accéder au dashboard Vendeur        |    x     |   x   |   o    |     x      |   o   |
+| Gérer sa Galerie / Vitrine Vendeur  |    x     |   x   |   o    |     x      |   o   |
 | Gérer ses posts et collections     |    x     |   x   |   o    |     x      |   o   |
 | Gérer ses tags et catégories       |    x     |   x   |   o    |     x      |   o   |
 | Gérer ses utilisateurs (clientèle) |    x     |   x   |   o    |     x      |   o   |
@@ -1396,7 +1385,7 @@ graph TB
 
 ### Administration globale
 
-| Fonctionnalité                    | Visiteur | User  | Client | Modérateur | Admin |
+| Fonctionnalité                    | Visiteur | User  | Vendeur | Modérateur | Admin |
 | --------------------------------- | :------: | :---: | :----: | :--------: | :---: |
 | Dashboard Admin + KPIs globaux    |    x     |   x   |   x    |     x      |   o   |
 | Gérer tous les utilisateurs       |    x     |   x   |   x    |     x      |   o   |
