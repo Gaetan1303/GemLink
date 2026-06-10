@@ -6,6 +6,8 @@ namespace App\Entity;
 
 use App\Repository\UserRepository;
 use DateTimeImmutable;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use InvalidArgumentException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -61,11 +63,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'created_at')]
     private DateTimeImmutable $createdAt;
 
+    /**
+     * @var Collection<int, RefreshToken>
+     */
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: RefreshToken::class, cascade: ['persist', 'remove'])]
+    private Collection $refreshTokens;
+
+    /**
+     * @var Collection<int, PasswordResetToken>
+     */
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: PasswordResetToken::class, cascade: ['persist', 'remove'])]
+    private Collection $passwordResetTokens;
+
+    /**
+     * @var Collection<int, EmailValidationToken>
+     */
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: EmailValidationToken::class, cascade: ['persist', 'remove'])]
+    private Collection $emailValidationTokens;
+
     public function __construct()
     {
         $this->id = Uuid::v7();
         $this->createdAt = new DateTimeImmutable();
+        $this->refreshTokens = new ArrayCollection();
+        $this->passwordResetTokens = new ArrayCollection();
+        $this->emailValidationTokens = new ArrayCollection();
     }
+
+    // --- Identifiants & Infos de Base ---
 
     public function getId(): Uuid
     {
@@ -101,6 +126,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->email;
     }
 
+    // --- Sécurité & Rôles ---
+
     /**
      * @return list<string>
      */
@@ -109,7 +136,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $roles = ['ROLE_USER'];
 
         if ($this->role !== 'user') {
-            $roles[] = 'ROLE_'.mb_strtoupper($this->role);
+            $roles[] = 'ROLE_' . mb_strtoupper($this->role);
         }
 
         return array_values(array_unique($roles));
@@ -158,6 +185,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function eraseCredentials(): void
     {
     }
+
+    // --- Profil & Métier ---
 
     public function getAvatarUrl(): ?string
     {
@@ -238,5 +267,54 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getCreatedAt(): DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    // --- Collections de Tokens (Relations) ---
+
+    /**
+     * @return Collection<int, RefreshToken>
+     */
+    public function getRefreshTokens(): Collection
+    {
+        return $this->refreshTokens;
+    }
+
+  
+
+
+    /**
+     * @return Collection<int, PasswordResetToken>
+     */
+    public function getPasswordResetTokens(): Collection
+    {
+        return $this->passwordResetTokens;
+    }
+
+    public function addPasswordResetToken(PasswordResetToken $token): self
+    {
+        if (!$this->passwordResetTokens->contains($token)) {
+            $this->passwordResetTokens->add($token);
+            $token->setUser($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, EmailValidationToken>
+     */
+    public function getEmailValidationTokens(): Collection
+    {
+        return $this->emailValidationTokens;
+    }
+
+    public function addEmailValidationToken(EmailValidationToken $token): self
+    {
+        if (!$this->emailValidationTokens->contains($token)) {
+            $this->emailValidationTokens->add($token);
+            $token->setUser($this);
+        }
+
+        return $this;
     }
 }
