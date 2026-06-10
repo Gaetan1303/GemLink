@@ -1,0 +1,20 @@
+name: Backend - Railway Deploy Trigger
+
+on:
+  push:
+    branches:
+      - master
+      - staging
+
+jobs:
+  notify:
+    name: Trigger Railway Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Informational step
+        run: |
+          echo "Railway deploy is handled automatically via GitHub integration"

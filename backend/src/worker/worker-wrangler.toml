@@ -1,0 +1,28 @@
+name       = "gemlink-worker"
+main       = "index.ts"
+compatibility_date = "2025-01-01"
+
+# ── Cloudflare Container (worker Messenger) ──
+[[containers]]
+class_name = "GemLinkWorkerContainer"
+image      = "./Dockerfile"
+
+  [containers.configuration]
+  instance_type = "basic"        # worker léger, pas besoin de standard
+  runtime       = "firecracker"
+
+# ── Cron Trigger ─────────────────────────────
+# Relance le worker toutes les minutes si --time-limit=55s
+[triggers]
+crons = ["* * * * *"]
+
+# ── Cloudflare Queue (si tu passes à CF Queues natif) ──
+# [[queues.consumers]]
+# queue        = "gemlink-queue"
+# max_batch_size    = 10
+# max_batch_timeout = 5
+
+# ── Variables ────────────────────────────────
+[vars]
+APP_ENV = "prod"
+# DATABASE_URL, REDIS_URL → Cloudflare Dashboard > Workers > Settings > Variables
