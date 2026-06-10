@@ -41,4 +41,4 @@ when@test:
                 algorithm: argon2id
                 time_cost: 2
                 memory_cost: 10
-                threads: 1
+                # 'threads' is not a recognized option for Symfony password_hashers configuration

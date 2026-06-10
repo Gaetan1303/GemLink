@@ -1,0 +1,24 @@
+# Image officielle FrankenPHP (PHP 8.3 ou 8.4 selon ton choix)
+FROM dunglas/frankenphp:php8.3
+
+# Dossier de travail
+WORKDIR /app
+
+# Copier le projet
+COPY . .
+
+# Installer dépendances PHP
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Optimisation Symfony prod
+RUN php bin/console cache:clear --env=prod
+RUN php bin/console cache:warmup --env=prod
+
+# Permissions Symfony (important sur containers)
+RUN chmod -R 775 var
+
+# Port exposé par Railway
+EXPOSE 8080
+
+# Commande de démarrage FrankenPHP
+CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]
