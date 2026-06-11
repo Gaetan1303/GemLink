@@ -1,27 +1,41 @@
-# GemLink – Le réseau social intelligent des passionnés de minéraux
+# Présentation du projet GemLink
 
-## Description
+GemLink est une application web full-stack spécialisée dans l’identification et le partage de pierres et minéraux. Le projet combine les fonctionnalités d’un réseau social communautaire avec un système de reconnaissance visuelle assisté par intelligence artificielle.
 
-GemLink est une plateforme web innovante qui combine un réseau social spécialisé dans les pierres et minéraux avec un système d'identification assisté par intelligence artificielle.
+L’objectif principal est de permettre à un utilisateur de photographier une pierre, d’obtenir une proposition d’identification automatique, puis de partager sa découverte avec une communauté de passionnés et d’experts. Les validations réalisées par la communauté alimentent progressivement l’amélioration du système de reconnaissance grâce à un mécanisme d’apprentissage continu.
 
-L'application permet aux utilisateurs de photographier une pierre afin d'obtenir une proposition d'identification automatique, puis de partager leur découverte avec une communauté de passionnés, collectionneurs et experts en minéralogie.
+## Fonctionnalités
 
-Au-delà de la simple reconnaissance, GemLink favorise les échanges grâce à des publications, commentaires, collections personnelles (« Vitrines ») et mécanismes de validation communautaire. Les utilisateurs les plus expérimentés contribuent à améliorer progressivement la qualité des identifications grâce à un système de confiance et d'apprentissage collaboratif.
+La plateforme propose plusieurs fonctionnalités : 
+- Un Espace Membre avec une création et gestion de compte utilisateur
+- Publication de photos et vidéos
+- Système de commentaires et de likes
+- Validation communautaire des identifications
+- Gestion de collections personnalisées appelées « vitrines »
+- Attribution de badges et de points
+- Système de modération et d’administration
 
-Le projet s'adresse aussi bien aux curieux souhaitant identifier une pierre trouvée lors d'une promenade qu'aux collectionneurs et experts désirant organiser, partager et enrichir leurs connaissances minéralogiques.
+## Architecture
+Le projet repose sur une architecture modulaire composée d’un frontend développé avec : 
+- Angular pour une interface utilisateur réactive et moderne.
+- Une API REST réalisée avec Symfony 
+- Une base de données PostgreSQL. 
+- Redis est utilisé pour la mise en cache et la gestion des traitements asynchrones via Symfony Messenger. 
+- Les médias sont stockés sur un service CDN externe afin d’optimiser les performances de chargement.
 
-### Objectifs principaux
+## A propos de l’intelligence artificielle
 
-Identifier automatiquement des pierres à partir d'une photographie.
-Créer une communauté dédiée aux minéraux et à la minéralogie.
-Valoriser l'expertise des membres grâce à un système de confiance.
-Constituer une base de connaissances collaborative améliorée en continu.
-Offrir un outil moderne de catalogage et de partage de collections.
-  
-### Public cible
+L’intelligence artificielle est isolée dans un service FastAPI développé en Python. Ce service analyse les images grâce à un pipeline composé de modèles YOLO, ViT et CLIP afin de détecter les pierres, proposer une identification et générer des embeddings vectoriels stockés dans PostgreSQL via l’extension pgvector.
 
-* Grand public curieux
-* Collectionneurs de minéraux
-* Passionnés de géologie
-* Experts et minéralogistes
-* Associations et clubs spécialisés
+## A propos de la sécurité de l'application
+
+La sécurité de l’application repose sur : 
+- l’utilisation de JWT pour l’authentification, 
+- du chiffrement des mots de passe avec Argon2id, 
+- d’un système de rôles et permissions (RBAC), 
+- de la validation des données côté serveur 
+- et d’une journalisation des actions sensibles via un audit log.
+
+## Objectif du projet
+
+GemLink a été conçu comme une plateforme moderne, évolutive et performante permettant de mettre en relation passionnés, collectionneurs et experts autour d’un outil d’identification assisté par intelligence artificielle.

@@ -1,0 +1,55 @@
+name: Frontend - Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - master
+      - staging
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy Angular
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Angular
+        working-directory: frontend
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            npm run build -- --configuration=production
+          else
+            npm run build -- --configuration=staging
+          fi
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@latest
+
+      - name: Deploy to Cloudflare Pages
+        working-directory: frontend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            npx wrangler pages deploy dist/frontend --project-name=gemlink --branch=master
+          else
+            npx wrangler pages deploy dist/frontend --project-name=gemlink --branch=staging
+          fi

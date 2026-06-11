@@ -1,0 +1,12 @@
+name       = "gemlink-frontend"
+main       = "worker.ts"
+compatibility_date = "2025-01-01"
+
+# ── Workers + Assets (build Angular statique) ─
+[assets]
+directory  = "./dist/gemlink/browser"
+binding    = "ASSETS"
+
+# Routing SPA : toutes les routes inconnues → index.html
+[assets.routing]
+fallback_mode = "single-page-application"

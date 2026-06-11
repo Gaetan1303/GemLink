@@ -1,0 +1,49 @@
+services:
+  database:
+    image: pgvector/pgvector:pg16
+    container_name: gemlink_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gemlink}
+      POSTGRES_USER: ${POSTGRES_USER:-gemlink}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-MimineForEver}
+
+    ports:
+      - "5432:5432"
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gemlink} -d ${POSTGRES_DB:-gemlink}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    volumes:
+      - database_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: gemlink_redis
+    restart: unless-stopped
+
+    command:
+      - redis-server
+      - --appendonly
+      - yes
+
+    ports:
+      - "6380:6380"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    volumes:
+      - redis_data:/data
+
+volumes:
+  database_data:
+  redis_data:

@@ -1,0 +1,11 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+    session: false
+
+    #esi: true
+    #fragments: true
+
+when@test:
+    framework:
+        test: true
