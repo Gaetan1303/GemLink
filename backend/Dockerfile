@@ -12,6 +12,8 @@ RUN docker-php-ext-install pdo_pgsql
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+RUN composer --version
+
 COPY composer.json composer.lock ./
 
 RUN composer install \
@@ -19,6 +21,7 @@ RUN composer install \
     --prefer-dist \
     --no-interaction \
     --optimize-autoloader
+
 COPY . .
 
 RUN mkdir -p var/cache var/log
