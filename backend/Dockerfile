@@ -18,9 +18,7 @@ RUN composer install \
     --no-dev \
     --prefer-dist \
     --no-interaction \
-    --optimize-autoloader \
-    --no-scripts
-
+    --optimize-autoloader
 COPY . .
 
 RUN mkdir -p var/cache var/log
