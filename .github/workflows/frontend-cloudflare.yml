@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - staging
+      - prod
   workflow_dispatch:
 
 concurrency:
@@ -25,6 +26,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         working-directory: frontend
@@ -39,17 +41,13 @@ jobs:
             npm run build -- --configuration=staging
           fi
 
-      - name: Install Wrangler
-        run: npm install -g wrangler@latest
-
       - name: Deploy to Cloudflare Pages
         working-directory: frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
-            npx wrangler pages deploy dist/frontend --project-name=gemlink --branch=master
-          else
-            npx wrangler pages deploy dist/frontend --project-name=gemlink --branch=staging
-          fi
+          BRANCH=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
+          npx wrangler@latest pages deploy dist/gemlink/browser \
+            --project-name=gemlink \
+            --branch=$BRANCH
