@@ -12,12 +12,9 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-
-RUN docker-php-ext-install pdo_pgsql \
-    && docker-php-ext-configure intl \
-    && docker-php-ext-install intl \
-    && pecl install redis \
-    && docker-php-ext-enable redis
+    
+RUN docker-php-ext-install pdo_pgsql intl \
+    && pecl install redis && docker-php-ext-enable redis
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
