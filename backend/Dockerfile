@@ -19,14 +19,13 @@ RUN composer install \
     --prefer-dist \
     --no-interaction \
     --optimize-autoloader \
+    --no-scripts \
     --no-plugins
 
 COPY . .
 
 RUN mkdir -p var/cache var/log
 RUN chmod -R 775 var
-
-RUN APP_ENV=prod APP_SECRET=placeholder php bin/console cache:warmup --env=prod --no-debug
 
 EXPOSE 8080
 
