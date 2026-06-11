@@ -1,20 +1,27 @@
-name: Backend - Railway Deploy Trigger
+name: Backend CI
 
 on:
+  pull_request:
   push:
     branches:
-      - master
+      - main
       - staging
 
 jobs:
-  notify:
-    name: Trigger Railway Deploy
+  test:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    defaults:
+      run:
+        working-directory: backend
 
-      - name: Informational step
-        run: |
-          echo "Railway deploy is handled automatically via GitHub integration"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - run: composer install --no-interaction
+
+      - run: php bin/console lint:container
