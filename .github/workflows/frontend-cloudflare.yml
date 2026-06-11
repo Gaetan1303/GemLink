@@ -35,11 +35,13 @@ jobs:
       - name: Build Angular
         working-directory: frontend
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
-            npm run build -- --configuration=production
-          else
-            npm run build -- --configuration=staging
-          fi
+          BRANCH=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
+          case $BRANCH in
+            master|prod) CONFIG=production ;;
+            *)            CONFIG=development ;;
+          esac
+          npm run build -- --configuration=$CONFIG
+  
 
       - name: Deploy to Cloudflare Pages
         working-directory: frontend
