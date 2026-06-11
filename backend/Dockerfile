@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 RUN docker-php-ext-install pdo_pgsql
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
