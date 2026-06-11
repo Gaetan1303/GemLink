@@ -2,6 +2,9 @@ FROM dunglas/frankenphp:php8.4
 
 WORKDIR /app
 
+# pour Autoriser Composer à s'exécuter en root
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -14,13 +17,12 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY composer.json composer.lock ./
 
+
 RUN composer install \
     --no-dev \
     --prefer-dist \
     --no-interaction \
-    --optimize-autoloader \
-    --no-scripts \
-    --no-plugins
+    --optimize-autoloader
 
 COPY . .
 
