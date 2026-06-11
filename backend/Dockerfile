@@ -12,8 +12,6 @@ RUN docker-php-ext-install pdo_pgsql
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-RUN composer --version
-
 COPY composer.json composer.lock ./
 
 RUN composer install \
@@ -23,12 +21,12 @@ RUN composer install \
     --optimize-autoloader \
     --no-scripts
 
-RUN php bin/console cache:warmup --env=prod --no-debug
-
 COPY . .
 
 RUN mkdir -p var/cache var/log
 RUN chmod -R 775 var
+
+RUN APP_ENV=prod APP_SECRET=placeholder php bin/console cache:warmup --env=prod --no-debug
 
 EXPOSE 8080
 
