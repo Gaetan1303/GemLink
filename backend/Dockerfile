@@ -20,13 +20,11 @@ RUN composer install \
     --no-dev \
     --prefer-dist \
     --no-interaction \
-    --optimize-autoloader \
-    --no-scripts
+    --optimize-autoloader
 
 COPY . .
 
-RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
-RUN mkdir -p var/cache var/log && chmod -R 775 var
+RUN php bin/console cache:warmup
 
 EXPOSE 8080
 
