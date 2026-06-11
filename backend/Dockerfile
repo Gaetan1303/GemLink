@@ -19,7 +19,7 @@ RUN composer install \
     --prefer-dist \
     --no-interaction \
     --optimize-autoloader \
-    --no-scripts
+    --no-plugins
 
 COPY . .
 
