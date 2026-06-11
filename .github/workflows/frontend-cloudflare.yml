@@ -1,4 +1,4 @@
-name: Frontend - Deploy to Cloudflare Pages
+name: Frontend - Deploy to Cloudflare Workers
 
 on:
   push:
@@ -38,18 +38,14 @@ jobs:
           BRANCH=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
           case $BRANCH in
             master|prod) CONFIG=production ;;
-            *)            CONFIG=development ;;
+            staging)     CONFIG=staging ;;
+            *)           CONFIG=development ;;
           esac
           npm run build -- --configuration=$CONFIG
-  
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy to Cloudflare Workers
         working-directory: frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          BRANCH=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
-          npx wrangler@latest pages deploy dist/gemlink/browser \
-            --project-name=gemlink \
-            --branch=$BRANCH
+        run: npx wrangler@latest deploy
