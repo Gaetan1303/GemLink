@@ -88,6 +88,15 @@
             "bin/phpunit"
         ]
     },
+    "symfony/brevo-mailer": {
+        "version": "8.1",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "6.4",
+            "ref": "7c1038ceb733175f610a913a885a7c8b552b703a"
+        }
+    },
     "symfony/console": {
         "version": "8.1",
         "recipe": {
@@ -131,6 +140,18 @@
             "src/Controller/.gitignore",
             "src/Kernel.php",
             ".editorconfig"
+        ]
+    },
+    "symfony/mailer": {
+        "version": "8.1",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "4.3",
+            "ref": "09051cfde49476e3c12cd3a0e44289ace1c75a4f"
+        },
+        "files": [
+            "config/packages/mailer.yaml"
         ]
     },
     "symfony/maker-bundle": {
