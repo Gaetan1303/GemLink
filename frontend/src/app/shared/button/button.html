@@ -1,18 +1,53 @@
-<button
-  class="
-    w-full
-    px-6
-    py-4
-    bg-[#040A20]
-    border
-    border-[#C5A059]/20
-    text-[#C5A059]
-    uppercase
-    font-extrabold
-    tracking-wider
-    transition
-    hover:border-[#C5A059]
-    hover:scale-[1.02]
-  ">
+<style>
+  .app-button {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 18px 21px;
+    gap: 10px;
+
+    width: 100%;
+    height: 61px;
+    cursor: pointer;
+
+    
+    background: rgba(197, 160, 89, 0.24);
+    border: 1px solid rgba(197, 160, 89, 0.1);
+    border-radius: 16px;
+
+    
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-style: normal;
+    font-weight: 800;
+    font-size: 16px;
+    line-height: 20px;
+    text-align: center;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #C5A059;
+    
+    transition: all 0.2s ease-in-out;
+  }
+
+  /* Effet au survol */
+  .app-button:hover:not(:disabled) {
+    background: rgba(197, 160, 89, 0.4);
+  }
+
+  /* Effet quand le formulaire est invalide */
+  .app-button:disabled {
+    background: rgba(197, 160, 89, 0.05);
+    color: rgba(197, 160, 89, 0.2);
+    border-color: rgba(197, 160, 89, 0.05);
+    cursor: not-allowed;
+  }
+</style>
+
+<button 
+  [type]="type" 
+  [disabled]="disabled" 
+  class="app-button">
   {{ label }}
 </button>
