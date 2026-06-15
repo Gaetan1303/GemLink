@@ -1,0 +1,53 @@
+:host {
+  display: block;
+  width: 100%; 
+  align-self: stretch;
+}
+
+button[mat-raised-button] {
+  box-sizing: border-box;
+  
+ 
+  display: flex !important; // Le !important sécurise la surcharge d'Angular Material
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 18px 21px !important;
+  gap: 10px;
+
+  width: 100%;
+  height: 61px !important; 
+
+  
+  background: rgba(197, 160, 89, 0.24) !important;
+  border: 1px solid rgba(197, 160, 89, 0.1) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important; 
+
+  
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 20px;
+  text-align: center;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #C5A059 !important;
+  
+  transition: all 0.2s ease-in-out;
+
+  /* Effet Hover (Au survol) */
+  &:hover:not(:disabled) {
+    background: rgba(197, 160, 89, 0.4) !important;
+  }
+
+  /* État Désactivé (Si le formulaire est invalide) */
+  &:disabled {
+    background: rgba(197, 160, 89, 0.1) !important;
+    color: rgba(197, 160, 89, 0.3) !important;
+    border-color: rgba(197, 160, 89, 0.05) !important;
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}

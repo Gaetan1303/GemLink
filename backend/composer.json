@@ -18,15 +18,18 @@
         "phpdocumentor/reflection-docblock": "^6.0",
         "phpstan/phpdoc-parser": "^2.3",
         "symfony/asset": "8.1.*",
+        "symfony/brevo-mailer": "8.1.*",
         "symfony/console": "8.1.*",
         "symfony/dotenv": "8.1.*",
         "symfony/expression-language": "8.1.*",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "8.1.*",
+        "symfony/mailer": "8.1.*",
         "symfony/messenger": "8.1.*",
         "symfony/monolog-bundle": "^4.0",
         "symfony/property-access": "8.1.*",
         "symfony/property-info": "8.1.*",
+        "symfony/redis-messenger": "8.1.*",
         "symfony/runtime": "8.1.*",
         "symfony/security-bundle": "8.1.*",
         "symfony/serializer": "8.1.*",
@@ -48,8 +51,12 @@
             "symfony/runtime": true
         },
         "bump-after-update": true,
-        "sort-packages": true
+        "sort-packages": true,
+        "platform": {
+        "php": "8.4.1"
+        }
     },
+
     "autoload": {
         "psr-4": {
             "App\\": "src/"
