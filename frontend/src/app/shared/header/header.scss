@@ -1,35 +1,39 @@
-.header {
-  position: relative;
-  width: 100%;
-  height: 114px;
-  
+:host {
+  display: block;
 }
 
-.logo {
+.header {
   position: absolute;
-  width: 60px;
-  height: 60px;
-  left: 22px;
-  top: 18px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 114px;
+  z-index: 100;
 
-  background: url("/assets/images/logo.png") center/cover;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 22px;
+}
+
+
+.logo {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  gap: 3px;
+
+  width: 50px;
+  height: 50px;
+
+  background: url('/assets/images/logo.png') center/cover no-repeat;
   border-radius: 12px;
 }
 
-.menu {
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  right: 22px;
-  top: 31px;
-
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.menu span {
-  height: 1.5px;
-  background: #C5A059;
-  width: 100%;
+.logo-img {
+  display: none; 
 }

@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, input, Input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,7 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
   styleUrls: ['./button.scss'],
 })
 export class ButtonComponent {
-  @Input() label: string = '';
-  @Input() disabled: boolean = false; 
-  @Input() type: 'button' | 'submit' | 'reset' = 'button'; // pour la soumission de formulaire
+  label = input<string>();
+  disabled = input<boolean>(false);
+  type = input<'button' | 'submit' | 'reset'>('button'); // pour la soumission de formulaire
 }
