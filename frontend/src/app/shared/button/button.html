@@ -46,8 +46,8 @@
 </style>
 
 <button 
-  [type]="type" 
-  [disabled]="disabled" 
+  [type]="type()" 
+  [disabled]="disabled()" 
   class="app-button">
-  {{ label }}
+  {{ label() }}
 </button>

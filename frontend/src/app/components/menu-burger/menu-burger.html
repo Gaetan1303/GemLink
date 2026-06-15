@@ -1,0 +1,31 @@
+<div class="menu-burger-trigger" [class.open]="isOpen()" (click)="toggleMenu()">
+  <span></span>
+  <span></span>
+  <span></span>
+</div>
+
+@if (isOpen()) {
+  <div class="menu-overlay" (click)="closeMenu()">
+    <nav class="menu-nav" (click)="$event.stopPropagation()">
+      
+      <ul class="frame-59">
+        @for (item of menuItems(); track item.route) {
+          <li>
+            <a 
+              [routerLink]="item.route" 
+              routerLinkActive="active" 
+              [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+              (click)="closeMenu()">
+              
+              <i class="menu-icon" [ngClass]="item.iconClass"></i>
+              
+              <span class="menu-label">{{ item.label }}</span>
+              
+            </a>
+          </li>
+        }
+      </ul>
+
+    </nav>
+  </div>
+}
