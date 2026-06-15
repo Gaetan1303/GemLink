@@ -1,0 +1,86 @@
+<form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="login-form">
+  
+  <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div class="input-group">
+    <div class="input-field-frame">
+      <input 
+        type="text" 
+        formControlName="lastname" 
+        placeholder="NOM (EX: MOUSSE)"
+        [class.is-invalid]="registerForm.get('lastname')?.invalid && isSubmitted"
+      />
+    </div>
+    <ng-container *ngIf="registerForm.get('lastname')?.invalid && isSubmitted">
+      <span class="error-text">Le nom est requis</span>
+    </ng-container>
+  </div>
+
+  <div class="input-group">
+    <div class="input-field-frame">
+      <input 
+        type="text" 
+        formControlName="firstname" 
+        placeholder="PRÉNOM (EX: PIERRE)"
+        [class.is-invalid]="registerForm.get('firstname')?.invalid && isSubmitted"
+      />
+    </div>
+    <ng-container *ngIf="registerForm.get('firstname')?.invalid && isSubmitted">
+      <span class="error-text">Le prénom est requis</span>
+    </ng-container>
+  </div>
+
+  <div class="input-group">
+    <div class="input-field-frame">
+      <input 
+        type="email" 
+        formControlName="email" 
+        placeholder="PIERRE@GMAIL.COM"
+        [class.is-invalid]="registerForm.get('email')?.invalid && isSubmitted"
+      />
+    </div>
+    <ng-container *ngIf="registerForm.get('email')?.invalid && isSubmitted">
+      <span class="error-text">Email requis ou format invalide</span>
+    </ng-container>
+  </div>
+
+  <div class="input-group">
+    <div class="input-field-frame">
+      <input 
+        type="password" 
+        formControlName="password" 
+        placeholder="MOT DE PASSE"
+        [class.is-invalid]="registerForm.get('password')?.invalid && isSubmitted"
+      />
+    </div>
+    <ng-container *ngIf="registerForm.get('password')?.invalid && isSubmitted">
+      <span class="error-text" *ngIf="registerForm.get('password')?.errors?.['required']">Mot de passe requis</span>
+      <span class="error-text" *ngIf="registerForm.get('password')?.errors?.['pattern']">
+        8 car. min, 1 Maj, 1 Min, 1 Chiffre, 1 Spécial.
+      </span>
+    </ng-container>
+  </div>
+
+  <div class="input-group">
+    <div class="input-field-frame">
+      <input 
+        type="password" 
+        formControlName="confirmPassword" 
+        placeholder="CONFIRMATION MDP"
+        [class.is-invalid]="registerForm.get('confirmPassword')?.invalid && isSubmitted"
+      />
+    </div>
+    <ng-container *ngIf="registerForm.get('confirmPassword')?.invalid && isSubmitted">
+      <span class="error-text" *ngIf="registerForm.get('confirmPassword')?.errors?.['required']">Veuillez confirmer le mot de passe</span>
+      <span class="error-text" *ngIf="registerForm.hasError('mismatch')">Les mots de passe ne correspondent pas</span>
+    </ng-container>
+  </div>
+
+  <app-button 
+    type="submit" 
+    label="CRÉER MON PROFIL" 
+    [disabled]="isSubmitted && registerForm.invalid">
+  </app-button>
+
+</form>
