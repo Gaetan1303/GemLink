@@ -12,4 +12,6 @@ import { MatButtonModule } from '@angular/material/button';
 })
 export class ButtonComponent {
   @Input() label: string = '';
+  @Input() disabled: boolean = false; 
+  @Input() type: 'button' | 'submit' | 'reset' = 'button'; // pour la soumission de formulaire
 }
