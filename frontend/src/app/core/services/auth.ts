@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment'; // À adapter s
 export interface RegisterRequest {
   username: string;
   email: string;
-  passwordHash: string; // Ton back attend le mot de passe (le hashage Argon2id se faisant côté serveur au moment de la réception, cf CA-2)
+  passwordHash: string; 
 }
 
 @Injectable({
@@ -14,7 +14,7 @@ export interface RegisterRequest {
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/auth`; // ex: http://localhost:8000/api/auth
+  private apiUrl = `${environment.apiUrl}/auth`; 
 
   register(data: RegisterRequest): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/register`, data);

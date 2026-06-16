@@ -23,7 +23,7 @@ final class AuthControllerTest extends WebTestCase
         $authMock->expects($this->once())
             ->method('register')
             ->with($this->callback(function ($data) {
-                return isset($data['email'], $data['username'], $data['password']);
+                return isset($data['email'], $data['username'], $data['passwordHash']);
             }))
             ->willReturn($user);
 
@@ -39,13 +39,14 @@ final class AuthControllerTest extends WebTestCase
             json_encode([
                 'email' => 'test_controller@example.com',
                 'username' => 'test_user',
-                'password' => 'Password123!'
+                'passwordHash' => 'Password123!'
             ])
         );
 
         $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
         $responseData = json_decode($client->getResponse()->getContent(), true);
-        $this->assertSame('Inscription réussie. Veuillez valider votre email.', $responseData['message']);
-    }
+        $this->assertSame(
+    'Si ces informations sont valides, un email de confirmation a été envoyé.',
+    $responseData['message']);}
 
 }
