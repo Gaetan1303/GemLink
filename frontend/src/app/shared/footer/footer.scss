@@ -1,0 +1,197 @@
+.footer {
+  background: #1f2833;
+  padding: 4rem 1rem;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+/* ---------------- */
+/* PARTIE GAUCHE */
+/* ---------------- */
+
+.footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.logo {
+  width: 125px;
+  height: 60px;
+  border-radius: 12px;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+.description {
+  color: #f2f3f5;
+
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.7;
+  letter-spacing: 0.08em;
+
+  margin: 0;
+}
+
+/* ---------------- */
+/* NEWSLETTER */
+/* ---------------- */
+
+.footer-right {
+  display: flex;
+  justify-content: center;
+}
+
+.newsletter-card {
+  width: 100%;
+  max-width: 450px;
+
+  background: #040a20;
+  border: 1px solid #c5a059;
+  border-radius: 24px;
+
+  padding: 48px 32px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+
+.newsletter-card h3 {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* Champ email */
+
+.email-input {
+  width: 100%;
+}
+
+.email-input input {
+  width: 100%;
+  height: 56px;
+
+  border: none;
+  border-radius: 999px;
+
+  background: #4a4a4a;
+  color: #ffffff;
+
+  font-size: 15px;
+  outline: none;
+}
+
+.email-input input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Bouton */
+
+.subscribe-btn {
+  width: 100%;
+  height: 56px;
+
+  border: none;
+  border-radius: 999px;
+
+  background: rgba(197, 160, 89, 0.15);
+
+  color: #c5a059;
+
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.subscribe-btn:hover {
+  background: rgba(197, 160, 89, 0.3);
+}
+
+/* ---------------- */
+/* LIENS */
+/* ---------------- */
+
+.footer-links {
+  max-width: 1200px;
+  margin: 4rem auto 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.footer-links a {
+  color: #64748b;
+
+  text-decoration: none;
+  text-transform: uppercase;
+
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+
+  transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+  color: #c5a059;
+}
+
+/* ---------------- */
+/* DESKTOP */
+/* ---------------- */
+
+@media (min-width: 1024px) {
+
+  .footer {
+    padding: 6rem 4rem;
+  }
+
+  .footer-content {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 5rem;
+  }
+
+  .footer-left {
+    flex: 1;
+    max-width: 600px;
+  }
+
+  .footer-right {
+    flex-shrink: 0;
+  }
+
+  .footer-links {
+    flex-direction: row;
+    justify-content: center;
+    gap: 4rem;
+  }
+}

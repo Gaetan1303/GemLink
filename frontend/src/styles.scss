@@ -1,6 +1,10 @@
 @use '@angular/material' as mat;
 @use 'sass:map';
 
+
+* {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
 // ─────────────────────────────────────────────
 // palette de couleur du site : GEMLINK
 // ─────────────────────────────────────────────

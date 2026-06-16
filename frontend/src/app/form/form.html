@@ -1,0 +1,37 @@
+<form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+
+  <div class="input-group">
+    <div class="input-field-frame">
+      <input 
+        type="email" 
+        formControlName="email" 
+        placeholder="PIERRE@GMAIL.COM"
+        [class.is-invalid]="loginForm.get('email')?.invalid && isSubmitted"
+      />
+    </div>
+    <ng-container *ngIf="loginForm.get('email')?.invalid && isSubmitted">
+      <span class="error-text">Email requis ou invalide</span>
+    </ng-container>
+  </div>
+
+  <div class="input-group">
+    <div class="input-field-frame">
+      <input 
+        type="password" 
+        formControlName="password" 
+        placeholder="MOTDEPASSE"
+        [class.is-invalid]="loginForm.get('password')?.invalid && isSubmitted"
+      />
+    </div>
+    <ng-container *ngIf="loginForm.get('password')?.invalid && isSubmitted">
+      <span class="error-text">Mot de passe requis</span>
+    </ng-container>
+  </div>
+
+  <app-button 
+    type="submit" 
+    label="Se connecter" 
+    [disabled]="isSubmitted && loginForm.invalid">
+  </app-button>
+
+</form>
