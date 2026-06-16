@@ -1,7 +1,8 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8000/api',
+  apiUrl: 'https://localhost:8000',
   cloudinaryCloudName: '',
   jwtStorageKey: 'gemlink_token',
   refreshTokenKey: 'gemlink_refresh_token',
 };
+  

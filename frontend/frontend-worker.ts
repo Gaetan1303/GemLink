@@ -1,3 +1,5 @@
+/// <reference types="@cloudflare/workers-types" />
+
 // Point d'entrée Workers + Assets
 // Cloudflare sert automatiquement les assets Angular via le binding ASSETS.
 // Ce fichier est requis par wrangler mais ne contient aucune logique custom.

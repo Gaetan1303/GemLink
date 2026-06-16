@@ -131,6 +131,14 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     ...<string, DefinitionType|AliasType|PrototypeType|StackType|ArgumentsType|null>
  * }
  * @psalm-type ExtensionType = array<string, mixed>
+ * @psalm-type WebProfilerConfig = array{
+ *     toolbar?: bool|array{ // Profiler toolbar configuration
+ *         enabled?: bool|Param, // Default: false
+ *         ajax_replace?: bool|Param, // Replace toolbar on AJAX requests // Default: false
+ *     },
+ *     intercept_redirects?: bool|Param, // Default: false
+ *     excluded_ajax_paths?: scalar|Param|null, // Default: "^/((index|app(_[\\w]+)?)\\.php/)?_wdt"
+ * }
  * @psalm-type FrameworkConfig = array{
  *     secret?: scalar|Param|null,
  *     http_method_override?: bool|Param, // Set true to enable support for the '_method' request parameter to determine the intended HTTP method on POST requests. // Default: false
@@ -1831,6 +1839,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
  *         services?: ServicesConfig,
+ *         web_profiler?: WebProfilerConfig,
  *         framework?: FrameworkConfig,
  *         maker?: MakerConfig,
  *         twig?: TwigConfig,
@@ -1860,6 +1869,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
  *         services?: ServicesConfig,
+ *         web_profiler?: WebProfilerConfig,
  *         framework?: FrameworkConfig,
  *         twig?: TwigConfig,
  *         security?: SecurityConfig,

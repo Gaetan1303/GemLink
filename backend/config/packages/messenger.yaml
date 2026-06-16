@@ -3,10 +3,10 @@ framework:
         failure_transport: failed
 
         transports:
-            async: 
+            async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
-            failed: 'doctrine://default?queue_name=failed'
+            failed:
+                dsn: 'redis://%env(REDIS_HOST)%:6379/messages_failed'
 
         routing:
-           
             'App\Message\SendEmailMessage': async
