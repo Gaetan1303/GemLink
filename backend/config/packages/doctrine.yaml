@@ -1,6 +1,7 @@
 doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
+        server_version: '18.4'
         mapping_types:
             ai_model_status: string
             ai_model_type: string

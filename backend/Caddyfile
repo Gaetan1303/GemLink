@@ -1,0 +1,13 @@
+{
+    frankenphp
+}
+
+:8080 {
+    root * /app/public
+
+    encode gzip zstd
+
+    php_server
+
+    file_server
+}
