@@ -1,8 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment'; // À adapter selon tes fichiers de config
-
+import { environment } from '../../../environments/environment'; 
 export interface RegisterRequest {
   username: string;
   email: string;
