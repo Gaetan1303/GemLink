@@ -33,7 +33,7 @@ Ce document fournit une référence rapide aux entités principales de l'applica
   - `avatar_url` : text, nullable
   - `bio` : string(500), nullable
   - `trust_score` : smallint, default 0
-  - `role` : string(20), default `user` (allowed: user, expert, moderator, client, admin)
+  - `role` : string(20), default `user` (allowed: user, expert, moderator, vendeur, admin)
   - `points` : integer, default 0
   - `level` : smallint, default 1
   - `status` : string(25), default `PENDING_VALIDATION`
@@ -183,7 +183,6 @@ Ce document fournit une référence rapide aux entités principales de l'applica
   - `created_at` : datetimetz_immutable
 
 ---
-
 
 
 

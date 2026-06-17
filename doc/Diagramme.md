@@ -1,6 +1,6 @@
 # Documentation Technique — GemLink
 
-> **Rôles :** Visiteur · User · Client · Modérateur · Administrateur 
+> **Rôles :** Visiteur · User · Vendeur · Modérateur · Administrateur 
 > **Outil de rendu :** GitHub, et [Mermaid Live](https://mermaid.live)
 
 ---
@@ -27,7 +27,7 @@
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Visiteur**       | Utilisateur non authentifié. Accès lecture seule aux contenus publics.                                                                                                                                                                                        |
 | **User**           | Utilisateur inscrit et authentifié. Accès aux fonctionnalités sociales et de reconnaissance.                                                                                                                                                                  |
-| **Client**         | Professionnel (bijoutier, musée, revendeur…) disposant d'un espace de gestion de sa propre galerie et vitrine. Il gère ses propres utilisateurs (sa clientèle), ses collections et sa facturation. N'a pas accès à l'administration globale de la plateforme. |
+| **Vendeur**        | Professionnel (bijoutier, musée, revendeur…) disposant d'un espace de gestion de sa propre galerie et vitrine. Il gère ses propres utilisateurs (sa clientèle), ses collections et sa facturation. N'a pas accès à l'administration globale de la plateforme. |
 | **Modérateur**     | Rôle attribué à un `User` par un Administrateur. Donne accès à un périmètre limité d'outils d'administration : modération des posts, commentaires et résultats de reconnaissance. Ne remplace pas l'Admin.                                                    |
 | **Administrateur** | Accès complet à l'ensemble de la plateforme. Gère tous les utilisateurs, contenus, paramètres IA, gamification, facturation et infrastructure.                                                                                                                |
 
@@ -56,8 +56,8 @@
 - Trust Score (consultation)
 - Groupes
 
-#### Client
-- Dashboard Client
+#### Vendeur
+- Dashboard Vendeur
 - Statistiques de sa galerie
 - Mailing vers sa clientèle
 - Gestion de ses utilisateurs (sa clientèle)
@@ -106,7 +106,7 @@ graph TD
  subgraph Couche_Présentation["️ Couche Présentation — Angular SPA"]
  A1[Pages Visiteur\nHomePage · Galerie · Vitrine publique]
  A2[Pages User\nProfil · Post · Collection · Reconnaissance · Gamification]
- A3[Pages Client\nDashboard · Galerie · Facturation]
+ A3[Pages Vendeur\nDashboard · Galerie · Facturation]
  A4[Pages Modérateur\nDashboard Modération]
  A5[Pages Admin\nDashboard · CMS · IA · Sécurité]
  end
@@ -119,7 +119,7 @@ graph TD
  B5[GamificationController\nLeaderboard · Badges · Trust Score]
  B6[ModerationController\nSignalements · Ban · Audit Log]
  B7[AdminController\nStats · IA · CMS · Facturation]
- B8[ClientController\nGalerie Client · Mailing]
+ B8[VendeurController\nGalerie Vendeur · Mailing]
  end
 
  subgraph Couche_Metier[" Couche Métier — Services Symfony"]
@@ -157,11 +157,11 @@ graph TD
 
 ![visiteur](/doc/usecase/Visitor.png "Visiteur")
 ![user](/doc/usecase/profil.png "Utilisateur")
-![client](/doc/usecase/client.png "Client")
+![vendeur](/doc/usecase/vendeur.png "Vendeur")
 ![feed](/doc/usecase/feed.png "Feed")
 ![identification](/doc/usecase/identification.png "Identification")
 ![collection](/doc/usecase/collection.png "Collection")
-![gestion](/doc/usecase/gestion_client.png "Gestion de contenu")
+![gestion](/doc/usecase/gestion_vendeur.png "Gestion de contenu")
 ![admin](/doc/usecase/admin.png "Administrateur")
 ![moderateur](/doc/usecase/moderator.png "Modérateur")
 
@@ -446,7 +446,7 @@ erDiagram
 
     FACTURE {
         uuid id PK
-        uuid client_id FK
+        uuid vendeur_id FK
         float amount
         text content
         invoice_status status
@@ -1212,14 +1212,14 @@ sequenceDiagram
 ```mermaid
 graph TB
 
- subgraph Client_Browser[" Navigateur Client"]
+ subgraph Browser[" Navigateur Web"]
  FE_App["Angular SPA\n@angular/core · NgRx · TailwindCSS"]
  FE_Auth["Module Auth\nLogin · Register · Profil"]
  FE_Social["Module Social\nFeed · Post · Like · Commentaire · Groupe"]
  FE_IA["Module Reconnaissance\nUpload · Résultat · Similarité · Validation"]
  FE_Vitrine["Module Vitrine\nCollection · QR Code · Partage"]
  FE_Gamif["Module Gamification\nLeaderboard · Badges · Points"]
- FE_Client["Module Client\nDashboard · Galerie · Facturation"]
+ FE_Vendeur["Module Vendeur\nDashboard · Galerie · Facturation"]
  FE_Mod["Module Modération\nSignalements · Audit"]
  FE_Admin["Module Admin\nDashboard · IA · CMS · Sécurité"]
 
@@ -1228,7 +1228,7 @@ graph TB
  FE_App --> FE_IA
  FE_App --> FE_Vitrine
  FE_App --> FE_Gamif
- FE_App --> FE_Client
+ FE_App --> FE_Vendeur
  FE_App --> FE_Mod
  FE_App --> FE_Admin
  end
@@ -1242,7 +1242,7 @@ graph TB
  SYM_Gamif["GamificationController\nLeaderboard · Badges · TrustScore"]
  SYM_Mod["ModerationController\nSignalements · AuditLog"]
  SYM_Admin["AdminController\nStats · FineTune · CMS"]
- SYM_Client["ClientController\nGalerie · Facturation · Mailing"]
+ SYM_Vendeur["VendeurController\nGalerie · Facturation · Mailing"]
  end
 
  subgraph Async_Layer[" Couche Asynchrone — Symfony Messenger + Redis Queue"]
@@ -1271,14 +1271,14 @@ graph TB
  PAYMENT["Passerelle paiement\nStripe / PayPlug"]
  end
 
- Client_Browser <-->|HTTPS / REST + JWT| API_Gateway
+ Browser <-->|HTTPS / REST + JWT| API_Gateway
  API_Gateway --> Async_Layer
  API_Gateway --> Data_Layer
  Async_Layer <--> Data_Layer
  MSG_IA -->|HTTP POST /analyze| IA_Service
  IA_Service --> Data_Layer
  MSG_Mail --> SMTP
- SYM_Client --> PAYMENT
+ SYM_Vendeur --> PAYMENT
 ```
 
 ---
