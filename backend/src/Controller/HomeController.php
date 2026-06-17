@@ -13,7 +13,7 @@ final class HomeController extends AbstractController
     {
         return $this->json([
             'status' => 'ok',
-            'message' => 'Mimine est derrière vous !',
+            'message' => 'Mimine est derriere vous !',
             'docs' => '/api/docs'
         ]);
     }
