@@ -4,14 +4,16 @@ WORKDIR /app
 
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-
-RUN install-php-extensions redis pdo_pgsql intl
-
-
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
+    libpq-dev \
+    libicu-dev \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
+
+    
+RUN install-php-extensions redis pdo_pgsql intl
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -22,8 +24,8 @@ RUN composer install \
     --no-interaction \
     --optimize-autoloader \
     --no-scripts 
-
 COPY . .
+
 
 EXPOSE 8080
 
