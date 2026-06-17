@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     libicu-dev \
     g++ \
     && rm -rf /var/lib/apt/lists/*
-
+RUN install-php-extensions redis pdo_pgsql intl
     
 RUN docker-php-ext-install pdo_pgsql intl \
     && pecl install redis && docker-php-ext-enable redis
