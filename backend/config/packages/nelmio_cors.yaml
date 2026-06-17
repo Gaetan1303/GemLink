@@ -7,5 +7,11 @@ nelmio_cors:
         allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With']
         expose_headers: ['Link']
         max_age: 3600
+
     paths:
-        '^/': ~
+        '^/':
+            allow_origin: ['https://gem-link.org', 'https://8d487c4e.gemmelink.pages.dev']
+            allow_headers: ['Content-Type', 'Authorization']
+            allow_methods: ['POST', 'GET', 'PUT', 'DELETE', 'OPTIONS']
+            allow_credentials: true
+            max_age: 3600
