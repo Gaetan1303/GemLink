@@ -180,7 +180,7 @@ CREATE TYPE invoice_status AS ENUM (
 -- Portée d'un tag
 CREATE TYPE tag_scope AS ENUM (
     'global',
-    'client',
+    'vendeur',
     'user'
 );
 ```
@@ -221,7 +221,7 @@ CREATE INDEX idx_user_points   ON "user" (points DESC);
 
 COMMENT ON TABLE  "user"             IS 'Comptes utilisateurs de la plateforme GemLink.';
 COMMENT ON COLUMN "user".trust_score IS 'Score de fiabilité (0–100), calculé automatiquement à partir des validations IA confirmées.';
-COMMENT ON COLUMN "user".role        IS 'Rôle RBAC : user, expert, moderator, client, admin.';
+COMMENT ON COLUMN "user".role        IS 'Rôle RBAC : user, expert, moderator, vendeur, admin.';
 COMMENT ON COLUMN "user".status      IS 'Cycle de vie du compte : PENDING_VALIDATION → ACTIVE → BANNED.';
 ```
 
@@ -332,8 +332,8 @@ CREATE INDEX idx_tag_name     ON tag (name);
 CREATE INDEX idx_tag_owner_id ON tag (owner_id);
 CREATE INDEX idx_tag_scope    ON tag (scope);
 
-COMMENT ON TABLE  tag        IS 'Étiquettes thématiques associées aux posts. Portée : global (plateforme), client (espace client), user (personnel).';
-COMMENT ON COLUMN tag.scope  IS 'global = visible par tous ; client = créé par un Client ; user = créé par un User.';
+COMMENT ON TABLE  tag        IS 'Étiquettes thématiques associées aux posts. Portée : global (plateforme), vendeur (espace vendeur), user (personnel).';
+COMMENT ON COLUMN tag.scope  IS 'global = visible par tous ; vendeur = créé par un Vendeur ; user = créé par un User.';
 ```
 
 ---
@@ -674,7 +674,7 @@ CREATE INDEX idx_badge_condition_type ON badge (condition_type);
 CREATE INDEX idx_badge_is_custom      ON badge (is_custom);
 
 COMMENT ON TABLE  badge            IS 'Récompenses attribuées automatiquement via des Event Listeners Symfony.';
-COMMENT ON COLUMN badge.is_custom  IS 'TRUE si créé par un Client pour sa propre galerie.';
+COMMENT ON COLUMN badge.is_custom  IS 'TRUE si créé par un Vendeur pour sa propre galerie.';
 COMMENT ON COLUMN badge.condition_type IS 'Type de déclencheur : POST_COUNT, VALIDATION_COUNT, TRUST_SCORE_THRESHOLD, LEVEL_REACHED.';
 ```
 
@@ -867,22 +867,22 @@ COMMENT ON TABLE follow IS 'Abonnements entre utilisateurs. Contrainte empêche 
 ```sql
 CREATE TABLE invoice (
     id          UUID           PRIMARY KEY DEFAULT uuid_generate_v4(),
-    client_id   UUID           NOT NULL,
+    vendeur_id  UUID           NOT NULL,
     amount      NUMERIC(10, 2) NOT NULL
                 CONSTRAINT chk_invoice_amount CHECK (amount > 0),
     status      invoice_status NOT NULL DEFAULT 'PENDING',
     issued_at   TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
     paid_at     TIMESTAMPTZ,
 
-    CONSTRAINT fk_invoice_client
-        FOREIGN KEY (client_id) REFERENCES vendeur(id)
+    CONSTRAINT fk_invoice_vendeur
+        FOREIGN KEY (vendeur_id) REFERENCES vendeur(id)
         ON DELETE RESTRICT
 );
 
-CREATE INDEX idx_invoice_client_id ON invoice (client_id);
+CREATE INDEX idx_invoice_vendeur_id ON invoice (vendeur_id);
 CREATE INDEX idx_invoice_status    ON invoice (status);
 
-COMMENT ON TABLE  invoice           IS 'Factures émises pour les abonnements Client. ON DELETE RESTRICT : un client avec des factures ne peut pas être supprimé.';
+COMMENT ON TABLE  invoice           IS 'Factures émises pour les abonnements Vendeur. ON DELETE RESTRICT : un vendeur avec des factures ne peut pas être supprimé.';
 COMMENT ON COLUMN invoice.amount    IS 'Montant en euros (TTC). Précision à 2 décimales.';
 COMMENT ON COLUMN invoice.paid_at   IS 'NULL = non payée. Renseigné lors de la confirmation de paiement (webhook Stripe).';
 ```
@@ -1130,12 +1130,12 @@ CREATE POLICY policy_audit_log_select
     TO gemlink_app
     USING (TRUE);
 
--- Invoice : un client ne voit que ses propres factures
+-- Invoice : un vendeur ne voit que ses propres factures
 CREATE POLICY policy_invoice_own
     ON invoice FOR SELECT
     TO gemlink_app
     USING (
-        client_id IN (
+        vendeur_id IN (
             SELECT id FROM vendeur
             WHERE user_id = current_setting('app.current_user_id')::UUID
         )
@@ -1181,5 +1181,5 @@ ALTER ROLE gemlink_admin BYPASSRLS;
 | `group_member` | `user_id` | `user` | N–1 | CASCADE |
 | `follow` | `follower_id` | `user` | N–1 | CASCADE |
 | `follow` | `followed_id` | `user` | N–1 | CASCADE |
-| `invoice` | `client_id` | `vendeur` | N–1 | RESTRICT |
+| `invoice` | `vendeur_id` | `vendeur` | N–1 | RESTRICT |
 | `audit_log` | `actor_id` | `user` | N–1 | RESTRICT |
