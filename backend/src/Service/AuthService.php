@@ -2,24 +2,35 @@
 
 namespace App\Service;
 
-use App\Entity\User;
 use App\Entity\EmailValidationToken;
+use App\Entity\RefreshToken;
+use App\Entity\User;
+use App\Exception\LoginFailedException;
+use App\Exception\LoginThrottledException;
 use App\Repository\UserRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\Messenger\MessageBusInterface;
 use InvalidArgumentException;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 
 class AuthService
 {
     private const PASSWORD_PATTERN = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/';
+    public const LOGIN_ERROR_MESSAGE = 'Identifiants invalides.';
+    public const JWT_TTL_SECONDS = 900;
+    public const REFRESH_TOKEN_TTL_SECONDS = 604800;
 
     public function __construct(
         private EntityManagerInterface $em,
         private UserRepository $userRepository,
         private UserPasswordHasherInterface $passwordHasher,
         private MessageBusInterface $messageBus,
+        private JWTTokenManagerInterface $jwtManager,
+        private CacheInterface $cache,
         private string $frontendUrl,
         private int $maxLoginAttempts = 5,
         private int $loginAttemptWindow = 600
@@ -63,6 +74,50 @@ class AuthService
         return $user;
     }
 
+    /**
+     * @param array{email?: mixed, password?: mixed} $data
+     *
+     * @return array{token: string, refreshToken: string, refreshTokenExpiresAt: DateTimeImmutable}
+     */
+    public function login(array $data): array
+    {
+        $email = is_string($data['email'] ?? null) ? mb_strtolower(trim($data['email'])) : '';
+        $password = is_string($data['password'] ?? null) ? $data['password'] : '';
+
+        if ($this->isLoginThrottled($email)) {
+            throw new LoginThrottledException(self::LOGIN_ERROR_MESSAGE);
+        }
+
+        $user = $email !== '' ? $this->userRepository->findOneBy(['email' => $email]) : null;
+        if (
+            !$user instanceof User
+            || $user->getStatus() !== 'ACTIVE'
+            || !$this->passwordHasher->isPasswordValid($user, $password)
+        ) {
+            $this->recordFailedLogin($email);
+
+            throw new LoginFailedException(self::LOGIN_ERROR_MESSAGE);
+        }
+
+        $this->resetLoginAttempts($email);
+
+        $refreshToken = bin2hex(random_bytes(32));
+        $refreshTokenExpiresAt = (new DateTimeImmutable())->modify('+7 days');
+
+        $this->em->persist(new RefreshToken(
+            $user,
+            hash('sha256', $refreshToken),
+            $refreshTokenExpiresAt
+        ));
+        $this->em->flush();
+
+        return [
+            'token' => $this->jwtManager->create($user),
+            'refreshToken' => $refreshToken,
+            'refreshTokenExpiresAt' => $refreshTokenExpiresAt,
+        ];
+    }
+
     private function validateRegistrationData(array $data): void
     {
         // CA-1 : champs requis
@@ -93,5 +148,61 @@ class AuthService
         if ($this->userRepository->findOneBy(['username' => $username])) {
             throw new InvalidArgumentException('Compte déjà existant.');
         }
+    }
+
+    /**
+     * @return array{count: int, blocked_until: int}
+     */
+    private function getLoginAttemptState(string $email): array
+    {
+        return $this->cache->get($this->loginAttemptCacheKey($email), function (ItemInterface $item): array {
+            $item->expiresAfter($this->loginAttemptWindow);
+
+            return ['count' => 0, 'blocked_until' => 0];
+        });
+    }
+
+    private function isLoginThrottled(string $email): bool
+    {
+        $state = $this->getLoginAttemptState($email);
+
+        return $state['blocked_until'] > time();
+    }
+
+    private function recordFailedLogin(string $email): void
+    {
+        $state = $this->getLoginAttemptState($email);
+        $count = $state['count'] + 1;
+        $blockedUntil = $state['blocked_until'];
+
+        if ($count >= $this->maxLoginAttempts) {
+            $blockedUntil = time() + $this->progressiveDelay($count);
+        }
+
+        $key = $this->loginAttemptCacheKey($email);
+        $this->cache->delete($key);
+        $this->cache->get($key, function (ItemInterface $item) use ($count, $blockedUntil): array {
+            $item->expiresAfter(max($this->loginAttemptWindow, $blockedUntil - time()));
+
+            return [
+                'count' => $count,
+                'blocked_until' => $blockedUntil,
+            ];
+        });
+    }
+
+    private function resetLoginAttempts(string $email): void
+    {
+        $this->cache->delete($this->loginAttemptCacheKey($email));
+    }
+
+    private function loginAttemptCacheKey(string $email): string
+    {
+        return 'auth_login_attempts_'.hash('sha256', $email);
+    }
+
+    private function progressiveDelay(int $failedAttempts): int
+    {
+        return 60 * (2 ** ($failedAttempts - $this->maxLoginAttempts));
     }
 }
