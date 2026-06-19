@@ -5,8 +5,9 @@ framework:
         transports:
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+
             failed:
-                dsn: '%env(REDIS_URL)%/messages_failed'
+                dsn: '%env(REDIS_URL)%'
 
         routing:
             'App\Message\SendEmailMessage': async
