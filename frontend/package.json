@@ -30,6 +30,7 @@
     "@angular/build": "^21.2.13",
     "@angular/cli": "^21.2.13",
     "@angular/compiler-cli": "^21.2.0",
+    "@cloudflare/workers-types": "^4.20260616.1",
     "@eslint/js": "^10.0.1",
     "angular-eslint": "21.4.0",
     "eslint": "^10.3.0",

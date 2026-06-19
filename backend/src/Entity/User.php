@@ -22,7 +22,7 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Index(name: 'idx_utilisateur_status', fields: ['status'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
-    private const ROLES_AUTORISES = ['user', 'expert', 'moderator', 'client', 'admin'];
+    private const ROLES_AUTORISES = ['USER', 'EXPERT', 'MODERATOR', 'VENDEUR', 'ADMIN'];
 
     private const STATUTS_AUTORISES = ['PENDING_VALIDATION', 'ACTIVE', 'BANNED'];
 
@@ -48,8 +48,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'trust_score', type: 'smallint', options: ['default' => 0])]
     private int $trustScore = 0;
 
-    #[ORM\Column(length: 20, options: ['default' => 'user'])]
-    private string $role = 'user';
+    #[ORM\Column(length: 20, options: ['default' => 'USER'])]
+    private string $role = 'USER';
 
     #[ORM\Column(options: ['default' => 0])]
     private int $points = 0;
@@ -135,8 +135,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $roles = ['ROLE_USER'];
 
-        if ($this->role !== 'user') {
-            $roles[] = 'ROLE_' . mb_strtoupper($this->role);
+        if ($this->role !== 'USER') {
+            $roles[] = 'ROLE_' . $this->role;
         }
 
         return array_values(array_unique($roles));

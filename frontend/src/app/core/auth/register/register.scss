@@ -1,0 +1,38 @@
+.register-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 100vh;
+  background: #040A20;
+  padding-bottom: 40px;
+  box-sizing: border-box;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+app-header {
+  width: 100%;
+  display: block;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+app-register-form {
+  display: block;
+  margin-top: 60px;
+  margin-bottom: 60px;
+  flex-grow: 1;
+  z-index: 5;
+}
+
+app-footer {
+  width: 100%;
+  display: block;
+  flex-shrink: 0;
+}

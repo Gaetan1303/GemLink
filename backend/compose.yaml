@@ -32,7 +32,7 @@ services:
       - yes
 
     ports:
-      - "6380:6380"
+      - "6380:6379"
 
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -43,7 +43,26 @@ services:
 
     volumes:
       - redis_data:/data
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: gemlink_pgadmin
+    restart: unless-stopped
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gemlink.com
+      PGADMIN_DEFAULT_PASSWORD: AdminPassword123!
+
+    ports:
+      - "8080:80"
+
+    depends_on:
+      database:
+        condition: service_healthy
+
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
 
 volumes:
   database_data:
   redis_data:
+  pgadmin_data:

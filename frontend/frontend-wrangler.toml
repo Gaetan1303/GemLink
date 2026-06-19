@@ -1,5 +1,5 @@
 name       = "gemlink-frontend"
-main       = "worker.ts"
+main       = "frontend-worker.ts"
 compatibility_date = "2025-01-01"
 
 [assets]

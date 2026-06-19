@@ -1,0 +1,82 @@
+<form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+
+  @if (successMessage) {
+    <div class="alert alert-success">{{ successMessage }}</div>
+  }
+  @if (errorMessage) {
+    <div class="alert alert-danger">{{ errorMessage }}</div>
+  }
+
+  <!-- CA-1 : pseudo unique saisi par l'utilisateur -->
+  <div class="input-group">
+    <div class="input-field-frame" [class.is-invalid]="registerForm.get('username')?.invalid && isSubmitted">
+      <input
+        type="text"
+        formControlName="username"
+        placeholder="PSEUDO"
+      />
+    </div>
+    @if (registerForm.get('username')?.invalid && isSubmitted) {
+      <span class="error-text">
+        @if (registerForm.get('username')?.errors?.['required']) { Le pseudo est requis }
+        @else if (registerForm.get('username')?.errors?.['minlength']) { 3 caractères minimum }
+        @else if (registerForm.get('username')?.errors?.['pattern']) { Caractères alphanumériques uniquement }
+      </span>
+    }
+  </div>
+
+  <div class="input-group">
+    <div class="input-field-frame" [class.is-invalid]="registerForm.get('email')?.invalid && isSubmitted">
+      <input
+        type="email"
+        formControlName="email"
+        placeholder="PIERRE@GMAIL.COM"
+      />
+    </div>
+    @if (registerForm.get('email')?.invalid && isSubmitted) {
+      <span class="error-text">Email requis ou format invalide</span>
+    }
+  </div>
+
+  <div class="input-group">
+    <div class="input-field-frame" [class.is-invalid]="registerForm.get('password')?.invalid && isSubmitted">
+      <input
+        type="password"
+        formControlName="password"
+        placeholder="MOT DE PASSE"
+      />
+    </div>
+    @if (registerForm.get('password')?.invalid && isSubmitted) {
+      @if (registerForm.get('password')?.errors?.['required']) {
+        <span class="error-text">Mot de passe requis</span>
+      } @else if (registerForm.get('password')?.errors?.['pattern'] || registerForm.get('password')?.errors?.['minlength']) {
+        <span class="error-text">8 car. min, 1 Maj, 1 Min, 1 Chiffre, 1 Spécial.</span>
+      }
+    }
+  </div>
+
+  <div class="input-group">
+    <div class="input-field-frame"
+      [class.is-invalid]="(registerForm.get('confirmPassword')?.invalid || registerForm.hasError('mismatch')) && isSubmitted">
+      <input
+        type="password"
+        formControlName="confirmPassword"
+        placeholder="CONFIRMATION MDP"
+      />
+    </div>
+    @if (isSubmitted) {
+      @if (registerForm.get('confirmPassword')?.errors?.['required']) {
+        <span class="error-text">Veuillez confirmer le mot de passe</span>
+      } @else if (registerForm.hasError('mismatch')) {
+        <span class="error-text">Les mots de passe ne correspondent pas</span>
+      }
+    }
+  </div>
+
+  <app-button
+    type="submit"
+    label="CRÉER MON PROFIL"
+    [disabled]="isSubmitted && registerForm.invalid">
+  </app-button>
+
+</form>

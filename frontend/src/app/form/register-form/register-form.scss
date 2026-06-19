@@ -1,0 +1,155 @@
+$bg-main: #040A20;
+$bg-card: #1F2833;
+$bg-input: #1A1625;
+$gold: #C5A059;
+$text-light: #E2E2E9;
+$white: #FFFFFF;
+$font-family: 'Plus Jakarta Sans', sans-serif;
+
+.register-form {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 36px;
+  gap: 19px;
+  width: 330px;
+  height: 550px;
+  background: $bg-card;
+  border: 1px solid rgba(197, 160, 89, 0.25);
+  box-shadow: inset 0px 4px 4px rgba(197, 160, 89, 0.05);
+  border-radius: 24px;
+  margin: 0 auto; 
+}
+
+.alert {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-family: $font-family;
+  font-size: 12px;
+  font-weight: 600;
+  box-sizing: border-box;
+  
+  &.alert-danger {
+    background: rgba(#ff4d4d, 0.1);
+    border: 1px solid rgba(#ff4d4d, 0.3);
+    color: #ff4d4d;
+  }
+  &.alert-success {
+    background: rgba(#00cc66, 0.1);
+    border: 1px solid rgba(#00cc66, 0.3);
+    color: #00cc66;
+  }
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0px 0px 10px;
+  gap: 8px;
+  width: 258px;
+  align-self: stretch;
+
+  .input-field-frame {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 11px 21px;
+    gap: 10px;
+    width: 258px;
+    height: 47px;
+    background: $bg-input;
+    border: 1px solid rgba(0, 0, 0, 0.11);
+    border-radius: 16px;
+    transition: border-color 0.2s ease;
+
+    &:has(input[type="password"]) {
+      height: 42px;
+    }
+
+    input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: $font-family;
+      font-style: normal;
+      font-weight: 700;
+      font-size: 18px;
+      line-height: 25px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: $text-light;
+
+      &::placeholder {
+        color: rgba($text-light, 0.35);
+        font-size: 16px;
+      }
+      
+      &.is-invalid {
+        color: #ff4d4d;
+      }
+    }
+    
+    &:focus-within {
+      border-color: rgba($gold, 0.5);
+    }
+  }
+
+  .error-text {
+    font-family: $font-family;
+    font-size: 11px;
+    font-weight: 700;
+    color: #ff4d4d;
+    letter-spacing: 0.03em;
+    margin-left: 6px;
+    text-transform: uppercase;
+  }
+}
+
+app-button {
+  width: 100%;
+  align-self: stretch;
+  
+  ::v-deep .btn-custom, 
+  button { 
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 18px 21px;
+    gap: 10px;
+    width: 258px !important;
+    height: 61px !important;
+    background: rgba(197, 160, 89, 0.24) !important;
+    border: 1px solid rgba(197, 160, 89, 0.1) !important;
+    border-radius: 16px !important;
+    cursor: pointer;
+    font-family: $font-family !important;
+    font-style: normal !important;
+    font-weight: 800 !important;
+    font-size: 16px !important;
+    line-height: 20px !important;
+    text-align: center !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    color: $gold !important;
+    transition: background 0.2s ease, transform 0.1s ease;
+
+    &:hover {
+      background: rgba(197, 160, 89, 0.35) !important;
+    }
+    
+    &:disabled {
+      background: rgba($bg-input, 0.5) !important;
+      color: rgba($text-light, 0.2) !important;
+      border-color: transparent !important;
+      cursor: not-allowed;
+    }
+  }
+}
