@@ -29,7 +29,6 @@ export class Form implements OnInit {
       return;
     }
 
-    console.log('Connexion demandée :', this.loginForm.value);
-
+    
   }
 }

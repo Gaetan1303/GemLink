@@ -37,6 +37,23 @@ class AuthController extends AbstractController
         );
     }
 
+    #[Route('/auth/validate-email/{token}', name: 'app_validate_email', methods: ['GET'])]
+    public function validateEmail(string $token, AuthService $authService): JsonResponse
+    {
+        try {
+            $authService->validateEmail($token);
+        } catch (InvalidArgumentException $e) {
+            return $this->json(
+                ['message' => $e->getMessage()],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        return $this->json([
+            'message' => 'Email valide avec succes.',
+        ]);
+    }
+
     #[Route('/auth/login', name: 'app_login', methods: ['POST'])]
     public function login(Request $request, AuthService $authService): JsonResponse
     {

@@ -1,4 +1,30 @@
 services:
+  php:
+    build:
+      dockerfile: Dockerfile
+    container_name: gemlink_php
+    restart: unless-stopped
+
+    environment:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-gemlink}
+      DB_USER: ${POSTGRES_USER:-gemlink}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-MimineForEver}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+    ports:
+      - "8000:8080"
+
+    volumes:
+      - .:/app
+
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
   database:
     image: pgvector/pgvector:pg16
     container_name: gemlink_postgres
