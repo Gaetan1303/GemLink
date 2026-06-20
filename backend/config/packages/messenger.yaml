@@ -7,7 +7,7 @@ framework:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
 
             failed:
-                dsn: '%env(REDIS_URL)%'
+               dsn: 'redis://%env(REDIS_HOST)%:6379/messages_failed'
 
         routing:
             'App\Message\SendEmailMessage': async
