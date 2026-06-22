@@ -1,0 +1,18 @@
+<div class="validate-email-page">
+  <app-header></app-header>
+
+  <main class="validate-email">
+    <section class="validate-email__panel" [class.validate-email__panel--error]="state() === 'error'">
+      <p class="validate-email__status" *ngIf="state() === 'loading'">Merci de patienter</p>
+      <p class="validate-email__status" *ngIf="state() === 'success'">Compte active</p>
+      <p class="validate-email__status" *ngIf="state() === 'error'">Validation impossible</p>
+
+      <h1>{{ message() }}</h1>
+
+      <a *ngIf="state() === 'success'" routerLink="/auth/login" class="validate-email__link">Aller a la connexion</a>
+      <a *ngIf="state() === 'error'" routerLink="/auth/register" class="validate-email__link">Creer un compte</a>
+    </section>
+  </main>
+
+  <app-footer></app-footer>
+</div>

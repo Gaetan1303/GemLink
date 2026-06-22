@@ -13,8 +13,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
     
-RUN docker-php-ext-install pdo_pgsql intl \
-    && pecl install redis && docker-php-ext-enable redis
+RUN install-php-extensions redis pdo_pgsql intl
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
