@@ -11,6 +11,14 @@ export const routes: Routes = [
         path: 'register',
         loadComponent: () => import('./core/auth/register/register').then(m => m.Register)
       },
+      {
+        path: 'login',
+        loadComponent: () => import('./form/form').then(m => m.Form)
+      },
+      {
+        path: 'validate-email/:token',
+        loadComponent: () => import('./core/auth/validate-email/validate-email').then(m => m.ValidateEmail)
+      },
     ]
   }
 ];
