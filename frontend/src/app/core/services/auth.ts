@@ -8,6 +8,10 @@ export interface RegisterRequest {
   passwordHash: string; 
 }
 
+export interface AuthMessageResponse {
+  message: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -17,5 +21,9 @@ export class AuthService {
 
   register(data: RegisterRequest): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/register`, data);
+  }
+
+  validateEmail(token: string): Observable<AuthMessageResponse> {
+    return this.http.get<AuthMessageResponse>(`${this.apiUrl}/validate-email/${token}`);
   }
 }
