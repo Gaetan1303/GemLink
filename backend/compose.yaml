@@ -17,9 +17,6 @@ services:
     ports:
       - "8000:8080"
 
-    volumes:
-      - .:/app
-
     depends_on:
       database:
         condition: service_healthy
