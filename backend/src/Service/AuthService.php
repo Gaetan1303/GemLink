@@ -111,7 +111,7 @@ class AuthService
     public function login(array $data): array
     {
         $email = is_string($data['email'] ?? null) ? mb_strtolower(trim($data['email'])) : '';
-        $password = is_string($data['password'] ?? null) ? $data['password'] : '';
+        $passwordHash = is_string($data['passwordHash'] ?? null) ? $data['passwordHash'] : '';
 
         if ($this->isLoginThrottled($email)) {
             throw new LoginThrottledException(self::LOGIN_ERROR_MESSAGE);
@@ -121,7 +121,7 @@ class AuthService
         if (
             !$user instanceof User
             || $user->getStatus() !== 'ACTIVE'
-            || !$this->passwordHasher->isPasswordValid($user, $password)
+            || !$this->passwordHasher->isPasswordValid($user, $passwordHash)
         ) {
             $this->recordFailedLogin($email);
 

@@ -17,7 +17,7 @@ export interface AuthMessageResponse {
 
 export interface LoginPayload {
   email:    string;
-  password: string;
+  passwordHash: string;
 }
 
 export interface LoginResponse {

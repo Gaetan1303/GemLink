@@ -36,18 +36,18 @@
 
   <!-- Mot de passe -->
   <div class="input-group">
-    <div class="input-field-frame" [class.is-invalid]="passwordCtrl.invalid && isSubmitted()">
+    <div class="input-field-frame" [class.is-invalid]="passwordHashCtrl.invalid && isSubmitted()">
       <input
         type="password"
-        formControlName="password"
+        formControlName="passwordHash"
         placeholder="MOTDEPASSE"
         autocomplete="current-password"
         data-testid="input-password"
-        [attr.aria-invalid]="passwordCtrl.invalid && isSubmitted()"
+        [attr.aria-invalid]="passwordHashCtrl.invalid && isSubmitted()"
         aria-describedby="password-error"
       />
     </div>
-    @if (passwordCtrl.invalid && isSubmitted()) {
+    @if (passwordHashCtrl.invalid && isSubmitted()) {
       <span id="password-error" class="error-text" data-testid="password-error">
         Mot de passe requis
       </span>

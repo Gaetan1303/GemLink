@@ -46,13 +46,13 @@ export class Form implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loginForm = this.#fb.group({
       email:    ['', [Validators.required, Validators.email]],
-      password: ['', Validators.required],
+      passwordHash: ['', Validators.required],
     });
   }
 
   // ── Accesseurs ─────────────────────────────────────────────
   get emailCtrl()    { return this.loginForm.get('email')!;    }
-  get passwordCtrl() { return this.loginForm.get('password')!; }
+  get passwordHashCtrl() { return this.loginForm.get('passwordHash')!; }
 
   // ── Soumission ─────────────────────────────────────────────
   onSubmit(): void {

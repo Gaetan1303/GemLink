@@ -13,8 +13,8 @@ import { SharedModule } from '../shared/shared-module';
 const VALID_EMAIL    = 'pierre@gmail.com';
 const VALID_PASSWORD = 'Password1!';
 
-function fillAndSubmit(fixture: ComponentFixture<Form>, email: string, password: string): void {
-  fixture.componentInstance.loginForm.setValue({ email, password });
+function fillAndSubmit(fixture: ComponentFixture<Form>, email: string, passwordHash: string): void {
+  fixture.componentInstance.loginForm.setValue({ email, passwordHash });
   fixture.componentInstance.onSubmit();
   fixture.detectChanges();
 }
@@ -69,7 +69,7 @@ describe('Form — US 1.3 Connexion', () => {
 
   it('devrait initialiser le formulaire vide', () => {
     expect(component.loginForm.get('email')?.value).toBe('');
-    expect(component.loginForm.get('password')?.value).toBe('');
+    expect(component.loginForm.get('passwordHash')?.value).toBe('');
   });
 
   // ── Validation locale ────────────────────────────────────
@@ -97,7 +97,7 @@ describe('Form — US 1.3 Connexion', () => {
     expect(loginSpy).toHaveBeenCalledOnce();
     expect(loginSpy).toHaveBeenCalledWith({
       email:    VALID_EMAIL,
-      password: VALID_PASSWORD,
+      passwordHash: VALID_PASSWORD,
     });
     expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
