@@ -13,7 +13,7 @@ export const routes: Routes = [
       },
       {
         path: 'login',
-        loadComponent: () => import('./form/form').then(m => m.Form)
+        loadComponent: () => import('./core/auth/login/login').then(m => m.Login)
       },
       {
         path: 'validate-email/:token',
