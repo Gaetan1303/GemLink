@@ -7,6 +7,7 @@ use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\Exception\LoginFailedException;
 use App\Exception\LoginThrottledException;
+use App\Repository\EmailValidationTokenRepository;
 use App\Repository\UserRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,6 +28,7 @@ class AuthService
     public function __construct(
         private EntityManagerInterface $em,
         private UserRepository $userRepository,
+        private EmailValidationTokenRepository $emailValidationTokenRepository,
         private UserPasswordHasherInterface $passwordHasher,
         private MessageBusInterface $messageBus,
         private JWTTokenManagerInterface $jwtManager,
@@ -74,6 +76,33 @@ class AuthService
         return $user;
     }
 
+    public function validateEmail(string $plainToken): void
+    {
+        $plainToken = trim($plainToken);
+        if ($plainToken === '') {
+            throw new InvalidArgumentException('Token de validation invalide.');
+        }
+
+        $token = $this->emailValidationTokenRepository->findOneBy(['token' => $plainToken]);
+        if (!$token instanceof EmailValidationToken) {
+            throw new InvalidArgumentException('Token de validation invalide.');
+        }
+
+        if ($token->isUsed()) {
+            throw new InvalidArgumentException('Token de validation deja utilise.');
+        }
+
+        if ($token->getExpiresAt() < new DateTimeImmutable()) {
+            throw new InvalidArgumentException('Token de validation expire.');
+        }
+
+        $user = $token->getUser();
+        $user->setStatus('ACTIVE');
+        $token->setUsed(true);
+
+        $this->em->flush();
+    }
+
     /**
      * @param array{email?: mixed, password?: mixed} $data
      *
@@ -82,7 +111,7 @@ class AuthService
     public function login(array $data): array
     {
         $email = is_string($data['email'] ?? null) ? mb_strtolower(trim($data['email'])) : '';
-        $password = is_string($data['password'] ?? null) ? $data['password'] : '';
+        $passwordHash = is_string($data['passwordHash'] ?? null) ? $data['passwordHash'] : '';
 
         if ($this->isLoginThrottled($email)) {
             throw new LoginThrottledException(self::LOGIN_ERROR_MESSAGE);
@@ -92,7 +121,7 @@ class AuthService
         if (
             !$user instanceof User
             || $user->getStatus() !== 'ACTIVE'
-            || !$this->passwordHasher->isPasswordValid($user, $password)
+            || !$this->passwordHasher->isPasswordValid($user, $passwordHash)
         ) {
             $this->recordFailedLogin($email);
 
