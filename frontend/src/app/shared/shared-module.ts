@@ -8,6 +8,7 @@ import { HeroSectionComponent } from './hero-section/hero-section';
 import { HowItWorks } from './how-it-works/how-it-works';
 import { KeyFigures } from './key-figures/key-figures';
 import { LatestDiscoveries } from './latest-discoveries/latest-discoveries';
+import { HeaderImage } from './header-image/header-image';
 
 
 
@@ -21,7 +22,8 @@ import { LatestDiscoveries } from './latest-discoveries/latest-discoveries';
     HowItWorks,
     KeyFigures,
     LatestDiscoveries,
-    MatIconModule
+    MatIconModule,
+    HeaderImage,
   ],
   exports: [
     CommonModule,
@@ -32,7 +34,8 @@ import { LatestDiscoveries } from './latest-discoveries/latest-discoveries';
     HowItWorks,
     KeyFigures,
     LatestDiscoveries,
-    MatIconModule
+    MatIconModule,
+    HeaderImage,
   ]
 })
 export class SharedModule {}
