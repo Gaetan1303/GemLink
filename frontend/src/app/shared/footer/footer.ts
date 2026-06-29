@@ -9,4 +9,4 @@ import { MatButtonModule } from '@angular/material/button';
   templateUrl: './footer.html',
   styleUrls: ['./footer.scss'],
 })
-export class FooterComponent {}
+export class Footer {}

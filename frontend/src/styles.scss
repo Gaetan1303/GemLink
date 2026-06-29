@@ -42,4 +42,16 @@ $gemlink-primary-palette: (
 // ─────────────────────────────────────────────
 :root {
   color-scheme: dark;
+
+  --background-color: #040A20;
+  --section-background-color: #0B1225;
+  --text-color: #FFFFFF;
+  --text-color-secondary: #adb5bd;
+  --primary-color: #C5A059;
+  --dark-contrast: #1A1625;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
 }

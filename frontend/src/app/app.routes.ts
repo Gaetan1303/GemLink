@@ -1,9 +1,13 @@
 import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
-
+import { Profile } from './pages/user/profile/profile';
 
 export const routes: Routes = [
   { path: '', component: Home },
+  {
+    path: 'users/me',
+    loadComponent: () => import('./pages/user/profile/profile').then(m => m.Profile)
+  },
   {
     path: 'auth',
     children: [
@@ -18,7 +22,7 @@ export const routes: Routes = [
       {
         path: 'validate-email/:token',
         loadComponent: () => import('./core/auth/validate-email/validate-email').then(m => m.ValidateEmail)
-      },
+      }
     ]
   }
 ];
