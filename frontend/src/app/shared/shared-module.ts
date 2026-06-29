@@ -9,6 +9,8 @@ import { HowItWorks } from './how-it-works/how-it-works';
 import { KeyFigures } from './key-figures/key-figures';
 import { LatestDiscoveries } from './latest-discoveries/latest-discoveries';
 import { HeaderImage } from './header-image/header-image';
+import { CookieConsentBanner } from './cookie-consent-banner/cookie-consent-banner';
+
 
 
 
@@ -24,6 +26,7 @@ import { HeaderImage } from './header-image/header-image';
     LatestDiscoveries,
     MatIconModule,
     HeaderImage,
+    CookieConsentBanner
   ],
   exports: [
     CommonModule,
@@ -36,6 +39,7 @@ import { HeaderImage } from './header-image/header-image';
     LatestDiscoveries,
     MatIconModule,
     HeaderImage,
+    CookieConsentBanner,
   ]
 })
 export class SharedModule {}
