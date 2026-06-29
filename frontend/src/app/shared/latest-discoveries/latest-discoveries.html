@@ -1,17 +1,17 @@
 <section class="latest-discoveries">
   <h2>Dernières découvertes</h2>
-  <div class="discoveries-grid">
+  <div class="discoveries-grid" role="list">
     <!-- Boucle FOR carte 6 fois avec des données différentes 
      {{item}} pour générer dynamiquement des attributs pour chaque élément répété dans *ngFor, 
      rendant chaque "carte de découverte" distincte en fonction de sa position dans la liste.
     -->
-    <div class="discovery-card" *ngFor="let item of [1,2,3,4,5,6]">
-      <img src="assets/images/quartz.png"  alt="Minéral {{item}}">
+    <div class="discovery-card" *ngFor="let item of [1,2,3,4,5,6]" role="listitem">
+      <img src="assets/images/quartz.png"  alt="Quartz Rose">
       <div class="card-content">
         <!-- Titre : {{ Pierre.nom }} -->
         <!-- Confiance de l'IA : {{ resultat_reconnaissance_ia }} -->
         <!-- Par : {{ pierre_user.nom_utilisateur }} -->
-        <h4>Quartz Rose</h4>
+        <h3>Quartz Rose</h3>
         <p>Confiance IA: 92%</p>
         <p>par @utilisateur{{item}}</p>
       </div>
