@@ -5,7 +5,7 @@
     <div class="footer-left">
 
       <div class="logo">
-        <img src="assets/images/logo.png" alt="Logo">
+        <img src="assets/images/logo.png" alt="GemLink logo">
       </div>
 
       <p class="description">
@@ -24,16 +24,20 @@
 
         <h3>Restez connectés</h3>
 
-        <div class="email-input">
-          <input
-            type="email"
-            placeholder="votre@email.com"
-          >
-        </div>
+        <form class="newsletter-form">
+          <label for="email-input" class="sr-only">Votre adresse email</label>
+          <div class="email-input">
+            <input
+              id="email-input"
+              type="email"
+              placeholder="votre@email.com"
+            >
+          </div>
 
-        <button class="subscribe-btn">
-          S'inscrire
-        </button>
+          <button type="submit" class="subscribe-btn">
+            S'inscrire
+          </button>
+        </form>
 
       </div>
 
@@ -42,9 +46,11 @@
   </div>
 
   <div class="footer-links">
-    <a href="#">Mentions légales</a>
-    <a href="#">Presse</a>
-    <a href="#">Contact</a>
+    <a routerLink="/mentions-legales">Mentions légales</a>
+    <a routerLink="/presse">Presse</a>
+    <a routerLink="/contact">Contact</a>
+    <a routerLink="/politique-de-confidentialite">Politique de confidentialité</a>
+    <a routerLink="/rgpd">RGPD</a>
   </div>
 
 </footer>
