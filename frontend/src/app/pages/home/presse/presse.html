@@ -1,34 +1,118 @@
+<div><app-header /></div>
+<div><app-header-image /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+<main class="legal-page" id="main-content">
+  <div class="legal-container">
 
-<div><app-header /> </div>
-  <div><app-nav-bar-mobile [role]="currentRole()" /> </div>
-<main class="legal-page">
     <h1>Espace Presse</h1>
 
-    <section>
-      <h2>À propos de GemLink</h2>
-      <p>GemLink est une plateforme communautaire innovante permettant d'identifier, partager et explorer des pierres et minéraux grâce à l'intelligence artificielle. Notre pipeline IA combine détection YOLO, classification ViT et recherche vectorielle via CLIP et pgvector.</p>
-    </section>
+    <!-- CA-2 : Présentation -->
+    <section aria-labelledby="apropos-title">
+      <h2 id="apropos-title">À propos de GemLink</h2>
 
-    <section>
-      <h2>Contact presse</h2>
-      <p>Pour toute demande presse, interview ou partenariat médiatique :</p>
-      <p><strong>Email :</strong> presse&#64;gem-link.org</p>
-    </section>
+      <p>
+        GemLink est une plateforme communautaire dédiée à l'identification, au partage et à l'exploration de pierres et minéraux. Elle s'adresse aussi bien aux collectionneurs amateurs qu'aux passionnés de gemmologie et de minéralogie.
+      </p>
 
-    <section>
-      <h2>Kit média</h2>
-      <p>Notre kit média (logos, visuels, captures d'écran) est disponible sur demande à l'adresse presse&#64;gem-link.org.</p>
-    </section>
+      <h3>Mission</h3>
+      <p>
+        Rendre la connaissance des pierres et minéraux accessible à tous, grâce à l'intelligence artificielle et à une communauté engagée.
+      </p>
 
-    <section>
-      <h2>Chiffres clés</h2>
+      <h3>Fonctionnalités principales</h3>
       <ul>
-        <li>Plus de 1 200 membres inscrits</li>
-        <li>Plus de 5 600 pierres identifiées</li>
-        <li>Plus de 890 minéraux référencés</li>
-        <li>Identification par IA en quelques secondes</li>
+        <li>Identification de pierres par photo grâce à un pipeline IA (détection YOLO, classification ViT, recherche vectorielle CLIP)</li>
+        <li>Partage de collections personnelles</li>
+        <li>Système de badges et de factions communautaires</li>
+        <li>Galerie collaborative de minéraux référencés</li>
+        <li>Vitrine de vente entre membres</li>
+      </ul>
+
+      <h3>Éléments différenciants</h3>
+      <ul>
+        <li>Pipeline IA entièrement conçu pour la gemmologie</li>
+        <li>Recherche par similarité visuelle via embeddings CLIP et pgvector</li>
+        <li>Approche communautaire : les utilisateurs enrichissent collectivement la base de données</li>
+        <li>Interface mobile-first pensée pour l'usage terrain</li>
+      </ul>
+
+      <h3>Chiffres clés</h3>
+      <ul class="presse__figures" aria-label="Chiffres clés de GemLink">
+        @for (figure of keyFigures; track figure.label) {
+          <li class="presse__figure">
+            <span class="presse__figure-number" aria-hidden="true">{{ figure.number }}</span>
+            <span class="presse__figure-label">{{ figure.label }}</span>
+          </li>
+        }
       </ul>
     </section>
 
+    <!-- CA-3 : Kit média -->
+    <section aria-labelledby="kit-title">
+      <h2 id="kit-title">Kit média</h2>
+      <p>Téléchargez les ressources officielles GemLink pour illustrer vos articles, présentations ou contenus.</p>
+
+      <ul class="presse__kit" aria-label="Fichiers du kit média">
+        @for (file of mediaKit; track file.label) {
+          <li class="presse__kit-item">
+            
+              [href]="file.url"
+              download
+              class="presse__kit-link"
+              [attr.aria-label]="file.label + ' — ' + file.format + ', ' + file.size">
+              <span class="presse__kit-label">{{ file.label }}</span>
+              <span class="presse__kit-meta" aria-hidden="true">{{ file.format }} — {{ file.size }}</span>
+            
+          </li>
+        }
+      </ul>
+    </section>
+
+    <!-- CA-4 : Contact presse -->
+    <section aria-labelledby="contact-title">
+      <h2 id="contact-title">Contact presse</h2>
+      <dl>
+        <dt>Adresse e-mail</dt>
+        <dd><a href="mailto:presse@gem-link.org">presse&#64;gem-link.org</a></dd>
+        <dt>Délai de réponse moyen</dt>
+        <dd>48 heures ouvrées</dd>
+        <dt>Disponibilités</dt>
+        <dd>L'équipe GemLink est disponible pour des interviews, démonstrations ou demandes d'information complémentaires.</dd>
+      </dl>
+    </section>
+
+    <!-- CA-5 : Revue de presse -->
+    <section aria-labelledby="revue-title">
+      <h2 id="revue-title">Revue de presse</h2>
+
+      @if (mediaCoverage.length === 0) {
+        <p class="presse__empty">
+          GemLink est disponible pour des interviews et des démonstrations.
+          Contactez-nous à <a href="mailto:presse@gem-link.org">presse&#64;gem-link.org</a>.
+        </p>
+      } @else {
+        <ul class="presse__coverage" aria-label="Publications consacrées à GemLink">
+          @for (item of mediaCoverage; track item.url) {
+            <li class="presse__coverage-item">
+              <span class="presse__coverage-media">{{ item.media }}</span>
+              
+                [href]="item.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="presse__coverage-link">
+                {{ item.title }}
+            
+              <time class="presse__coverage-date" [attr.datetime]="item.date">{{ item.date }}</time>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <footer class="legal-footer" aria-label="Date de mise à jour">
+      <p><small>Dernière mise à jour : 29 juin 2026</small></p>
+    </footer>
+
+  </div>
+  <app-footer></app-footer>
 </main>
-<app-footer></app-footer>
