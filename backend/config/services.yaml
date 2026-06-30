@@ -3,6 +3,7 @@ parameters:
     app.mailer_from_email: '%env(MAILER_FROM_EMAIL)%'
     app.mailer_from_name: '%env(MAILER_FROM_NAME)%'
     app.frontend_url: '%env(resolve:FRONTEND_URL)%'
+    infomaniak_newsletter.domain_id: '%env(INFOMANIAK_NEWSLETTER_DOMAIN_ID)%'
 
 services:
     _defaults:
@@ -12,7 +13,10 @@ services:
             string $fromEmail: '%app.mailer_from_email%'
             string $fromName: '%app.mailer_from_name%'
             string $frontendUrl: '%app.frontend_url%'
-    
+    App\Service\NewsletterCampaignService:
+        arguments:
+            $token: '%infomaniak_newsletter.token%'
+            $domainId: '%infomaniak_newsletter.domain_id%'
     App\:
         resource: '../src/'
 
