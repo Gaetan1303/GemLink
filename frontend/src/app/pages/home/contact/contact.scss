@@ -1,0 +1,131 @@
+.legal-page {
+  min-height: 100vh;
+  background-color: #040A20;
+  color: #f0f0f0;
+  padding: 2rem 1rem 4rem;
+
+  h1 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    color: #C5A059;
+    margin-bottom: 2rem;
+  }
+
+  h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: #C5A059;
+    margin: 2rem 0 1rem;
+  }
+
+  section {
+    border-bottom: 1px solid rgba(197, 160, 89, 0.2);
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+
+    &:last-of-type {
+      border-bottom: none;
+    }
+  }
+
+  p {
+    line-height: 1.7;
+    margin-bottom: 1rem;
+    color: rgba(240, 240, 240, 0.8);
+  }
+
+  a {
+    color: #C5A059;
+    text-underline-offset: 3px;
+
+    &:hover,
+    &:focus {
+      text-decoration: underline;
+      outline: 2px solid #C5A059;
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
+
+  dl {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 0.5rem 1rem;
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+    }
+
+    dt { font-weight: 700; color: #C5A059; }
+    dd { margin: 0; }
+  }
+
+  .contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      label {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #f0f0f0;
+      }
+
+      input, textarea {
+        background-color: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(197, 160, 89, 0.25);
+        border-radius: 6px;
+        padding: 0.8rem 1rem;
+        color: #f0f0f0;
+        font-family: inherit;
+        font-size: 1rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+        &::placeholder { color: rgba(240, 240, 240, 0.3); }
+        &:hover { border-color: rgba(197, 160, 89, 0.6); }
+        &:focus {
+          outline: none;
+          border-color: #C5A059;
+          box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
+        }
+      }
+
+      textarea { resize: vertical; }
+    }
+
+    .btn-submit {
+      align-self: flex-start;
+      background-color: #C5A059;
+      color: #040A20;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.8rem 2.5rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+
+      &:hover { background-color: #d4b473; }
+      &:active { transform: scale(0.98); }
+      &:focus-visible {
+        outline: 2px solid #f0f0f0;
+        outline-offset: 3px;
+      }
+
+      @media (max-width: 600px) {
+        align-self: stretch;
+        text-align: center;
+      }
+    }
+  }
+}

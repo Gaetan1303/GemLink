@@ -1,14 +1,96 @@
-<div><app-header /> </div>
-  <div><app-nav-bar-mobile [role]="currentRole()" /> </div>
+<div><app-header /></div>
+<div><app-header-image /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
 <main class="legal-page">
+  <h1>Mentions légales</h1>
 
+  <section aria-labelledby="editeur-title">
+    <h2 id="editeur-title">Éditeur du site</h2>
+    <dl>
+      <dt>Structure</dt>
+      <dd>Mimine Entreprise</dd>
+      
+      <dt>Nom du site</dt>
+      <dd>GemLink</dd>
+      
+      <dt>Statut</dt>
+      <dd>Auto-entrepreneur — Projet étudiant (RNCP CDA)</dd>
+      
+      <dt>Contact</dt>
+      <dd><a href="mailto:contact@gem-link.org">contact&#64;gem-link.org</a></dd>
+    </dl>
+  </section>
 
+  <section aria-labelledby="directeur-title">
+    <h2 id="directeur-title">Directeur de la publication</h2>
+    <div class="publication-wrapper">
+      <dl>
+        <dt>Responsable</dt>
+        <dd>Mimine Begue</dd>
+      </dl>
+     <!--<img src="assets/images/avatars/Mimine.png" alt="Portrait de Mimine Begue" class="avatar-publication">--> </div>
+  </section>
 
-
-
-
-
-
-
+  <section aria-labelledby="hebergement-title">
+    <h2 id="hebergement-title">Hébergement</h2>
     
-    <app-footer></app-footer>
+    <h3>Infrastructure principale</h3>
+    <dl>
+      <dt>Hébergeur</dt>
+      <dd>Railway Corp.</dd>
+      <dt>Adresse postale</dt>
+      <dd>340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis</dd>
+      <dt>Site web</dt>
+      <dd><a href="https://railway.app" target="_blank" rel="noopener noreferrer">https://railway.app</a></dd>
+    </dl>
+
+    <h3>Réseau de diffusion (CDN)</h3>
+    <dl>
+      <dt>Prestataire</dt>
+      <dd>Cloudflare</dd>
+      <dt>Adresse postale</dt>
+      <dd>101 Townsend St, San Francisco, CA 94107, États-Unis</dd>
+      <dt>Site web</dt>
+      <dd><a href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer">https://www.cloudflare.com</a></dd>
+    </dl>
+  </section>
+
+  <section aria-labelledby="tiers-title">
+    <h2 id="tiers-title">Services tiers</h2>
+    <dl>
+      <dt>Prestataire de stockage des médias</dt>
+      <dd>Cloudinary</dd>
+      <dt>Adresse</dt>
+      <dd>112 S. Market Street, Suite 300, San Jose, CA 95113, États-Unis</dd>
+      <dt>Site web</dt>
+      <dd><a href="https://cloudinary.com" target="_blank" rel="noopener noreferrer">https://cloudinary.com</a></dd>
+    </dl>
+  </section>
+
+  <section aria-labelledby="pi-plateforme-title">
+    <h2 id="pi-plateforme-title">Propriété intellectuelle — Plateforme</h2>
+    <p>
+      Le site GemLink, son code source, ses éléments graphiques, sa base documentaire et ses contenus éditoriaux sont protégés par le droit d'auteur conformément aux dispositions du Code de la propriété intellectuelle.
+    </p>
+    <p>
+      Toute reproduction, représentation, modification ou exploitation non autorisée, totale ou partielle, est interdite sans autorisation préalable écrite du titulaire des droits.
+    </p>
+  </section>
+
+  <section aria-labelledby="pi-utilisateurs-title">
+    <h2 id="pi-utilisateurs-title">Propriété intellectuelle — Contenus utilisateurs</h2>
+    <p>
+      Les photographies, descriptions et contenus publiés par les utilisateurs demeurent leur propriété exclusive. L'utilisateur conserve l'intégralité de ses droits de propriété intellectuelle sur ses créations.
+    </p>
+    <p>
+      La publication d'un contenu sur GemLink accorde uniquement à la plateforme une licence non exclusive, gratuite et mondiale, permettant l'affichage et la diffusion dudit contenu dans le cadre du fonctionnement du service.
+    </p>
+    <p>
+      Les modalités détaillées sont définies dans les
+      <a routerLink="/cgu">Conditions Générales d'Utilisation (CGU)</a>.
+    </p>
+  </section>
+</main>
+
+<app-footer></app-footer>
