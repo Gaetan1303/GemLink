@@ -21,6 +21,7 @@ use Symfony\Contracts\Cache\ItemInterface;
 class AuthService
 {
     private const PASSWORD_PATTERN = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/';
+    public const EMAIL_VALIDATION_SUCCESS_MESSAGE = 'Adresse email validee. Votre compte est maintenant actif.';
     public const LOGIN_ERROR_MESSAGE = 'Identifiants invalides.';
     public const JWT_TTL_SECONDS = 900;
     public const REFRESH_TOKEN_TTL_SECONDS = 604800;
@@ -31,6 +32,7 @@ class AuthService
         private EmailValidationTokenRepository $emailValidationTokenRepository,
         private UserPasswordHasherInterface $passwordHasher,
         private MessageBusInterface $messageBus,
+        private EmailValidationTokenSigner $emailValidationTokenSigner,
         private JWTTokenManagerInterface $jwtManager,
         private CacheInterface $cache,
         private string $frontendUrl,
@@ -52,26 +54,12 @@ class AuthService
 
         $this->em->persist($user);
 
-        // CA-4 : token de validation email, lié à l'utilisateur
-        $token = new EmailValidationToken();
-        $token->setUser($user);
-        $token->setToken(bin2hex(random_bytes(32))); // 64 car. hex, cryptographiquement sûr
-        $token->setExpiresAt((new DateTimeImmutable())->modify('+24 hours'));
-        $user->addEmailValidationToken($token);
-        $this->em->persist($token);
+        $plainToken = $this->createAndPersistEmailValidationToken($user);
 
         $this->em->flush();
 
-        // CA-4 : envoi asynchrone via Messenger, ne bloque pas la réponse HTTP
-        $this->messageBus->dispatch(new \App\Message\SendEmailMessage(
-            to: $user->getEmail(),
-            subject: 'Confirmez votre inscription sur GemLink',
-            template: 'emails/validation.html.twig',
-            templateData: [
-                'username' => $user->getUsername(),
-                'validationUrl' => sprintf('%s/auth/validate-email/%s', $this->frontendUrl, $token->getToken()),
-            ],
-        ));
+        // CA-1 : envoi asynchrone via Messenger, ne bloque pas la réponse HTTP
+        $this->dispatchEmailValidationMessage($user, $plainToken);
 
         return $user;
     }
@@ -83,22 +71,33 @@ class AuthService
             throw new InvalidArgumentException('Token de validation invalide.');
         }
 
-        $token = $this->emailValidationTokenRepository->findOneBy(['token' => $plainToken]);
+        $claims = $this->emailValidationTokenSigner->decodeAndVerify($plainToken);
+
+        $token = $this->emailValidationTokenRepository->findOneBy(['token' => hash('sha256', $plainToken)]);
         if (!$token instanceof EmailValidationToken) {
             throw new InvalidArgumentException('Token de validation invalide.');
         }
 
+        if ($token->getUser()->getId()->toRfc4122() !== $claims['sub']) {
+            throw new InvalidArgumentException('Token de validation invalide.');
+        }
+
         if ($token->isUsed()) {
-            throw new InvalidArgumentException('Token de validation deja utilise.');
+            throw new InvalidArgumentException('Lien de validation déjà utilisé.');
         }
 
         if ($token->getExpiresAt() < new DateTimeImmutable()) {
-            throw new InvalidArgumentException('Token de validation expire.');
+            throw new InvalidArgumentException('Lien de validation expiré. Vous pouvez demander un nouveau lien.');
         }
 
         $user = $token->getUser();
         $user->setStatus('ACTIVE');
-        $token->setUsed(true);
+
+        foreach ($user->getEmailValidationTokens() as $userToken) {
+            if (!$userToken->isUsed()) {
+                $userToken->setUsed(true);
+            }
+        }
 
         $this->em->flush();
     }
@@ -145,6 +144,21 @@ class AuthService
             'refreshToken' => $refreshToken,
             'refreshTokenExpiresAt' => $refreshTokenExpiresAt,
         ];
+    }
+
+    public function resendValidationEmail(string $email): void
+    {
+        $user = $this->userRepository->findOneBy(['email' => $email]);
+
+        if (!$user || $user->getStatus() !== 'PENDING_VALIDATION') {
+            // Pour des raisons de sécurité, ne pas révéler si l'email existe ou si le compte est déjà actif.
+            return;
+        }
+
+        $plainToken = $this->createAndPersistEmailValidationToken($user);
+        $this->em->flush();
+
+        $this->dispatchEmailValidationMessage($user, $plainToken);
     }
 
     private function validateRegistrationData(array $data): void
@@ -228,6 +242,33 @@ class AuthService
     private function loginAttemptCacheKey(string $email): string
     {
         return 'auth_login_attempts_'.hash('sha256', $email);
+    }
+
+    private function createAndPersistEmailValidationToken(User $user): string
+    {
+        $signed = $this->emailValidationTokenSigner->createSignedToken($user->getId()->toRfc4122());
+
+        $token = new EmailValidationToken();
+        $token->setUser($user);
+        $token->setToken(hash('sha256', $signed['token']));
+        $token->setExpiresAt($signed['expiresAt']);
+        $user->addEmailValidationToken($token);
+        $this->em->persist($token);
+
+        return $signed['token'];
+    }
+
+    private function dispatchEmailValidationMessage(User $user, string $signedToken): void
+    {
+        $this->messageBus->dispatch(new \App\Message\SendEmailMessage(
+            to: $user->getEmail(),
+            subject: 'Confirmez votre inscription sur GemLink',
+            template: 'emails/validation.html.twig',
+            templateData: [
+                'username' => $user->getUsername(),
+                'validationUrl' => sprintf('%s/auth/validate-email/%s', $this->frontendUrl, $signedToken),
+            ],
+        ));
     }
 
     private function progressiveDelay(int $failedAttempts): int

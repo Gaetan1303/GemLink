@@ -6,6 +6,7 @@ use App\Exception\LoginFailedException;
 use App\Exception\LoginThrottledException;
 use App\Service\AuthService;
 use InvalidArgumentException;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -50,8 +51,40 @@ class AuthController extends AbstractController
         }
 
         return $this->json([
-            'message' => 'Email valide avec succes.',
+            'message' => AuthService::EMAIL_VALIDATION_SUCCESS_MESSAGE,
+            'redirectTo' => '/auth/login?validated=1',
         ]);
+    }
+
+    #[Route('/auth/resend-validation-email', name: 'app_resend_validation_email', methods: ['POST'])]
+    public function resendValidationEmail(
+        Request $request,
+        AuthService $authService,
+        #[Autowire(service: 'limiter.email_validation_resend')] mixed $resendLimiter,
+    ): JsonResponse {
+        $ip = $request->getClientIp() ?? 'unknown';
+        $limit = $resendLimiter->create($ip)->consume(1);
+
+        if (!$limit->isAccepted()) {
+            return $this->json(
+                ['message' => 'Trop de demandes de renvoi depuis cette adresse IP. Réessayez plus tard.'],
+                Response::HTTP_TOO_MANY_REQUESTS
+            );
+        }
+
+        $data = json_decode($request->getContent(), true) ?? [];
+        $email = is_string($data['email'] ?? null) ? mb_strtolower(trim($data['email'])) : '';
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['message' => 'Adresse email invalide.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $authService->resendValidationEmail($email);
+
+        return $this->json(
+            ['message' => 'Si ce compte existe et est en attente, un nouvel email de validation a été envoyé.'],
+            Response::HTTP_ACCEPTED
+        );
     }
 
     #[Route('/auth/login', name: 'app_login', methods: ['POST'])]
