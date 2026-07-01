@@ -1,96 +1,102 @@
 <div><app-header /></div>
-<div><app-header-image /></div>
 <div><app-nav-bar-mobile [role]="currentRole()" /></div>
 
-<main class="legal-page">
-  <h1>Mentions légales</h1>
+<main class="legal-page" id="main-content">
+  <div class="legal-container">
 
-  <section aria-labelledby="editeur-title">
-    <h2 id="editeur-title">Éditeur du site</h2>
-    <dl>
-      <dt>Structure</dt>
-      <dd>Mimine Entreprise</dd>
-      
-      <dt>Nom du site</dt>
-      <dd>GemLink</dd>
-      
-      <dt>Statut</dt>
-      <dd>Auto-entrepreneur — Projet étudiant (RNCP CDA)</dd>
-      
-      <dt>Contact</dt>
-      <dd><a href="mailto:contact@gem-link.org">contact&#64;gem-link.org</a></dd>
-    </dl>
-  </section>
+    <h1>Contactez-nous</h1>
+    <p class="legal-intro">Une question, une suggestion ? Notre équipe vous répond sous 48h.</p>
 
-  <section aria-labelledby="directeur-title">
-    <h2 id="directeur-title">Directeur de la publication</h2>
-    <div class="publication-wrapper">
+    @if (success()) {
+      <div class="alert alert--success" role="alert">
+        Votre message a bien été envoyé. Nous vous répondrons dans les plus brefs délais.
+      </div>
+    } @else {
+
+      @if (error()) {
+        <div class="alert alert--error" role="alert">{{ error() }}</div>
+      }
+
+      <div class="contact-form">
+
+        <div class="form-group">
+          <label for="nom">Nom <span class="required" aria-hidden="true">*</span></label>
+          <input
+            id="nom"
+            type="text"
+            placeholder="Votre nom"
+            autocomplete="name"
+            [value]="nom()"
+            (input)="nom.set($any($event.target).value)"
+            [disabled]="isLoading()"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email <span class="required" aria-hidden="true">*</span></label>
+          <input
+            id="email"
+            type="email"
+            placeholder="votre@email.com"
+            autocomplete="email"
+            [value]="email()"
+            (input)="email.set($any($event.target).value)"
+            [disabled]="isLoading()"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sujet">Sujet</label>
+          <input
+            id="sujet"
+            type="text"
+            placeholder="Sujet de votre message"
+            [value]="sujet()"
+            (input)="sujet.set($any($event.target).value)"
+            [disabled]="isLoading()"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="message">Message <span class="required" aria-hidden="true">*</span></label>
+          <textarea
+            id="message"
+            rows="6"
+            placeholder="Votre message..."
+            [value]="message()"
+            (input)="message.set($any($event.target).value)"
+            [disabled]="isLoading()"
+          ></textarea>
+        </div>
+
+        <button
+          class="btn-submit"
+          [disabled]="isLoading()"
+          (click)="submit()"
+          [attr.aria-busy]="isLoading()">
+          @if (isLoading()) { Envoi en cours... } @else { Envoyer }
+        </button>
+
+      </div>
+    }
+
+    <section class="contact-info" aria-labelledby="contact-info-title">
+      <h2 id="contact-info-title">Autres moyens de nous contacter</h2>
       <dl>
-        <dt>Responsable</dt>
-        <dd>Mimine Begue</dd>
+        <dt>Email général</dt>
+        <dd><a href="mailto:contact@gem-link.org">contact&#64;gem-link.org</a></dd>
+        <dt>Presse</dt>
+        <dd><a href="mailto:presse@gem-link.org">presse&#64;gem-link.org</a></dd>
+        <dt>Délai de réponse</dt>
+        <dd>48 heures ouvrées</dd>
       </dl>
-     <!--<img src="assets/images/avatars/Mimine.png" alt="Portrait de Mimine Begue" class="avatar-publication">--> </div>
-  </section>
+    </section>
 
-  <section aria-labelledby="hebergement-title">
-    <h2 id="hebergement-title">Hébergement</h2>
-    
-    <h3>Infrastructure principale</h3>
-    <dl>
-      <dt>Hébergeur</dt>
-      <dd>Railway Corp.</dd>
-      <dt>Adresse postale</dt>
-      <dd>340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis</dd>
-      <dt>Site web</dt>
-      <dd><a href="https://railway.app" target="_blank" rel="noopener noreferrer">https://railway.app</a></dd>
-    </dl>
+    <footer class="legal-footer" aria-label="Date de mise à jour">
+      <p><small>Dernière mise à jour : 29 juin 2026</small></p>
+    </footer>
 
-    <h3>Réseau de diffusion (CDN)</h3>
-    <dl>
-      <dt>Prestataire</dt>
-      <dd>Cloudflare</dd>
-      <dt>Adresse postale</dt>
-      <dd>101 Townsend St, San Francisco, CA 94107, États-Unis</dd>
-      <dt>Site web</dt>
-      <dd><a href="https://www.cloudflare.com" target="_blank" rel="noopener noreferrer">https://www.cloudflare.com</a></dd>
-    </dl>
-  </section>
-
-  <section aria-labelledby="tiers-title">
-    <h2 id="tiers-title">Services tiers</h2>
-    <dl>
-      <dt>Prestataire de stockage des médias</dt>
-      <dd>Cloudinary</dd>
-      <dt>Adresse</dt>
-      <dd>112 S. Market Street, Suite 300, San Jose, CA 95113, États-Unis</dd>
-      <dt>Site web</dt>
-      <dd><a href="https://cloudinary.com" target="_blank" rel="noopener noreferrer">https://cloudinary.com</a></dd>
-    </dl>
-  </section>
-
-  <section aria-labelledby="pi-plateforme-title">
-    <h2 id="pi-plateforme-title">Propriété intellectuelle — Plateforme</h2>
-    <p>
-      Le site GemLink, son code source, ses éléments graphiques, sa base documentaire et ses contenus éditoriaux sont protégés par le droit d'auteur conformément aux dispositions du Code de la propriété intellectuelle.
-    </p>
-    <p>
-      Toute reproduction, représentation, modification ou exploitation non autorisée, totale ou partielle, est interdite sans autorisation préalable écrite du titulaire des droits.
-    </p>
-  </section>
-
-  <section aria-labelledby="pi-utilisateurs-title">
-    <h2 id="pi-utilisateurs-title">Propriété intellectuelle — Contenus utilisateurs</h2>
-    <p>
-      Les photographies, descriptions et contenus publiés par les utilisateurs demeurent leur propriété exclusive. L'utilisateur conserve l'intégralité de ses droits de propriété intellectuelle sur ses créations.
-    </p>
-    <p>
-      La publication d'un contenu sur GemLink accorde uniquement à la plateforme une licence non exclusive, gratuite et mondiale, permettant l'affichage et la diffusion dudit contenu dans le cadre du fonctionnement du service.
-    </p>
-    <p>
-      Les modalités détaillées sont définies dans les
-      <a routerLink="/cgu">Conditions Générales d'Utilisation (CGU)</a>.
-    </p>
-  </section>
+  </div>
 </main>
 
-<app-footer></app-footer>
+<app-footer />
