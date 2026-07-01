@@ -59,6 +59,10 @@ export class AuthService {
     return this.#http.get<AuthMessageResponse>(`${this.#apiUrl}/validate-email/${token}`);
   }
 
+  resendValidationEmail(email: string): Observable<AuthMessageResponse> {
+    return this.#http.post<AuthMessageResponse>(`${this.#apiUrl}/resend-validation-email`, { email });
+  }
+
   // CA-1 : withCredentials obligatoire pour recevoir le cookie refresh token httpOnly
   login(payload: LoginPayload): Observable<LoginResponse> {
     return this.#http.post<LoginResponse>(

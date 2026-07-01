@@ -26,9 +26,14 @@ export class RegisterForm implements OnInit {
   private router = inject(Router);
 
   registerForm!: FormGroup;
+  resendForm!: FormGroup;
   isSubmitted = false;
   successMessage: string | null = null;
   errorMessage: string | null = null;
+  resendSuccessMessage: string | null = null;
+  resendErrorMessage: string | null = null;
+  isResendLoading = false;
+  showResendForm = false;
 
   ngOnInit(): void {
     this.registerForm = this.fb.group(
@@ -52,6 +57,10 @@ export class RegisterForm implements OnInit {
       },
       { validators: passwordMatchValidator }
     );
+
+    this.resendForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+    });
   }
 
   onSubmit(): void {
@@ -84,5 +93,37 @@ export class RegisterForm implements OnInit {
         console.error(err);
       },
     });
+  }
+
+  onResendValidationEmail(): void {
+    this.resendSuccessMessage = null;
+    this.resendErrorMessage = null;
+
+    if (this.resendForm.invalid) {
+      this.resendForm.markAllAsTouched();
+      return;
+    }
+
+    this.isResendLoading = true;
+    this.authService.resendValidationEmail(this.resendForm.value.email ?? '').subscribe({
+      next: (response) => {
+        this.isResendLoading = false;
+        this.resendSuccessMessage = response.message;
+      },
+      error: (err: { status?: number; error?: { message?: string } }) => {
+        this.isResendLoading = false;
+
+        if (err.status === 429) {
+          this.resendErrorMessage = 'Trop de demandes depuis cette adresse IP. Réessayez dans 1 heure.';
+          return;
+        }
+
+        this.resendErrorMessage = err.error?.message ?? 'Impossible de renvoyer l\'email de validation.';
+      },
+    });
+  }
+
+  toggleResendForm(): void {
+    this.showResendForm = !this.showResendForm;
   }
 }

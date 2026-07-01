@@ -74,6 +74,59 @@
   padding-left: 5px !important;
 }
 
+.error-text--success {
+  color: #63d194 !important;
+}
+
+.login-form--resend {
+  margin-top: 18px !important;
+}
+
+.login-form__toggle-button {
+  width: 330px;
+  margin-top: 10px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(197, 160, 89, 0.35);
+  background: rgba(197, 160, 89, 0.12);
+  color: #C5A059;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-form__resend-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateX(-44px);
+  transition: max-height 0.45s ease, opacity 0.35s ease, transform 0.45s ease;
+}
+
+.login-form__resend-panel--open {
+  max-height: 640px;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.login-form__divider {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid rgba(197, 160, 89, 0.2);
+  margin: 0;
+}
+
+.login-form__resend-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #C5A059;
+  margin: 0;
+}
+
 
 // ==========================================
 // 2. VERSION DESKTOP (Écrans >= 1024px)
@@ -99,5 +152,9 @@
         font-size: 18px !important;
       }
     }
+  }
+
+  .login-form__toggle-button {
+    width: 450px;
   }
 }

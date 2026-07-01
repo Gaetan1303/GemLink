@@ -63,3 +63,49 @@
   />
 
 </form>
+
+<button type="button" class="login-form__toggle-button" (click)="toggleResendForm()">
+  @if (!showResendForm()) {
+    Afficher le formulaire de renvoi
+  } @else {
+    Masquer le formulaire de renvoi
+  }
+</button>
+
+<div class="login-form__resend-panel" [class.login-form__resend-panel--open]="showResendForm()">
+<form [formGroup]="resendForm" (ngSubmit)="onResendValidationEmail()" class="login-form login-form--resend" novalidate>
+  <hr class="login-form__divider" />
+
+  <p class="login-form__resend-label">Adresse non validee ?</p>
+
+  @if (resendSuccess()) {
+    <span class="error-text error-text--success" role="status">{{ resendSuccess() }}</span>
+  }
+
+  @if (resendError()) {
+    <span class="error-text" role="alert">{{ resendError() }}</span>
+  }
+
+  <div class="input-group">
+    <div class="input-field-frame" [class.is-invalid]="resendEmailCtrl.invalid && resendEmailCtrl.touched">
+      <input
+        type="email"
+        formControlName="email"
+        placeholder="EMAIL DE VALIDATION"
+        autocomplete="email"
+      />
+    </div>
+
+    @if (resendEmailCtrl.invalid && resendEmailCtrl.touched) {
+      <span class="error-text">Email requis ou invalide</span>
+    }
+  </div>
+
+  <app-button
+    type="submit"
+    label="Renvoyer l'email de validation"
+    [disabled]="isResendLoading()"
+  />
+
+</form>
+</div>

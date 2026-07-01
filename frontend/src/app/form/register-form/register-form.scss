@@ -23,6 +23,56 @@ $font-family: 'Plus Jakarta Sans', sans-serif;
   margin: 0 auto; 
 }
 
+.register-form--resend {
+  margin-top: 18px;
+  height: auto;
+}
+
+.register-form__divider {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid rgba(197, 160, 89, 0.2);
+  margin: 0;
+}
+
+.register-form__resend-label {
+  font-family: $font-family;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $gold;
+  margin: 0;
+}
+
+.register-form__toggle-button {
+  width: 330px;
+  margin-top: 10px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(197, 160, 89, 0.35);
+  background: rgba(197, 160, 89, 0.12);
+  color: $gold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: $font-family;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.register-form__resend-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateX(-44px);
+  transition: max-height 0.45s ease, opacity 0.35s ease, transform 0.45s ease;
+}
+
+.register-form__resend-panel--open {
+  max-height: 700px;
+  opacity: 1;
+  transform: translateX(0);
+}
+
 .alert {
   width: 100%;
   padding: 8px 12px;
@@ -151,5 +201,11 @@ app-button {
       border-color: transparent !important;
       cursor: not-allowed;
     }
+  }
+}
+
+@media (min-width: 1024px) {
+  .register-form__toggle-button {
+    width: 330px;
   }
 }

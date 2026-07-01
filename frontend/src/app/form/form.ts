@@ -27,12 +27,17 @@ export class Form implements OnInit, OnDestroy {
 
   // ── State ──────────────────────────────────────────────────
   loginForm!: FormGroup;
+  resendForm!: FormGroup;
 
   isSubmitted = signal(false);
   isLoading   = signal(false);
 
   // CA-2 : message générique serveur
   serverError = signal<string | null>(null);
+  resendSuccess = signal<string | null>(null);
+  resendError = signal<string | null>(null);
+  isResendLoading = signal(false);
+  showResendForm = signal(false);
 
   // CA-3 : throttle
   isThrottled              = signal(false);
@@ -48,11 +53,16 @@ export class Form implements OnInit, OnDestroy {
       email:    ['', [Validators.required, Validators.email]],
       passwordHash: ['', Validators.required],
     });
+
+    this.resendForm = this.#fb.group({
+      email: ['', [Validators.required, Validators.email]],
+    });
   }
 
   // ── Accesseurs ─────────────────────────────────────────────
   get emailCtrl()    { return this.loginForm.get('email')!;    }
   get passwordHashCtrl() { return this.loginForm.get('passwordHash')!; }
+  get resendEmailCtrl() { return this.resendForm.get('email')!; }
 
   // ── Soumission ─────────────────────────────────────────────
   onSubmit(): void {
@@ -92,6 +102,41 @@ export class Form implements OnInit, OnDestroy {
           }
         },
       });
+  }
+
+  onResendValidationEmail(): void {
+    this.resendSuccess.set(null);
+    this.resendError.set(null);
+
+    if (this.resendForm.invalid) {
+      this.resendForm.markAllAsTouched();
+      return;
+    }
+
+    this.isResendLoading.set(true);
+    this.#authService
+      .resendValidationEmail(this.resendForm.value.email ?? '')
+      .pipe(takeUntil(this.#destroy$))
+      .subscribe({
+        next: (response) => {
+          this.isResendLoading.set(false);
+          this.resendSuccess.set(response.message);
+        },
+        error: (err: { status?: number; error?: { message?: string } }) => {
+          this.isResendLoading.set(false);
+
+          if (err.status === 429) {
+            this.resendError.set('Trop de demandes depuis cette adresse IP. Réessayez dans 1 heure.');
+            return;
+          }
+
+          this.resendError.set(err.error?.message ?? 'Impossible de renvoyer l\'email de validation.');
+        },
+      });
+  }
+
+  toggleResendForm(): void {
+    this.showResendForm.update((current) => !current);
   }
 
   // ── Throttle ───────────────────────────────────────────────
