@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Routing\Attribute\Route;
-
+use Symfony\Component\Mime\Address;
 
 #[Route('/contact')]
 class ContactController extends AbstractController
@@ -35,12 +35,12 @@ class ContactController extends AbstractController
             return $this->json(['message' => 'Adresse email invalide.'], 400);
         }
 
-        $emailMessage = (new Email())
-            ->from($email)
-            ->to('contact@gem-link.org')
-            ->replyTo($email)
-            ->subject("[GemLink Contact] {$sujet}")
-            ->text("Nom : {$nom}\nEmail : {$email}\n\n{$message}");
+       $emailMessage = (new Email())
+        ->from(new Address('contact@gem-link.org', 'GemLink'))
+        ->to(new Address('contact@gem-link.org', 'GemLink'))
+        ->replyTo(new Address($email, $nom))
+        ->subject("[GemLink Contact] {$sujet}")
+        ->text("Nom : {$nom}\nEmail : {$email}\n\n{$message}");
 
         $this->mailer->send($emailMessage);
 

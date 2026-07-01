@@ -1,7 +1,7 @@
 
 ###> symfony/framework-bundle ###t
 .env.production
-
+.env
 .env.test
 .env.dev
 /.env.local
