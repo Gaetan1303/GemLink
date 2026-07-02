@@ -108,10 +108,6 @@ class AuthService
     /**
      * US 1.3 : Connexion.
      *
-     * Modification par rapport à la version précédente : le JWT inclut désormais un
-     * claim `jti` (JWT ID) — identifiant unique généré à la création — nécessaire pour
-     * pouvoir l'inscrire en blocklist Redis lors de la déconnexion (CA-2 US 1.5).
-     *
      * @param array{email?: mixed, passwordHash?: mixed} $data
      * @return array{token: string, refreshToken: string, refreshTokenExpiresAt: DateTimeImmutable}
      */
@@ -136,23 +132,65 @@ class AuthService
 
         $this->resetLoginAttempts($email);
 
-        $refreshToken = bin2hex(random_bytes(32));
-        $refreshTokenExpiresAt = (new DateTimeImmutable())->modify('+7 days');
+        ['refreshToken' => $refreshToken, 'refreshTokenExpiresAt' => $expiresAt, 'refreshTokenEntity' => $entity]
+            = $this->issueRefreshToken($user);
 
-        $this->em->persist(new RefreshToken(
-            $user,
-            hash('sha256', $refreshToken),
-            $refreshTokenExpiresAt
-        ));
+        $this->em->persist($entity);
         $this->em->flush();
 
-        // CA-2 (US 1.5) : jti unique par token, utilisé comme clé de blocklist Redis à la déconnexion.
         $jti = bin2hex(random_bytes(16));
 
         return [
             'token' => $this->jwtManager->createFromPayload($user, ['jti' => $jti]),
             'refreshToken' => $refreshToken,
-            'refreshTokenExpiresAt' => $refreshTokenExpiresAt,
+            'refreshTokenExpiresAt' => $expiresAt,
+        ];
+    }
+
+    /**
+     * US 1.4 : Renouvellement de session (silent refresh).
+     *
+     * CA-2 : rotation de refresh token — l'ancien est révoqué, un nouveau est émis
+     *        à chaque renouvellement réussi.
+     *
+     * @return array{token: string, refreshToken: string, refreshTokenExpiresAt: DateTimeImmutable}
+     *
+     * @throws InvalidArgumentException si le refresh token est absent, expiré ou révoqué (→ CA-3 côté client)
+     */
+    public function refresh(string $rawRefreshToken): array
+    {
+        if ($rawRefreshToken === '') {
+            throw new InvalidArgumentException('Refresh token manquant.');
+        }
+
+        $tokenHash = hash('sha256', $rawRefreshToken);
+        $refreshToken = $this->refreshTokenRepository->findValidByHash($tokenHash);
+
+        if ($refreshToken === null) {
+            // CA-3 : token invalide, expiré ou révoqué → le contrôleur renverra 401
+            throw new InvalidArgumentException('Refresh token invalide ou expiré.');
+        }
+
+        $user = $refreshToken->getUser();
+
+        // CA-2 : révoquer l'ancien refresh token avant d'en émettre un nouveau
+        $refreshToken->revoke();
+
+        // CA-2 : émettre un nouveau refresh token
+        ['refreshToken' => $newRawToken, 'refreshTokenExpiresAt' => $expiresAt, 'refreshTokenEntity' => $newEntity]
+            = $this->issueRefreshToken($user);
+
+        $this->em->persist($newEntity);
+        $this->em->flush();
+
+        // Nouveau JWT avec un nouveau jti (l'ancien jti n'est PAS mis en blocklist :
+        // il était déjà expiré au moment où on renouvelle)
+        $jti = bin2hex(random_bytes(16));
+
+        return [
+            'token' => $this->jwtManager->createFromPayload($user, ['jti' => $jti]),
+            'refreshToken' => $newRawToken,
+            'refreshTokenExpiresAt' => $expiresAt,
         ];
     }
 
@@ -160,14 +198,10 @@ class AuthService
      * US 1.5 : Déconnexion.
      *
      * CA-1 : révoque le refresh token en base + supprime le cookie côté contrôleur.
-     * CA-2 : inscrit le jti du JWT en blocklist Redis avec une TTL = durée résiduelle du token.
-     *
-     * On ne lève pas d'exception si le refresh token est introuvable ou le JWT déjà expiré :
-     * la déconnexion doit toujours réussir côté client même en cas d'état incohérent serveur.
+     * CA-2 : inscrit le jti du JWT en blocklist Redis (TTL = durée résiduelle).
      */
     public function logout(string $rawRefreshToken, string $rawJwt): void
     {
-        // CA-1 : révoquer le refresh token en base
         if ($rawRefreshToken !== '') {
             $tokenHash = hash('sha256', $rawRefreshToken);
             $refreshToken = $this->refreshTokenRepository->findValidByHash($tokenHash);
@@ -177,12 +211,10 @@ class AuthService
             }
         }
 
-        // CA-2 : mettre le JWT en blocklist Redis avec TTL = durée de vie résiduelle
         if ($rawJwt !== '') {
             $payload = $this->decodeJwtPayloadUnsafe($rawJwt);
             $jti = isset($payload['jti']) && is_string($payload['jti']) ? $payload['jti'] : '';
             $exp = isset($payload['exp']) && is_int($payload['exp']) ? $payload['exp'] : 0;
-
             $ttl = $exp - time();
 
             if ($jti !== '' && $ttl > 0) {
@@ -206,6 +238,23 @@ class AuthService
         $this->em->flush();
 
         $this->dispatchEmailValidationMessage($user, $plainToken);
+    }
+
+    // ── Helpers privés ─────────────────────────────────────────────────────────
+
+    /**
+     * @return array{refreshToken: string, refreshTokenExpiresAt: DateTimeImmutable, refreshTokenEntity: RefreshToken}
+     */
+    private function issueRefreshToken(User $user): array
+    {
+        $raw = bin2hex(random_bytes(32));
+        $expiresAt = (new DateTimeImmutable())->modify(sprintf('+%d seconds', self::REFRESH_TOKEN_TTL_SECONDS));
+
+        return [
+            'refreshToken' => $raw,
+            'refreshTokenExpiresAt' => $expiresAt,
+            'refreshTokenEntity' => new RefreshToken($user, hash('sha256', $raw), $expiresAt),
+        ];
     }
 
     private function validateRegistrationData(array $data): void
@@ -245,8 +294,7 @@ class AuthService
 
     private function isLoginThrottled(string $email): bool
     {
-        $state = $this->getLoginAttemptState($email);
-        return $state['blocked_until'] > time();
+        return $this->getLoginAttemptState($email)['blocked_until'] > time();
     }
 
     private function recordFailedLogin(string $email): void
@@ -311,8 +359,7 @@ class AuthService
 
     /**
      * Décode le payload JWT sans vérification de signature.
-     * Utilisé uniquement pour extraire `jti` et `exp` lors de la déconnexion :
-     * la signature a déjà été vérifiée par LexikJWT en amont (firewall api).
+     * Usage : logout uniquement, après vérification préalable par le firewall Symfony.
      *
      * @return array<string, mixed>
      */

@@ -23,7 +23,7 @@ class AuthController extends AbstractController
 
         try {
             $authService->register($data);
-        } catch (InvalidArgumentException $e) {
+        } catch (InvalidArgumentException) {
             return $this->json(
                 ['message' => 'Si ces informations sont valides, un email de confirmation a été envoyé.'],
                 Response::HTTP_BAD_REQUEST
@@ -42,10 +42,7 @@ class AuthController extends AbstractController
         try {
             $authService->validateEmail($token);
         } catch (InvalidArgumentException $e) {
-            return $this->json(
-                ['message' => $e->getMessage()],
-                Response::HTTP_BAD_REQUEST
-            );
+            return $this->json(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
 
         return $this->json([
@@ -93,51 +90,57 @@ class AuthController extends AbstractController
         try {
             $tokens = $authService->login($data);
         } catch (LoginThrottledException) {
-            return $this->json(
-                ['message' => AuthService::LOGIN_ERROR_MESSAGE],
-                Response::HTTP_TOO_MANY_REQUESTS
-            );
+            return $this->json(['message' => AuthService::LOGIN_ERROR_MESSAGE], Response::HTTP_TOO_MANY_REQUESTS);
         } catch (LoginFailedException) {
+            return $this->json(['message' => AuthService::LOGIN_ERROR_MESSAGE], Response::HTTP_UNAUTHORIZED);
+        }
+
+        return $this->buildTokenResponse($tokens['token'], $tokens['refreshToken'], $tokens['refreshTokenExpiresAt']);
+    }
+
+    /**
+     * US 1.4 : Renouvellement silencieux de session.
+     *
+     * Route PUBLIQUE (hors firewall JWT) : le JWT client est expiré, il ne peut pas
+     * être présenté dans Authorization. Le refresh token httpOnly suffit à prouver
+     * l'identité de la session.
+     *
+     * CA-1 : transparent pour l'utilisateur — appelé par l'intercepteur Angular.
+     * CA-2 : rotation de refresh token — l'ancien est révoqué, un nouveau cookie est posé.
+     * CA-3 : en cas de token invalide/expiré/révoqué → 401, l'intercepteur redirige vers /auth/login.
+     */
+    #[Route('/auth/refresh', name: 'app_refresh', methods: ['POST'])]
+    public function refresh(Request $request, AuthService $authService): JsonResponse
+    {
+        $rawRefreshToken = $request->cookies->get('refresh_token', '');
+
+        try {
+            $tokens = $authService->refresh($rawRefreshToken);
+        } catch (InvalidArgumentException) {
+            // CA-3 : token absent, expiré ou révoqué → 401 → intercepteur Angular redirige vers /auth/login
             return $this->json(
-                ['message' => AuthService::LOGIN_ERROR_MESSAGE],
+                ['message' => 'Session expirée. Veuillez vous reconnecter.'],
                 Response::HTTP_UNAUTHORIZED
             );
         }
 
-        $response = $this->json(['token' => $tokens['token']]);
-        $response->headers->setCookie(Cookie::create(
-            'refresh_token',
-            $tokens['refreshToken'],
-            time() + AuthService::REFRESH_TOKEN_TTL_SECONDS,
-            '/',
-            null,
-            true,  // Secure
-            true,  // httpOnly
-            false,
-            Cookie::SAMESITE_STRICT
-        ));
-
-        return $response;
+        // CA-2 : nouveau cookie httpOnly avec le nouveau refresh token (rotation)
+        return $this->buildTokenResponse($tokens['token'], $tokens['refreshToken'], $tokens['refreshTokenExpiresAt']);
     }
 
     /**
      * US 1.5 : Déconnexion.
      *
      * Protégé par le firewall `api` (JWT requis dans Authorization: Bearer).
-     * Le refresh token est lu depuis le cookie httpOnly posé lors du login.
-     *
      * CA-1 : révoque le refresh token en base + vide le cookie client.
      * CA-2 : inscrit le JWT en blocklist Redis (TTL = durée résiduelle).
-     * CA-3 : renvoie une redirection vers la page d'accueil publique.
-     *        Côté Angular, c'est le service qui navigue vers "/" après l'appel.
+     * CA-3 : renvoi 200 → l'Angular AuthService navigue vers "/".
      */
     #[Route('/auth/logout', name: 'app_logout', methods: ['POST'])]
     public function logout(Request $request, AuthService $authService): JsonResponse
     {
-        // CA-1 : refresh token brut depuis le cookie httpOnly
         $rawRefreshToken = $request->cookies->get('refresh_token', '');
 
-        // CA-2 : JWT depuis l'en-tête Authorization (posé par LexikJWT, déjà vérifié par le firewall)
         $rawJwt = '';
         $authHeader = $request->headers->get('Authorization', '');
         if (str_starts_with($authHeader, 'Bearer ')) {
@@ -146,20 +149,39 @@ class AuthController extends AbstractController
 
         $authService->logout($rawRefreshToken, $rawJwt);
 
-        // CA-1 : suppression du cookie côté client — on le repose vide avec une date passée
         $expiredCookie = Cookie::create('refresh_token')
             ->withValue('')
-            ->withExpires(1)       // timestamp passé → suppression immédiate
+            ->withExpires(1)
             ->withPath('/')
             ->withSecure(true)
             ->withHttpOnly(true)
             ->withSameSite(Cookie::SAMESITE_STRICT);
 
-        $response = $this->json(
-            ['message' => 'Déconnexion réussie.'],
-            Response::HTTP_OK
-        );
+        $response = $this->json(['message' => 'Déconnexion réussie.']);
         $response->headers->setCookie($expiredCookie);
+
+        return $response;
+    }
+
+    // ── Helper ────────────────────────────────────────────────────────────────
+
+    private function buildTokenResponse(
+        string $jwt,
+        string $rawRefreshToken,
+        \DateTimeImmutable $expiresAt
+    ): JsonResponse {
+        $response = $this->json(['token' => $jwt]);
+        $response->headers->setCookie(Cookie::create(
+            'refresh_token',
+            $rawRefreshToken,
+            $expiresAt,
+            '/',
+            null,
+            true,  // Secure
+            true,  // httpOnly
+            false,
+            Cookie::SAMESITE_STRICT
+        ));
 
         return $response;
     }
