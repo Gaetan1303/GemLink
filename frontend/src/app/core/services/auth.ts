@@ -42,7 +42,6 @@ export class AuthService {
   readonly #router = inject(Router);
   readonly #apiUrl = `${environment.apiUrl}/auth`;
 
-  // --- State management ---
   currentUser     = signal<User | null | undefined>(undefined);
   isAuthenticated = computed(() => !!this.currentUser());
 
@@ -65,7 +64,7 @@ export class AuthService {
     return this.#http.post<AuthMessageResponse>(`${this.#apiUrl}/resend-validation-email`, { email });
   }
 
-  // US 1.3 : connexion — withCredentials pour recevoir le cookie refresh token httpOnly
+  // US 1.3
   login(payload: LoginPayload): Observable<LoginResponse> {
     return this.#http.post<LoginResponse>(
       `${this.#apiUrl}/login`,
@@ -79,8 +78,8 @@ export class AuthService {
     );
   }
 
-  /**
-   * US 1.4 : Renouvellement silencieux — appelé par l'intercepteur, pas directement par les composants.
+  /** 
+   * / US 1.4 — appelé par l'intercepteur
    *
    * CA-1 : withCredentials envoie le cookie httpOnly `refresh_token` automatiquement.
    * CA-2 : le backend révoque l'ancien token et pose un nouveau cookie (rotation).
@@ -93,7 +92,7 @@ export class AuthService {
     return this.#http.post<LoginResponse>(
       `${this.#apiUrl}/refresh`,
       {},
-      { withCredentials: true }, // CA-1 : le cookie httpOnly est envoyé automatiquement
+      { withCredentials: true },
     ).pipe(
       tap(response => {
         localStorage.setItem('token', response.token);
@@ -112,7 +111,6 @@ export class AuthService {
    */
   logout(): void {
     const token = localStorage.getItem('token');
-
     const headers = token
       ? new HttpHeaders({ Authorization: `Bearer ${token}` })
       : new HttpHeaders();
@@ -125,21 +123,37 @@ export class AuthService {
       )
       .subscribe({
         next:  () => this.clearSession(),
-        error: () => this.clearSession(), // CA-3 : on nettoie même en cas d'erreur réseau
+        error: () => this.clearSession(),
       });
+  }
+
+  // US 1.6 — Étape 1 : demande de réinitialisation
+  // CA-1 : l'API renvoie toujours 202 + message générique, côté client on fait pareil.
+  requestPasswordReset(email: string): Observable<AuthMessageResponse> {
+    return this.#http.post<AuthMessageResponse>(
+      `${this.#apiUrl}/reset-password/request`,
+      { email },
+    );
+  }
+
+  // US 1.6 — Étape 2 : confirmation du nouveau mot de passe
+  // CA-3 : si 200, toutes les sessions existantes ont été révoquées côté backend.
+  resetPassword(token: string, password: string): Observable<AuthMessageResponse> {
+    return this.#http.post<AuthMessageResponse>(
+      `${this.#apiUrl}/reset-password/confirm`,
+      { token, password },
+    );
   }
 
   /**
    * Nettoyage de session côté client.
-   * Public car appelé aussi par l'intercepteur lors d'un échec de refresh (CA-3 US 1.4).
+   * Public car appelé aussi par l'intercepteur auth (US 1.4 CA-3).
    */
   clearSession(): void {
     localStorage.removeItem('token');
     this.currentUser.set(null);
     this.#router.navigate(['/']);
   }
-
-  // ── Helpers privés ───────────────────────────────────────
 
   private decodeAndSetUser(token: string): void {
     try {

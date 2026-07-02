@@ -47,12 +47,17 @@
         aria-describedby="password-error"
       />
     </div>
-    @if (passwordHashCtrl.invalid && isSubmitted()) {
-      <span id="password-error" class="error-text" data-testid="password-error">
-        Mot de passe requis
-      </span>
-    }
-  </div>
+      
+      <a routerLink="/auth/reset-password" class="login-form__forgot-link">
+        Mot de passe oublié ?
+      </a>
+
+      @if (passwordHashCtrl.invalid && isSubmitted()) {
+        <span id="password-error" class="error-text" data-testid="password-error">
+          Mot de passe requis
+        </span>
+      }
+    </div>
 
   <!-- CTA -->
   <app-button

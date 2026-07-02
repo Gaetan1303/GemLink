@@ -2,6 +2,8 @@
 
 namespace App\Repository;
 
+use App\Entity\User;
+
 use App\Entity\RefreshToken;
 use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -33,4 +35,21 @@ class RefreshTokenRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+        public function revokeAllActiveForUser(User $user): void
+    {
+        $now = new DateTimeImmutable();
+ 
+        $this->createQueryBuilder('rt')
+            ->update()
+            ->set('rt.revokedAt', ':now')
+            ->where('rt.user = :user')
+            ->andWhere('rt.revokedAt IS NULL')
+            ->andWhere('rt.expiresAt > :now2')
+            ->setParameter('now', $now)
+            ->setParameter('user', $user)
+            ->setParameter('now2', $now)
+            ->getQuery()
+            ->execute();
+    }
+
 }

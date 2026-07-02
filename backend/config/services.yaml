@@ -32,4 +32,6 @@ services:
         arguments:
             $cache:     '@cache.app'
             $cachePool: '@cache.app'
-
+            $frontendUrl: '%env(FRONTEND_URL)%'
+            $maxLoginAttempts: 5
+            $loginAttemptWindow: 600

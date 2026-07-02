@@ -20,6 +20,9 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use App\Entity\PasswordResetToken;
+use App\Repository\PasswordResetTokenRepository; 
+
 
 class AuthService
 {
@@ -42,7 +45,8 @@ class AuthService
         private CacheItemPoolInterface $cachePool,
         private string $frontendUrl,
         private int $maxLoginAttempts = 5,
-        private int $loginAttemptWindow = 600
+        private int $loginAttemptWindow = 600,
+        private PasswordResetTokenRepository $passwordResetTokenRepository,
     ) {}
 
     // --- US 1.1 : Inscription ---
@@ -226,19 +230,123 @@ class AuthService
         }
     }
 
+    // --- US 1.6 : Réinitialisation du mot de passe ---
+ 
+    /**
+     * CA-1 : demande de réinitialisation.
+     * Retourne TOUJOURS sans lever d'exception, que l'email existe ou non,
+     * pour ne pas permettre l'énumération de comptes.
+     * L'email de reset n'est envoyé que si l'adresse est connue en base.
+     */
+    public function requestPasswordReset(string $email): void
+    {
+        $email = mb_strtolower(trim($email));
+ 
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return; // CA-1 : silencieux, pas d'exception
+        }
+ 
+        $user = $this->userRepository->findOneBy(['email' => $email]);
+ 
+        // CA-1 : on sort silencieusement si l'email est inconnu
+        if (!$user instanceof User) {
+            return;
+        }
+ 
+        // CA-2 : token signé HMAC, TTL 1 heure
+        $signed = $this->emailValidationTokenSigner->createSignedToken(
+            $user->getId()->toRfc4122(),
+            ttlSeconds: 3600
+        );
+ 
+        // CA-2 : seul le hash SHA-256 est persisté en base
+        $resetToken = new PasswordResetToken();
+        $resetToken->setUser($user);
+        $resetToken->setToken(hash('sha256', $signed['token']));
+        $resetToken->setExpiresAt($signed['expiresAt']);
+ 
+        $user->addPasswordResetToken($resetToken);
+        $this->em->persist($resetToken);
+        $this->em->flush();
+ 
+        // Envoi asynchrone via Messenger
+        $this->messageBus->dispatch(new \App\Message\SendEmailMessage(
+            to: $user->getEmail(),
+            subject: 'Réinitialisation de votre mot de passe GemLink',
+            template: 'emails/password_reset.html.twig',
+            templateData: [
+                'username' => $user->getUsername(),
+                'resetUrl' => sprintf('%s/auth/reset-password/%s', $this->frontendUrl, $signed['token']),
+            ],
+        ));
+    }
+ 
+    /**
+     * CA-2 / CA-3 / CA-4 : confirmation et application du nouveau mot de passe.
+     *
+     * @throws InvalidArgumentException si le token est invalide, expiré ou déjà utilisé,
+     *                                  ou si le mot de passe ne respecte pas la politique (CA-4).
+     */
+    public function resetPassword(string $rawToken, string $newPassword): void
+    {
+        // CA-4 : validation du mot de passe en amont, avant toute vérification du token,
+        // pour donner un retour immédiat sur la politique de sécurité.
+        if (!preg_match(self::PASSWORD_PATTERN, $newPassword)) {
+            throw new InvalidArgumentException(
+                'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.'
+            );
+        }
+ 
+        $rawToken = trim($rawToken);
+        if ($rawToken === '') {
+            throw new InvalidArgumentException('Token de réinitialisation invalide.');
+        }
+ 
+        // CA-2 : vérification de la signature HMAC avant la requête DB
+        try {
+            $claims = $this->emailValidationTokenSigner->decodeAndVerify($rawToken);
+        } catch (InvalidArgumentException) {
+            throw new InvalidArgumentException('Lien de réinitialisation invalide ou expiré.');
+        }
+ 
+        // CA-2 : recherche par hash SHA-256, non utilisé, non expiré
+        $resetToken = $this->passwordResetTokenRepository->findValidByHash(hash('sha256', $rawToken));
+ 
+        if ($resetToken === null) {
+            throw new InvalidArgumentException('Lien de réinitialisation invalide ou déjà utilisé.');
+        }
+ 
+        // Vérification de cohérence : le token appartient bien à l'utilisateur signataire
+        if ($resetToken->getUser()->getId()->toRfc4122() !== $claims['sub']) {
+            throw new InvalidArgumentException('Lien de réinitialisation invalide ou expiré.');
+        }
+ 
+        $user = $resetToken->getUser();
+ 
+        // Mise à jour du mot de passe
+        $user->setPasswordHash($this->passwordHasher->hashPassword($user, $newPassword));
+ 
+        // CA-2 : marquer le token comme utilisé (usage unique)
+        $resetToken->setUsed(true);
+ 
+        // CA-3 : révoquer toutes les sessions actives via une requête DQL groupée
+        $this->refreshTokenRepository->revokeAllActiveForUser($user);
+ 
+        $this->em->flush();
+    }
+ 
     public function resendValidationEmail(string $email): void
     {
         $user = $this->userRepository->findOneBy(['email' => $email]);
-
         if (!$user || $user->getStatus() !== 'PENDING_VALIDATION') {
             return;
         }
-
+ 
         $plainToken = $this->createAndPersistEmailValidationToken($user);
         $this->em->flush();
-
         $this->dispatchEmailValidationMessage($user, $plainToken);
     }
+
 
     // ── Helpers privés ─────────────────────────────────────────────────────────
 

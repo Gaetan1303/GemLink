@@ -162,6 +162,55 @@ class AuthController extends AbstractController
 
         return $response;
     }
+        /**
+     * US 1.6 — Étape 1 : demande de réinitialisation.
+     *
+     * CA-1 : réponse identique qu'importe si l'email est connu ou non.
+     * Route publique, pas de JWT requis.
+     */
+    #[Route('/auth/reset-password/request', name: 'app_reset_password_request', methods: ['POST'])]
+    public function resetPasswordRequest(Request $request, AuthService $authService): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true) ?? [];
+        $email = is_string($data['email'] ?? null) ? $data['email'] : '';
+ 
+        // Le service ne lève jamais d'exception ici (CA-1)
+        $authService->requestPasswordReset($email);
+ 
+        // CA-1 : message générique systématique
+        return $this->json(
+            ['message' => 'Si cette adresse est associée à un compte, un email de réinitialisation vient d\'être envoyé.'],
+            Response::HTTP_ACCEPTED
+        );
+    }
+ 
+    /**
+     * US 1.6 — Étape 2 : application du nouveau mot de passe.
+     *
+     * CA-2 : valide que le token est à usage unique, non expiré (TTL 1 h).
+     * CA-3 : révoque tous les refresh tokens actifs de l'utilisateur.
+     * CA-4 : le service applique la même politique de mot de passe qu'à l'inscription.
+     * Route publique, pas de JWT requis.
+     */
+    #[Route('/auth/reset-password/confirm', name: 'app_reset_password_confirm', methods: ['POST'])]
+    public function resetPasswordConfirm(Request $request, AuthService $authService): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true) ?? [];
+        $token    = is_string($data['token']    ?? null) ? $data['token']    : '';
+        $password = is_string($data['password'] ?? null) ? $data['password'] : '';
+ 
+        try {
+            $authService->resetPassword($token, $password);
+        } catch (InvalidArgumentException $e) {
+            return $this->json(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+ 
+        return $this->json(
+            ['message' => 'Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter.'],
+            Response::HTTP_OK
+        );
+    }
+
 
     // ── Helper ────────────────────────────────────────────────────────────────
 

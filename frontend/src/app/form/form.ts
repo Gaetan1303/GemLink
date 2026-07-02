@@ -7,6 +7,8 @@ import { takeUntil } from 'rxjs/operators';
 
 import { SharedModule } from '../shared/shared-module';
 import { AuthService } from '../core/services/auth';
+import { ResetPassword } from '../core/auth/reset-password/reset-password';
+import { RouterLink } from '@angular/router';
 
 // ── Constantes US 1.3 CA-3 ───────────────────────────────────
 const MAX_ATTEMPTS   = 5;
@@ -14,7 +16,7 @@ const THROTTLE_DELAY = 30; // secondes
 
 @Component({
   selector: 'app-form',
-  imports: [CommonModule, ReactiveFormsModule, SharedModule],
+  imports: [CommonModule, ReactiveFormsModule, SharedModule, ResetPassword, RouterLink],
   templateUrl: './form.html',
   styleUrls: ['./form.scss'],
 })

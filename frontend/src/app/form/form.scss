@@ -21,7 +21,22 @@
   border-radius: 24px !important;
   transition: all 0.3s ease-in-out !important;
 }
+.login-form__forgot-link {
+  align-self: flex-end;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgba(197, 160, 89, 0.7);
+  text-decoration: none;
+  margin-top: -8px; // Pour le rapprocher de l'input
+  transition: color 0.2s ease;
 
+  &:hover {
+    color: #C5A059;
+    text-decoration: underline;
+  }
+}
 .input-group {
   display: flex !important;
   flex-direction: column !important;
