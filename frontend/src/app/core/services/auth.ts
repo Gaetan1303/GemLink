@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { jwtDecode } from 'jwt-decode';
 import { MenuRole } from '../../components/menu-burger/menu-navigation.model';
@@ -43,7 +43,7 @@ export class AuthService {
   readonly #apiUrl = `${environment.apiUrl}/auth`;
 
   // --- State management ---
-  currentUser    = signal<User | null | undefined>(undefined);
+  currentUser     = signal<User | null | undefined>(undefined);
   isAuthenticated = computed(() => !!this.currentUser());
 
   constructor() {
@@ -65,7 +65,7 @@ export class AuthService {
     return this.#http.post<AuthMessageResponse>(`${this.#apiUrl}/resend-validation-email`, { email });
   }
 
-  // CA-1 US 1.3 : withCredentials obligatoire pour recevoir le cookie refresh token httpOnly
+  // US 1.3 : connexion — withCredentials pour recevoir le cookie refresh token httpOnly
   login(payload: LoginPayload): Observable<LoginResponse> {
     return this.#http.post<LoginResponse>(
       `${this.#apiUrl}/login`,
@@ -75,18 +75,40 @@ export class AuthService {
       tap(response => {
         localStorage.setItem('token', response.token);
         this.decodeAndSetUser(response.token);
-      })
+      }),
     );
   }
 
   /**
-   * US 1.5 : Déconnexion.
+   * US 1.4 : Renouvellement silencieux — appelé par l'intercepteur, pas directement par les composants.
    *
-   * CA-1 : envoie le cookie httpOnly (withCredentials) au backend qui révoque le refresh
-   *        token en base et vide le cookie via Set-Cookie.
-   * CA-2 : envoie le JWT dans Authorization: Bearer → backend l'inscrit en blocklist Redis.
-   * CA-3 : après confirmation serveur (ou même en cas d'erreur réseau), l'état local est
-   *        effacé et l'utilisateur est redirigé vers la page d'accueil publique ("/").
+   * CA-1 : withCredentials envoie le cookie httpOnly `refresh_token` automatiquement.
+   * CA-2 : le backend révoque l'ancien token et pose un nouveau cookie (rotation).
+   * CA-3 : si la réponse est 401, l'intercepteur catchError gère la redirection.
+   *
+   * Retourne le nouveau JWT (string) pour que l'intercepteur puisse immédiatement
+   * rejouer la requête originale sans second aller-retour.
+   */
+  refresh(): Observable<string> {
+    return this.#http.post<LoginResponse>(
+      `${this.#apiUrl}/refresh`,
+      {},
+      { withCredentials: true }, // CA-1 : le cookie httpOnly est envoyé automatiquement
+    ).pipe(
+      tap(response => {
+        localStorage.setItem('token', response.token);
+        this.decodeAndSetUser(response.token);
+      }),
+      map(response => response.token),
+    );
+  }
+
+  /**
+   * US 1.5 : Déconnexion explicite.
+   *
+   * CA-1 : withCredentials envoie le cookie httpOnly pour que le backend le révoque.
+   * CA-2 : envoie le JWT dans Authorization pour que le backend le mette en blocklist.
+   * CA-3 : après confirmation (ou erreur réseau), nettoyage local + redirection vers "/".
    */
   logout(): void {
     const token = localStorage.getItem('token');
@@ -95,39 +117,39 @@ export class AuthService {
       ? new HttpHeaders({ Authorization: `Bearer ${token}` })
       : new HttpHeaders();
 
-    // On appelle l'API puis on nettoie, que la requête réussisse ou échoue.
-    // L'utilisateur ne doit jamais rester bloqué sur une page protégée à cause
-    // d'un problème réseau lors de la déconnexion.
     this.#http
       .post<AuthMessageResponse>(
-        // La route de logout est sous /api/* (firewall Symfony qui vérifie le JWT)
         `${environment.apiUrl}/auth/logout`,
         {},
         { headers, withCredentials: true },
       )
       .subscribe({
-        next:     () => this.#clearSessionAndRedirect(),
-        error:    () => this.#clearSessionAndRedirect(), // CA-3 : on nettoie même en cas d'erreur
+        next:  () => this.clearSession(),
+        error: () => this.clearSession(), // CA-3 : on nettoie même en cas d'erreur réseau
       });
+  }
+
+  /**
+   * Nettoyage de session côté client.
+   * Public car appelé aussi par l'intercepteur lors d'un échec de refresh (CA-3 US 1.4).
+   */
+  clearSession(): void {
+    localStorage.removeItem('token');
+    this.currentUser.set(null);
+    this.#router.navigate(['/']);
   }
 
   // ── Helpers privés ───────────────────────────────────────
 
-  #clearSessionAndRedirect(): void {
-    // CA-1 : suppression du JWT stocké localement
-    localStorage.removeItem('token');
-
-    // Réinitialisation du signal d'état
-    this.currentUser.set(null);
-
-    // CA-3 : redirection vers la page d'accueil publique
-    this.#router.navigate(['/']);
-  }
-
   private decodeAndSetUser(token: string): void {
     try {
-      const decoded: { roles: MenuRole[]; username: string; iat: number; exp: number; id: number } =
-        jwtDecode(token);
+      const decoded: {
+        roles: MenuRole[];
+        username: string;
+        iat: number;
+        exp: number;
+        id: number;
+      } = jwtDecode(token);
 
       this.currentUser.set({
         id:       decoded.id,
