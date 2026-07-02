@@ -11,7 +11,16 @@
   flex-direction: column;
   gap: 3rem;
 }
+.newsletter-success {
+  color: #a5d6a7;
+  font-size: 0.9rem;
+}
 
+.newsletter-error {
+  color: #e07a5f;
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0;
+}
 /* ---------------- */
 /* PARTIE GAUCHE */
 /* ---------------- */

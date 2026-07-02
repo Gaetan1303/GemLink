@@ -1,0 +1,116 @@
+:host {
+  display: block;
+}
+
+// ── Barre fixe en bas ────────────────────────────────────────
+.nav-bar-mobile {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+
+  height: 72px;
+
+  background: #040A20;
+  border-top: 1px solid rgba(197, 160, 89, 0.2);
+
+  // Sécurité iPhone X+ (safe area)
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+// ── Liste d'items ─────────────────────────────────────────────
+.nav-bar-mobile__list {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+
+  height: 100%;
+  width: 100%;
+
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-bar-mobile__item {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+// ── Lien / bouton de nav ──────────────────────────────────────
+.nav-bar-mobile__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  width: 100%;
+  height: 100%;
+
+  text-decoration: none;
+  border-radius: 8px;
+  overflow: hidden; // pour le ripple Material
+  transition: opacity 0.2s ease;
+
+  // État par défaut : icône et label atténués
+  color: rgba(197, 160, 89, 0.45);
+
+  &:hover {
+    opacity: 0.8;
+    color: rgba(197, 160, 89, 0.75);
+  }
+
+  // ── Actif ─────────────────────────────────────────────────
+  &--active {
+    color: #C5A059 !important;
+
+    .nav-bar-mobile__icon {
+      color: #C5A059 !important;
+      // Halo doré sur l'icône active
+      filter: drop-shadow(0px 0px 6px rgba(197, 160, 89, 0.55));
+    }
+
+    .nav-bar-mobile__label {
+      text-shadow: 0px 0px 8px rgba(197, 160, 89, 0.6);
+    }
+  }
+}
+
+// ── Icône Material ────────────────────────────────────────────
+.nav-bar-mobile__icon {
+  //  .menu-icon : 20px
+  font-size: 22px !important;
+  width: 22px !important;
+  height: 22px !important;
+
+  color: inherit;
+  transition: color 0.2s ease, filter 0.2s ease;
+}
+
+// ── Label ─────────────────────────────────────────────────────
+.nav-bar-mobile__label {
+  // .menu-label
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  color: inherit;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+// ── Responsive : masquer sur desktop ─────────────────────────
+@media (min-width: 768px) {
+  :host {
+    display: none;
+  }
+}

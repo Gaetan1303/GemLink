@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Newsletter — GemLink Admin{% endblock %}
+
+{% block body %}
+<div class="newsletter-admin">
+    <h1>Créer une campagne newsletter</h1>
+
+    {% for message in app.flashes('success') %}
+        <div class="alert alert--success">{{ message }}</div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div class="alert alert--error">{{ message }}</div>
+    {% endfor %}
+
+    <form method="post" action="{{ path('admin_newsletter_create') }}" class="newsletter-form">
+
+        <div class="form-group">
+            <label for="subject">Sujet</label>
+            <input type="text" id="subject" name="subject" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email_from_name">Nom de l'expéditeur</label>
+            <input type="text" id="email_from_name" name="email_from_name" value="GemLink">
+        </div>
+
+        <div class="form-group">
+            <label for="email_from_addr">Email de l'expéditeur</label>
+            <input type="email" id="email_from_addr" name="email_from_addr" value="contact@gem-link.org">
+        </div>
+
+        <div class="form-group">
+            <label>Listes de diffusion</label>
+            {% for list in mailingLists %}
+                <label class="checkbox-label">
+                    <input type="checkbox" name="mailing_list_ids[]" value="{{ list.id }}">
+                    {{ list.name }}
+                </label>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="content">Contenu (HTML)</label>
+            <textarea id="content" name="content" rows="12" required></textarea>
+        </div>
+
+        <button type="submit" class="submit-btn">Créer la campagne</button>
+    </form>
+</div>
+{% endblock %}

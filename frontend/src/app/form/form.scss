@@ -1,77 +1,145 @@
 // ==========================================
-// 1. VERSION MOBILE 
+// 1. VERSION MOBILE
 // ==========================================
 
 .login-form {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 36px;
-  gap: 19px;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  padding: 36px !important;
+  gap: 19px !important;
 
-  position: relative;
-  width: 330px;
-  min-height: 313px;
+  position: relative !important;
+  width: 330px !important;
+  min-height: 313px !important;
 
-  background: #1F2833;
-  border: 1px solid rgba(197, 160, 89, 0.25);
-  box-shadow: inset 0px 4px 4px rgba(197, 160, 89, 0.05);
-  border-radius: 24px;
-  transition: all 0.3s ease-in-out; // Animation fluide lors du changement d'écran
+  background: #1F2833 !important;
+  border: 1px solid rgba(197, 160, 89, 0.25) !important;
+  box-shadow: inset 0px 4px 4px rgba(197, 160, 89, 0.05) !important;
+  border-radius: 24px !important;
+  transition: all 0.3s ease-in-out !important;
 }
+.login-form__forgot-link {
+  align-self: flex-end;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgba(197, 160, 89, 0.7);
+  text-decoration: none;
+  margin-top: -8px; // Pour le rapprocher de l'input
+  transition: color 0.2s ease;
 
+  &:hover {
+    color: #C5A059;
+    text-decoration: underline;
+  }
+}
 .input-group {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  width: 100%;
-  align-self: stretch;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 8px !important;
+  width: 100% !important;
+  align-self: stretch !important;
 }
 
 .input-field-frame {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: 11px 21px;
-  gap: 10px;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 11px 21px !important;
+  gap: 10px !important;
 
-  width: 100%;
-  height: 47px;
+  width: 100% !important;
+  height: 47px !important;
 
-  background: #1A1625;
-  border: 1px solid rgba(0, 0, 0, 0.11);
-  border-radius: 16px;
+  background: #1A1625 !important;
+  border: 1px solid rgba(0, 0, 0, 0.11) !important;
+  border-radius: 16px !important;
 
   input {
-    width: 100%;
-    background: transparent;
-    border: none;
-    outline: none;
+    width: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
 
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-style: normal;
-    font-weight: 700;
-    font-size: 16px; 
-    line-height: 20px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #E2E2E9;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-style: normal !important;
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    line-height: 20px !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    color: #E2E2E9 !important;
 
     &::placeholder {
-      color: rgba(226, 226, 233, 0.4);
+      color: rgba(226, 226, 233, 0.4) !important;
     }
   }
 }
 
 .error-text {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 11px;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 11px !important;
+  color: #C5A059 !important;
+  padding-left: 5px !important;
+}
+
+.error-text--success {
+  color: #63d194 !important;
+}
+
+.login-form--resend {
+  margin-top: 18px !important;
+}
+
+.login-form__toggle-button {
+  width: 330px;
+  margin-top: 10px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(197, 160, 89, 0.35);
+  background: rgba(197, 160, 89, 0.12);
   color: #C5A059;
-  padding-left: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-form__resend-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateX(-44px);
+  transition: max-height 0.45s ease, opacity 0.35s ease, transform 0.45s ease;
+}
+
+.login-form__resend-panel--open {
+  max-height: 640px;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.login-form__divider {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid rgba(197, 160, 89, 0.2);
+  margin: 0;
+}
+
+.login-form__resend-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #C5A059;
+  margin: 0;
 }
 
 
@@ -81,24 +149,27 @@
 
 @media (min-width: 1024px) {
   .login-form {
-    width: 450px;       
-    min-height: 400px;  // Plus de hauteur pour un rendu plus aéré
-    padding: 48px;      
-    gap: 24px;          // Plus d'espace entre les blocs (inputs, bouton)
-    
-    // Centrer le formulaire sur les grands écrans
-    margin: 0 auto; 
+    width: 450px !important;
+    min-height: 400px !important;
+    padding: 48px !important;
+    gap: 24px !important;
+    margin: 0 auto !important;
   }
 
   .input-group {
-    gap: 10px; 
+    gap: 10px !important;
 
-  .input-field-frame {
-    height: 54px; 
-    padding: 14px 24px;
+    .input-field-frame {
+      height: 54px !important;
+      padding: 14px 24px !important;
 
-    input {
-      font-size: 18px;
+      input {
+        font-size: 18px !important;
+      }
     }
   }
-  }}
+
+  .login-form__toggle-button {
+    width: 450px;
+  }
+}

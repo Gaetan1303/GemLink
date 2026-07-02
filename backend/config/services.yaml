@@ -3,6 +3,7 @@ parameters:
     app.mailer_from_email: '%env(MAILER_FROM_EMAIL)%'
     app.mailer_from_name: '%env(MAILER_FROM_NAME)%'
     app.frontend_url: '%env(resolve:FRONTEND_URL)%'
+    infomaniak_newsletter.domain_id: '%env(INFOMANIAK_NEWSLETTER_DOMAIN_ID)%'
 
 services:
     _defaults:
@@ -12,8 +13,25 @@ services:
             string $fromEmail: '%app.mailer_from_email%'
             string $fromName: '%app.mailer_from_name%'
             string $frontendUrl: '%app.frontend_url%'
-    
+    App\Service\NewsletterCampaignService:
+        arguments:
+            $token: '%infomaniak_newsletter.token%'
+            $domainId: '%infomaniak_newsletter.domain_id%'
     App\:
         resource: '../src/'
+    App\EventListener\JwtBlocklistListener:
+        arguments:
+            $cache: '@cache.app'
+        tags:
+            - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_decoded, method: onJwtDecoded }
 
-
+    # AuthService reçoit les deux interfaces Cache de Symfony :
+    # - CacheInterface    (Symfony Contracts) → utilisée pour le throttling login (get/delete avec callback)
+    # - CacheItemPoolInterface (PSR-6)        → utilisée pour la blocklist JWT (getItem/save avec TTL fine)
+    App\Service\AuthService:
+        arguments:
+            $cache:     '@cache.app'
+            $cachePool: '@cache.app'
+            $frontendUrl: '%env(FRONTEND_URL)%'
+            $maxLoginAttempts: 5
+            $loginAttemptWindow: 600

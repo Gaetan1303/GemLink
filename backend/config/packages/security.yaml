@@ -32,6 +32,8 @@ security:
     access_control:
         - { path: ^/api/login_check$, roles: PUBLIC_ACCESS }
         - { path: ^/api/(docs|contexts|openapi), roles: PUBLIC_ACCESS }
+        # US 1.5 : logout requiert un utilisateur authentifié
+        - { path: ^/api/auth/logout$, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

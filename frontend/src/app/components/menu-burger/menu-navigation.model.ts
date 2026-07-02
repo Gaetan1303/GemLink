@@ -1,26 +1,59 @@
 export interface MenuItem {
   label: string;
   route: string;
-  iconClass: string; 
+  iconClass: string;
 }
 
-export type MenuRole = 'visiteur' | 'user' | 'admin';
+export type MenuRole = 'VISITEUR' | 'ROLE_USER' | 'ROLE_ADMIN';
 
-export const NAVIGATION_MENUS: Record<MenuRole, MenuItem[]> = {
-  visiteur: [
-    { label: 'Connexion', route: '/auth/login', iconClass: 'icon-login' },
-    { label: 'Inscription', route: '/auth/register', iconClass: 'icon-register' }
-  ],
-  user: [
-    { label: 'Faction', route: '/factions', iconClass: 'icon-faction' },
-    { label: 'Badge', route: '/badges', iconClass: 'icon-badge' },
-    { label: 'Profil', route: '/users/me', iconClass: 'icon-profile' },
-    { label: 'Collection', route: '/collections', iconClass: 'icon-collection' },
-    { label: 'Retour', route: '/', iconClass: 'icon-back' }
-  ],
-  admin: [
-    { label: 'Dashboard', route: '/admin/stats', iconClass: 'icon-dashboard' },
-    { label: 'Modération', route: '/admin/reports', iconClass: 'icon-moderation' },
-    { label: 'Retour', route: '/', iconClass: 'icon-back' }
-  ]
+export interface MenuConfig {
+  navItems: MenuItem[];  // nav-bar-mobile (5 max)
+  menuItems: MenuItem[]; // menu-burger (tout)
+}
+
+export const NAVIGATION_MENUS: Record<MenuRole, MenuConfig> = {
+  VISITEUR: {
+    navItems: [
+      { label: 'Accueil',     route: '/',              iconClass: 'home' },
+      { label: 'Connexion',   route: '/auth/login',    iconClass: 'login' },
+      { label: 'Inscription', route: '/auth/register', iconClass: 'person_add' },
+    ],
+    menuItems: [
+      { label: 'Accueil',     route: '/',              iconClass: 'home' },
+      { label: 'Connexion',   route: '/auth/login',    iconClass: 'login' },
+      { label: 'Inscription', route: '/auth/register', iconClass: 'person_add' },
+    ],
+  },
+  ROLE_USER: {
+    navItems: [
+      { label: 'Accueil',    route: '/',            iconClass: 'home' },
+      { label: 'Post',       route: '/posts',        iconClass: 'near_me' },
+      { label: 'Identifier', route: '/identifier',  iconClass: 'center_focus_strong' },
+      { label: 'Profil',     route: '/users/me',    iconClass: 'person' },
+      { label: 'Galerie',    route: '/collections', iconClass: 'collections' },
+    ],
+    menuItems: [
+      { label: 'Accueil',     route: '/',            iconClass: 'home' },
+      { label: 'Post',        route: '/posts',        iconClass: 'near_me' },
+      { label: 'Identifier',  route: '/identifier',  iconClass: 'center_focus_strong' },
+      { label: 'Profil',      route: '/users/me',    iconClass: 'person' },
+      { label: 'Galerie',     route: '/collections', iconClass: 'collections' },
+      { label: 'Faction',     route: '/factions',    iconClass: 'groups' },
+      { label: 'Badge',       route: '/badges',      iconClass: 'military_tech' },
+      { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
+    ],
+  },
+  ROLE_ADMIN: {
+    navItems: [
+      { label: 'Accueil',    route: '/',                iconClass: 'home' },
+      { label: 'Dashboard',  route: '/admin/stats',     iconClass: 'dashboard' },
+      { label: 'Modération', route: '/admin/reports',   iconClass: 'shield' },
+      { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
+    ],
+    menuItems: [
+      { label: 'Accueil',    route: '/',                iconClass: 'home' },
+      { label: 'Dashboard',  route: '/admin/stats',     iconClass: 'dashboard' },
+      { label: 'Modération', route: '/admin/reports',   iconClass: 'shield' },
+    ],
+  },
 };

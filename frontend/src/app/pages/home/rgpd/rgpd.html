@@ -1,0 +1,96 @@
+<div><app-header /></div>
+<div><app-header-image /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
+<main class="legal-page" id="main-content">
+  <div class="legal-container">
+
+    <h1>RGPD</h1>
+
+    <section aria-labelledby="responsable-title">
+      <h2 id="responsable-title">Responsable du traitement</h2>
+      <p>GemLink est responsable du traitement de vos données personnelles. Contact : <a href="mailto:contact@gem-link.org">contact&#64;gem-link.org</a></p>
+    </section>
+
+    <section aria-labelledby="base-title">
+      <h2 id="base-title">Base légale du traitement</h2>
+      <p>Le traitement de vos données repose sur votre consentement explicite lors de l'inscription, ainsi que sur l'exécution du contrat de service lié à votre compte GemLink.</p>
+    </section>
+
+    <section aria-labelledby="transfert-title">
+      <h2 id="transfert-title">Transfert de données</h2>
+      <p>Vos données sont hébergées en Europe via Railway. Aucun transfert vers des pays tiers n'est effectué.</p>
+    </section>
+
+    <section aria-labelledby="droits-title">
+      <h2 id="droits-title">Exercer vos droits</h2>
+      <p>Pour toute demande relative à vos droits RGPD (accès, rectification, suppression, portabilité, opposition), utilisez le formulaire ci-dessous ou écrivez-nous directement à <a href="mailto:contact@gem-link.org">contact&#64;gem-link.org</a>.</p>
+      <p>Vous pouvez également introduire une réclamation auprès de la CNIL : <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">www.cnil.fr</a></p>
+    </section>
+
+    <section aria-labelledby="formulaire-title">
+      <h2 id="formulaire-title">Formulaire d'exercice de vos droits</h2>
+
+      @if (success()) {
+        <div class="alert alert--success">
+          Votre demande a bien été envoyée. Nous vous répondrons dans les meilleurs délais.
+        </div>
+      } @else {
+        <div class="contact-form">
+          @if (error()) {
+            <div class="alert alert--error">{{ error() }}</div>
+          }
+
+          <div class="form-group">
+            <label for="rgpd-nom">Nom <span class="required">*</span></label>
+            <input
+              id="rgpd-nom"
+              type="text"
+              placeholder="Votre nom"
+              [value]="nom()"
+              (input)="nom.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="rgpd-email">Email <span class="required">*</span></label>
+            <input
+              id="rgpd-email"
+              type="email"
+              placeholder="votre@email.com"
+              [value]="email()"
+              (input)="email.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="rgpd-message">
+              Votre demande <span class="required">*</span>
+            </label>
+            <textarea
+              id="rgpd-message"
+              rows="6"
+              placeholder="Décrivez votre demande (accès, rectification, suppression, portabilité, opposition...)"
+              [value]="message()"
+              (input)="message.set($any($event.target).value)"
+            ></textarea>
+          </div>
+
+          <button
+            class="submit-btn"
+            [disabled]="isLoading()"
+            (click)="submit()">
+            @if (isLoading()) { Envoi en cours... } @else { Envoyer ma demande }
+          </button>
+        </div>
+      }
+    </section>
+
+    <footer class="legal-footer" aria-label="Date de mise à jour">
+      <p><small>Dernière mise à jour : 29 juin 2026</small></p>
+    </footer>
+
+  </div>
+</main>
+
+    <app-footer></app-footer>

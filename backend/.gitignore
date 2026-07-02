@@ -2,6 +2,7 @@
 ###> symfony/framework-bundle ###t
 .env.production
 .env
+.env.test
 .env.dev
 /.env.local
 /.env.local.php
@@ -20,3 +21,4 @@ commande.md
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+.compose.test.yaml
