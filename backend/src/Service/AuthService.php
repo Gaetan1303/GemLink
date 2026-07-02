@@ -5,14 +5,17 @@ namespace App\Service;
 use App\Entity\EmailValidationToken;
 use App\Entity\RefreshToken;
 use App\Entity\User;
+use App\EventListener\JwtBlocklistListener;
 use App\Exception\LoginFailedException;
 use App\Exception\LoginThrottledException;
 use App\Repository\EmailValidationTokenRepository;
+use App\Repository\RefreshTokenRepository;
 use App\Repository\UserRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Contracts\Cache\CacheInterface;
@@ -30,11 +33,13 @@ class AuthService
         private EntityManagerInterface $em,
         private UserRepository $userRepository,
         private EmailValidationTokenRepository $emailValidationTokenRepository,
+        private RefreshTokenRepository $refreshTokenRepository,
         private UserPasswordHasherInterface $passwordHasher,
         private MessageBusInterface $messageBus,
         private EmailValidationTokenSigner $emailValidationTokenSigner,
         private JWTTokenManagerInterface $jwtManager,
         private CacheInterface $cache,
+        private CacheItemPoolInterface $cachePool,
         private string $frontendUrl,
         private int $maxLoginAttempts = 5,
         private int $loginAttemptWindow = 600
@@ -48,7 +53,6 @@ class AuthService
         $user = new User();
         $user->setEmail($data['email']);
         $user->setUsername($data['username']);
-        // CA-1/CA-2 : le frontend envoie "passwordHash" (mot de passe en clair, nommage transitoire)
         $user->setPasswordHash($this->passwordHasher->hashPassword($user, $data['passwordHash']));
         $user->setStatus('PENDING_VALIDATION');
 
@@ -58,7 +62,6 @@ class AuthService
 
         $this->em->flush();
 
-        // CA-1 : envoi asynchrone via Messenger, ne bloque pas la réponse HTTP
         $this->dispatchEmailValidationMessage($user, $plainToken);
 
         return $user;
@@ -103,8 +106,13 @@ class AuthService
     }
 
     /**
-     * @param array{email?: mixed, password?: mixed} $data
+     * US 1.3 : Connexion.
      *
+     * Modification par rapport à la version précédente : le JWT inclut désormais un
+     * claim `jti` (JWT ID) — identifiant unique généré à la création — nécessaire pour
+     * pouvoir l'inscrire en blocklist Redis lors de la déconnexion (CA-2 US 1.5).
+     *
+     * @param array{email?: mixed, passwordHash?: mixed} $data
      * @return array{token: string, refreshToken: string, refreshTokenExpiresAt: DateTimeImmutable}
      */
     public function login(array $data): array
@@ -123,7 +131,6 @@ class AuthService
             || !$this->passwordHasher->isPasswordValid($user, $passwordHash)
         ) {
             $this->recordFailedLogin($email);
-
             throw new LoginFailedException(self::LOGIN_ERROR_MESSAGE);
         }
 
@@ -139,11 +146,52 @@ class AuthService
         ));
         $this->em->flush();
 
+        // CA-2 (US 1.5) : jti unique par token, utilisé comme clé de blocklist Redis à la déconnexion.
+        $jti = bin2hex(random_bytes(16));
+
         return [
-            'token' => $this->jwtManager->create($user),
+            'token' => $this->jwtManager->createFromPayload($user, ['jti' => $jti]),
             'refreshToken' => $refreshToken,
             'refreshTokenExpiresAt' => $refreshTokenExpiresAt,
         ];
+    }
+
+    /**
+     * US 1.5 : Déconnexion.
+     *
+     * CA-1 : révoque le refresh token en base + supprime le cookie côté contrôleur.
+     * CA-2 : inscrit le jti du JWT en blocklist Redis avec une TTL = durée résiduelle du token.
+     *
+     * On ne lève pas d'exception si le refresh token est introuvable ou le JWT déjà expiré :
+     * la déconnexion doit toujours réussir côté client même en cas d'état incohérent serveur.
+     */
+    public function logout(string $rawRefreshToken, string $rawJwt): void
+    {
+        // CA-1 : révoquer le refresh token en base
+        if ($rawRefreshToken !== '') {
+            $tokenHash = hash('sha256', $rawRefreshToken);
+            $refreshToken = $this->refreshTokenRepository->findValidByHash($tokenHash);
+            if ($refreshToken !== null) {
+                $refreshToken->revoke();
+                $this->em->flush();
+            }
+        }
+
+        // CA-2 : mettre le JWT en blocklist Redis avec TTL = durée de vie résiduelle
+        if ($rawJwt !== '') {
+            $payload = $this->decodeJwtPayloadUnsafe($rawJwt);
+            $jti = isset($payload['jti']) && is_string($payload['jti']) ? $payload['jti'] : '';
+            $exp = isset($payload['exp']) && is_int($payload['exp']) ? $payload['exp'] : 0;
+
+            $ttl = $exp - time();
+
+            if ($jti !== '' && $ttl > 0) {
+                $item = $this->cachePool->getItem(JwtBlocklistListener::blocklistKey($jti));
+                $item->set(true);
+                $item->expiresAfter($ttl);
+                $this->cachePool->save($item);
+            }
+        }
     }
 
     public function resendValidationEmail(string $email): void
@@ -151,7 +199,6 @@ class AuthService
         $user = $this->userRepository->findOneBy(['email' => $email]);
 
         if (!$user || $user->getStatus() !== 'PENDING_VALIDATION') {
-            // Pour des raisons de sécurité, ne pas révéler si l'email existe ou si le compte est déjà actif.
             return;
         }
 
@@ -163,28 +210,23 @@ class AuthService
 
     private function validateRegistrationData(array $data): void
     {
-        // CA-1 : champs requis
         if (empty($data['email']) || empty($data['username']) || empty($data['passwordHash'])) {
             throw new InvalidArgumentException('Données manquantes.');
         }
 
-        // CA-1 : pseudo alphanumérique, 3-30 caractères
         $username = trim($data['username']);
         if (!preg_match('/^[a-zA-Z0-9_]{3,30}$/', $username)) {
             throw new InvalidArgumentException('Pseudo invalide.');
         }
 
-        // CA-1 : email RFC 5322 
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             throw new InvalidArgumentException('Email invalide.');
         }
 
-        // CA-2 : politique de mot de passe revalidée côté serveur 
         if (!preg_match(self::PASSWORD_PATTERN, $data['passwordHash'])) {
             throw new InvalidArgumentException('Mot de passe ne respectant pas la politique de sécurité.');
         }
 
-        // CA-3 : ces vérifications lèvent la même exception générique, 
         if ($this->userRepository->findOneBy(['email' => mb_strtolower($username = trim($data['email']))])) {
             throw new InvalidArgumentException('Compte déjà existant.');
         }
@@ -193,14 +235,10 @@ class AuthService
         }
     }
 
-    /**
-     * @return array{count: int, blocked_until: int}
-     */
     private function getLoginAttemptState(string $email): array
     {
         return $this->cache->get($this->loginAttemptCacheKey($email), function (ItemInterface $item): array {
             $item->expiresAfter($this->loginAttemptWindow);
-
             return ['count' => 0, 'blocked_until' => 0];
         });
     }
@@ -208,7 +246,6 @@ class AuthService
     private function isLoginThrottled(string $email): bool
     {
         $state = $this->getLoginAttemptState($email);
-
         return $state['blocked_until'] > time();
     }
 
@@ -226,11 +263,7 @@ class AuthService
         $this->cache->delete($key);
         $this->cache->get($key, function (ItemInterface $item) use ($count, $blockedUntil): array {
             $item->expiresAfter(max($this->loginAttemptWindow, $blockedUntil - time()));
-
-            return [
-                'count' => $count,
-                'blocked_until' => $blockedUntil,
-            ];
+            return ['count' => $count, 'blocked_until' => $blockedUntil];
         });
     }
 
@@ -241,7 +274,7 @@ class AuthService
 
     private function loginAttemptCacheKey(string $email): string
     {
-        return 'auth_login_attempts_'.hash('sha256', $email);
+        return 'auth_login_attempts_' . hash('sha256', $email);
     }
 
     private function createAndPersistEmailValidationToken(User $user): string
@@ -274,5 +307,24 @@ class AuthService
     private function progressiveDelay(int $failedAttempts): int
     {
         return 60 * (2 ** ($failedAttempts - $this->maxLoginAttempts));
+    }
+
+    /**
+     * Décode le payload JWT sans vérification de signature.
+     * Utilisé uniquement pour extraire `jti` et `exp` lors de la déconnexion :
+     * la signature a déjà été vérifiée par LexikJWT en amont (firewall api).
+     *
+     * @return array<string, mixed>
+     */
+    private function decodeJwtPayloadUnsafe(string $token): array
+    {
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) {
+            return [];
+        }
+
+        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/'), true), true);
+
+        return is_array($payload) ? $payload : [];
     }
 }

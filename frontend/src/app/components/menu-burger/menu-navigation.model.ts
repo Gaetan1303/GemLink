@@ -40,6 +40,7 @@ export const NAVIGATION_MENUS: Record<MenuRole, MenuConfig> = {
       { label: 'Galerie',     route: '/collections', iconClass: 'collections' },
       { label: 'Faction',     route: '/factions',    iconClass: 'groups' },
       { label: 'Badge',       route: '/badges',      iconClass: 'military_tech' },
+      { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
     ],
   },
   ROLE_ADMIN: {
@@ -47,6 +48,7 @@ export const NAVIGATION_MENUS: Record<MenuRole, MenuConfig> = {
       { label: 'Accueil',    route: '/',                iconClass: 'home' },
       { label: 'Dashboard',  route: '/admin/stats',     iconClass: 'dashboard' },
       { label: 'Modération', route: '/admin/reports',   iconClass: 'shield' },
+      { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
     ],
     menuItems: [
       { label: 'Accueil',    route: '/',                iconClass: 'home' },

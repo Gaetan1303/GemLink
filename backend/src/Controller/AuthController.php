@@ -24,14 +24,12 @@ class AuthController extends AbstractController
         try {
             $authService->register($data);
         } catch (InvalidArgumentException $e) {
-            // CA-3 : message générique
             return $this->json(
                 ['message' => 'Si ces informations sont valides, un email de confirmation a été envoyé.'],
                 Response::HTTP_BAD_REQUEST
             );
         }
 
-        // CA-3 : même réponse en cas de succès réel ou de conflit email/username
         return $this->json(
             ['message' => 'Si ces informations sont valides, un email de confirmation a été envoyé.'],
             Response::HTTP_CREATED
@@ -113,11 +111,55 @@ class AuthController extends AbstractController
             time() + AuthService::REFRESH_TOKEN_TTL_SECONDS,
             '/',
             null,
-            true,
-            true,
+            true,  // Secure
+            true,  // httpOnly
             false,
             Cookie::SAMESITE_STRICT
         ));
+
+        return $response;
+    }
+
+    /**
+     * US 1.5 : Déconnexion.
+     *
+     * Protégé par le firewall `api` (JWT requis dans Authorization: Bearer).
+     * Le refresh token est lu depuis le cookie httpOnly posé lors du login.
+     *
+     * CA-1 : révoque le refresh token en base + vide le cookie client.
+     * CA-2 : inscrit le JWT en blocklist Redis (TTL = durée résiduelle).
+     * CA-3 : renvoie une redirection vers la page d'accueil publique.
+     *        Côté Angular, c'est le service qui navigue vers "/" après l'appel.
+     */
+    #[Route('/auth/logout', name: 'app_logout', methods: ['POST'])]
+    public function logout(Request $request, AuthService $authService): JsonResponse
+    {
+        // CA-1 : refresh token brut depuis le cookie httpOnly
+        $rawRefreshToken = $request->cookies->get('refresh_token', '');
+
+        // CA-2 : JWT depuis l'en-tête Authorization (posé par LexikJWT, déjà vérifié par le firewall)
+        $rawJwt = '';
+        $authHeader = $request->headers->get('Authorization', '');
+        if (str_starts_with($authHeader, 'Bearer ')) {
+            $rawJwt = substr($authHeader, 7);
+        }
+
+        $authService->logout($rawRefreshToken, $rawJwt);
+
+        // CA-1 : suppression du cookie côté client — on le repose vide avec une date passée
+        $expiredCookie = Cookie::create('refresh_token')
+            ->withValue('')
+            ->withExpires(1)       // timestamp passé → suppression immédiate
+            ->withPath('/')
+            ->withSecure(true)
+            ->withHttpOnly(true)
+            ->withSameSite(Cookie::SAMESITE_STRICT);
+
+        $response = $this->json(
+            ['message' => 'Déconnexion réussie.'],
+            Response::HTTP_OK
+        );
+        $response->headers->setCookie($expiredCookie);
 
         return $response;
     }

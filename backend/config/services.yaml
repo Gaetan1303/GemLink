@@ -19,5 +19,17 @@ services:
             $domainId: '%infomaniak_newsletter.domain_id%'
     App\:
         resource: '../src/'
+    App\EventListener\JwtBlocklistListener:
+        arguments:
+            $cache: '@cache.app'
+        tags:
+            - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_decoded, method: onJwtDecoded }
 
+    # AuthService reçoit les deux interfaces Cache de Symfony :
+    # - CacheInterface    (Symfony Contracts) → utilisée pour le throttling login (get/delete avec callback)
+    # - CacheItemPoolInterface (PSR-6)        → utilisée pour la blocklist JWT (getItem/save avec TTL fine)
+    App\Service\AuthService:
+        arguments:
+            $cache:     '@cache.app'
+            $cachePool: '@cache.app'
 
