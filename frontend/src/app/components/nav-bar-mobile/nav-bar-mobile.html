@@ -1,0 +1,23 @@
+<nav class="nav-bar-mobile" role="navigation" aria-label="Navigation principale">
+  <ul class="nav-bar-mobile__list">
+
+    @for (item of menuItems(); track item.route) {
+      <li class="nav-bar-mobile__item">
+        <a
+          class="nav-bar-mobile__link"
+          [class.nav-bar-mobile__link--active]="isActive(item.route)"
+          [routerLink]="item.route"
+          routerLinkActive="nav-bar-mobile__link--active"
+          [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+          matRipple
+          [matRippleColor]="'rgba(197, 160, 89, 0.15)'"
+          [attr.aria-label]="item.label"
+          [attr.aria-current]="isActive(item.route) ? 'page' : null"
+        >
+          <mat-icon class="nav-bar-mobile__icon" [fontIcon]="item.iconClass" />
+              </a>
+      </li>
+    }
+
+  </ul>
+</nav>

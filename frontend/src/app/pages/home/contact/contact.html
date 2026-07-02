@@ -1,0 +1,103 @@
+<div><app-header /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
+<main class="legal-page" id="main-content">
+  <div class="legal-container">
+
+    <h1>Contactez-nous</h1>
+    <p class="legal-intro">Une question, une suggestion ? Notre équipe vous répond sous 48h.</p>
+
+    @if (success()) {
+      <div class="alert alert--success" role="alert">
+        Votre message a bien été envoyé. Nous vous répondrons dans les plus brefs délais.
+      </div>
+    } @else {
+
+      @if (error()) {
+        <div class="alert alert--error" role="alert">{{ error() }}</div>
+      }
+
+      <div class="contact-form">
+
+        <div class="form-group">
+          <label for="nom">Nom <span class="required" aria-hidden="true">*</span></label>
+          <input
+            id="nom"
+            type="text"
+            placeholder="Votre nom"
+            autocomplete="name"
+            [value]="nom()"
+            (input)="nom.set($any($event.target).value)"
+            [disabled]="isLoading()"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email <span class="required" aria-hidden="true">*</span></label>
+          <input
+            id="email"
+            type="email"
+            placeholder="votre@email.com"
+            autocomplete="email"
+            [value]="email()"
+            (input)="email.set($any($event.target).value)"
+            [disabled]="isLoading()"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sujet">Sujet</label>
+          <input
+            id="sujet"
+            type="text"
+            placeholder="Sujet de votre message"
+            [value]="sujet()"
+            (input)="sujet.set($any($event.target).value)"
+            [disabled]="isLoading()"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="message">Message <span class="required" aria-hidden="true">*</span></label>
+          <textarea
+            id="message"
+            rows="6"
+            placeholder="Votre message..."
+            [value]="message()"
+            (input)="message.set($any($event.target).value)"
+            [disabled]="isLoading()"
+          ></textarea>
+        </div>
+
+          <button
+          type="button"
+          class="btn-submit"
+          [disabled]="isLoading()"
+          (click)="submit()"
+          [attr.aria-busy]="isLoading()">
+          @if (isLoading()) { Envoi en cours... } @else { Envoyer }
+        </button>
+
+      </div>
+    }
+
+    <section class="contact-info" aria-labelledby="contact-info-title">
+      <h2 id="contact-info-title">Autres moyens de nous contacter</h2>
+      <dl>
+        <dt>Email général</dt>
+        <dd><a href="mailto:contact@gem-link.org">contact&#64;gem-link.org</a></dd>
+        <dt>Presse</dt>
+        <dd><a href="mailto:presse@gem-link.org">presse&#64;gem-link.org</a></dd>
+        <dt>Délai de réponse</dt>
+        <dd>48 heures ouvrées</dd>
+      </dl>
+    </section>
+
+    <footer class="legal-footer" aria-label="Date de mise à jour">
+      <p><small>Dernière mise à jour : 29 juin 2026</small></p>
+    </footer>
+
+  </div>
+</main>
+
+<app-footer />

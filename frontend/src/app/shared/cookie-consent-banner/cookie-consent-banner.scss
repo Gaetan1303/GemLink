@@ -1,0 +1,38 @@
+@use '@angular/material' as mat;
+
+:host {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  pointer-events: auto;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.cookie-banner-container {
+  // Utilise la couleur de fond des sections pour se démarquer légèrement
+  background-color: var(--section-background-color);
+  // Ajoute une bordure supérieure subtile pour la séparation visuelle
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 24px;
+  // Ajoute une légère ombre pour donner de la profondeur
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cookie-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 24px; // Espace entre le texte et les boutons
+  width: 100%;
+  max-width: 1200px; // Limite la largeur sur les grands écrans
+
+  p {
+    margin: 0;
+    color: var(--text-color-secondary);
+    flex-grow: 1; // Le texte prend l'espace disponible
+  }
+}

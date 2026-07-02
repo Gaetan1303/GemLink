@@ -4,13 +4,13 @@
   max-width: 415px;
   height: 475px;
   overflow: hidden;
-  
+
 }
 
 /* BACKGROUND */
 .hero-bg {
   position: absolute;
-  
+
 }
 
 /* HEADER */
@@ -88,6 +88,22 @@
 
   color: #C5A059;
   cursor: pointer;
+}
+
+@media (max-width: 420px) {
+  .hero {
+    max-width: 100%;
+  }
+  .hero-title {
+    width: 95%;
+    font-size: 35px;
+  }
+  .hero-description {
+    width: 90%;
+  }
+  .hero-button {
+    width: 95%;
+  }
 }
 
 /* ========================= */

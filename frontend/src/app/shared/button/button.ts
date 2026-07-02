@@ -10,7 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
   templateUrl: './button.html',
   styleUrls: ['./button.scss'],
 })
-export class ButtonComponent {
+export class Button {
   label = input<string>();
   disabled = input<boolean>(false);
   type = input<'button' | 'submit' | 'reset'>('button'); // pour la soumission de formulaire

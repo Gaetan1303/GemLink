@@ -1,37 +1,65 @@
-<form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+<form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form" novalidate>
 
+  <!-- CA-2 : erreur générique serveur -->
+  @if (serverError()) {
+    <span class="error-text" data-testid="server-error" role="alert">
+      {{ serverError() }}
+    </span>
+  }
+
+  <!-- CA-3 : throttle actif -->
+  @if (isThrottled()) {
+    <span class="error-text error-text--throttle" data-testid="throttle-error" role="alert">
+      Trop de tentatives. Réessayez dans {{ throttleRemainingSeconds() }}s.
+    </span>
+  }
+
+  <!-- Email -->
   <div class="input-group">
-    <div class="input-field-frame">
-      <input 
-        type="email" 
-        formControlName="email" 
+    <div class="input-field-frame" [class.is-invalid]="emailCtrl.invalid && isSubmitted()">
+      <input
+        type="email"
+        formControlName="email"
         placeholder="PIERRE@GMAIL.COM"
-        [class.is-invalid]="loginForm.get('email')?.invalid && isSubmitted"
+        autocomplete="email"
+        data-testid="input-email"
+        [attr.aria-invalid]="emailCtrl.invalid && isSubmitted()"
+        aria-describedby="email-error"
       />
     </div>
-    <ng-container *ngIf="loginForm.get('email')?.invalid && isSubmitted">
-      <span class="error-text">Email requis ou invalide</span>
-    </ng-container>
+    @if (emailCtrl.invalid && isSubmitted()) {
+      <span id="email-error" class="error-text" data-testid="email-error">
+        Email requis ou invalide
+      </span>
+    }
   </div>
 
+  <!-- Mot de passe -->
   <div class="input-group">
-    <div class="input-field-frame">
-      <input 
-        type="password" 
-        formControlName="password" 
+    <div class="input-field-frame" [class.is-invalid]="passwordHashCtrl.invalid && isSubmitted()">
+      <input
+        type="password"
+        formControlName="passwordHash"
         placeholder="MOTDEPASSE"
-        [class.is-invalid]="loginForm.get('password')?.invalid && isSubmitted"
+        autocomplete="current-password"
+        data-testid="input-password"
+        [attr.aria-invalid]="passwordHashCtrl.invalid && isSubmitted()"
+        aria-describedby="password-error"
       />
     </div>
-    <ng-container *ngIf="loginForm.get('password')?.invalid && isSubmitted">
-      <span class="error-text">Mot de passe requis</span>
-    </ng-container>
+    @if (passwordHashCtrl.invalid && isSubmitted()) {
+      <span id="password-error" class="error-text" data-testid="password-error">
+        Mot de passe requis
+      </span>
+    }
   </div>
 
-  <app-button 
-    type="submit" 
-    label="Se connecter" 
-    [disabled]="isSubmitted && loginForm.invalid">
-  </app-button>
+  <!-- CTA -->
+  <app-button
+    type="submit"
+    label="Se connecter"
+    [disabled]="isThrottled() || isLoading()"
+    data-testid="btn-submit"
+  />
 
 </form>
