@@ -41,4 +41,47 @@ class RefreshToken
         $this->expiresAt = $expiresAt;
         $this->createdAt = new DateTimeImmutable();
     }
+
+    public function getId(): Uuid
+    {
+        return $this->id;
+    }
+
+    public function getUser(): User
+    {
+        return $this->user;
+    }
+
+    public function getTokenHash(): string
+    {
+        return $this->tokenHash;
+    }
+
+    public function getExpiresAt(): DateTimeImmutable
+    {
+        return $this->expiresAt;
+    }
+
+    public function getRevokedAt(): ?DateTimeImmutable
+    {
+        return $this->revokedAt;
+    }
+
+    public function getCreatedAt(): DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function isValid(): bool
+    {
+        return $this->revokedAt === null && $this->expiresAt > new DateTimeImmutable();
+    }
+
+    /**
+     * CA-1 : révocation du refresh token en base.
+     */
+    public function revoke(): void
+    {
+        $this->revokedAt = new DateTimeImmutable();
+    }
 }

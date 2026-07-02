@@ -2,6 +2,11 @@
 framework:
     secret: '%env(APP_SECRET)%'
     session: false
+    rate_limiter:
+        email_validation_resend:
+            policy: 'fixed_window'
+            limit: 3
+            interval: '1 hour'
 
     #esi: true
     #fragments: true

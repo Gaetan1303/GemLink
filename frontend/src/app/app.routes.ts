@@ -45,6 +45,20 @@ export const routes: Routes = [
       {
         path: 'validate-email/:token',
         loadComponent: () => import('./core/auth/validate-email/validate-email').then(m => m.ValidateEmail)
+      },
+      {
+        path: 'logout',
+        loadComponent: () => import('./core/auth/logout/logout').then(m => m.Logout)
+      },
+            // US 1.6 — Étape 1 : formulaire de demande de réinitialisation (CA-1)
+      {
+        path: 'reset-password',
+        loadComponent: () => import('./core/auth/reset-password/reset-password').then(m => m.ResetPassword)
+      },
+      // US 1.6 — Étape 2 : formulaire de saisie du nouveau mot de passe (CA-2, CA-3, CA-4)
+      {
+        path: 'reset-password/:token',
+        loadComponent: () => import('./core/auth/reset-password-confirm/reset-password-confirm').then(m => m.ResetPasswordConfirm)
       }
     ]
   }
