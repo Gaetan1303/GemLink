@@ -45,7 +45,11 @@ export const routes: Routes = [
       {
         path: 'validate-email/:token',
         loadComponent: () => import('./core/auth/validate-email/validate-email').then(m => m.ValidateEmail)
-      }
+      },
+      {
+        path: 'logout',
+        loadComponent: () => import('./core/auth/logout/logout').then(m => m.Logout)
+      },
     ]
   }
 ];
