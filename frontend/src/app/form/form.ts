@@ -16,7 +16,7 @@ const THROTTLE_DELAY = 30; // secondes
 
 @Component({
   selector: 'app-form',
-  imports: [CommonModule, ReactiveFormsModule, SharedModule, ResetPassword, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, SharedModule, RouterLink],
   templateUrl: './form.html',
   styleUrls: ['./form.scss'],
 })
