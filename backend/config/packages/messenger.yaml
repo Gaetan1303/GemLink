@@ -5,6 +5,11 @@ framework:
         transports:
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 5
+                    delay: 1000
+                    multiplier: 2
+                    max_delay: 60000
 
        
             failed:
@@ -12,3 +17,4 @@ framework:
 
         routing:
             'App\Message\SendEmailMessage': async
+            'App\Message\AnalyzeMediaMessage': async

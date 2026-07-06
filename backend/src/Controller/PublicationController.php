@@ -110,19 +110,23 @@ final class PublicationController extends AbstractController
      */
     private function extractTags(Request $request): array
     {
-        $tagsArray = $request->request->all('tags');
+        $rawTags = $request->request->get('tags');
 
-        if ($tagsArray !== []) {
-            return $tagsArray;
+        if (is_array($rawTags)) {
+            return array_values(array_filter(array_map(
+                static fn (mixed $tag): string => is_string($tag) ? trim($tag) : '',
+                $rawTags,
+            ), static fn (string $tag): bool => $tag !== ''));
         }
 
-        $tagsString = $request->request->get('tags');
-
-        if (!is_string($tagsString) || trim($tagsString) === '') {
+        if (!is_string($rawTags) || trim($rawTags) === '') {
             return [];
         }
 
-        return array_map('trim', explode(',', $tagsString));
+        return array_values(array_filter(array_map(
+            static fn (string $tag): string => trim($tag),
+            explode(',', $rawTags),
+        ), static fn (string $tag): bool => $tag !== ''));
     }
 
     /**
