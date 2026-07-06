@@ -32,22 +32,23 @@ class AuthService
     public const JWT_TTL_SECONDS = 900;
     public const REFRESH_TOKEN_TTL_SECONDS = 604800;
 
-    public function __construct(
-        private EntityManagerInterface $em,
-        private UserRepository $userRepository,
-        private EmailValidationTokenRepository $emailValidationTokenRepository,
-        private RefreshTokenRepository $refreshTokenRepository,
-        private UserPasswordHasherInterface $passwordHasher,
-        private MessageBusInterface $messageBus,
-        private EmailValidationTokenSigner $emailValidationTokenSigner,
-        private JWTTokenManagerInterface $jwtManager,
-        private CacheInterface $cache,
-        private CacheItemPoolInterface $cachePool,
-        private string $frontendUrl,
-        private int $maxLoginAttempts = 5,
-        private int $loginAttemptWindow = 600,
-        private PasswordResetTokenRepository $passwordResetTokenRepository,
-    ) {}
+public function __construct(
+    private EntityManagerInterface $em,
+    private UserRepository $userRepository,
+    private EmailValidationTokenRepository $emailValidationTokenRepository,
+    private RefreshTokenRepository $refreshTokenRepository,
+    private UserPasswordHasherInterface $passwordHasher,
+    private MessageBusInterface $messageBus,
+    private EmailValidationTokenSigner $emailValidationTokenSigner,
+    private JWTTokenManagerInterface $jwtManager,
+    private CacheInterface $cache,
+    private CacheItemPoolInterface $cachePool,
+    private string $frontendUrl,
+    private PasswordResetTokenRepository $passwordResetTokenRepository,
+    private int $maxLoginAttempts = 5,
+    private int $loginAttemptWindow = 600,
+) {
+}
 
     // --- US 1.1 : Inscription ---
     public function register(array $data): User
