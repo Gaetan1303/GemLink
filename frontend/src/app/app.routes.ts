@@ -25,7 +25,12 @@ export const routes: Routes = [
     path: 'rgpd',
     loadComponent: () => import('./pages/home/rgpd/rgpd').then(m => m.Rgpd)
   },
-
+// US 2.1 — Publication d'un post MVP
+  {
+    path: 'posts/new',
+    loadComponent: () => import('./pages/post/post-create/post-create').then(m => m.PostCreate)
+  },
+ 
   {
     path: 'users/me',
     loadComponent: () => import('./pages/user/profile/profile').then(m => m.Profile)
