@@ -1,0 +1,57 @@
+<div><app-header /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
+<main class="post-list-page" id="main-content">
+  <div class="post-list-container">
+
+    <div class="post-list-header">
+      <h1>Découvertes de la communauté</h1>
+      <a routerLink="/posts/new" class="btn-publish">
+        <mat-icon>add_a_photo</mat-icon>
+        Publier
+      </a>
+    </div>
+
+    @if (loadError()) {
+      <div class="alert alert--error" role="alert">{{ loadError() }}</div>
+    }
+
+    @if (isLoading()) {
+      <p class="post-list-loading">Chargement des posts...</p>
+    } @else if (posts().length === 0) {
+      <p class="post-list-empty">Aucun post pour le moment. Soyez le premier à partager une découverte !</p>
+    } @else {
+      <div class="post-grid">
+        @for (post of posts(); track post.id) {
+          <a [routerLink]="['/posts', post.id]" class="post-card">
+            @if (post.mediaType === 'IMAGE') {
+              <img [src]="post.mediaUrl" [alt]="post.title ?? 'Pierre publiée par ' + post.author.username" />
+            } @else {
+              <div class="post-card__video-thumb">
+                <mat-icon>videocam</mat-icon>
+              </div>
+            }
+            <div class="post-card__info">
+              <span class="post-card__title">{{ post.title || 'Sans titre' }}</span>
+              <span class="post-card__author">{{ post.author.username }}</span>
+              @if (post.status === 'PENDING_ANALYSIS') {
+                <span class="badge badge--pending">Analyse en cours</span>
+              } @else if (post.status === 'ANALYSIS_FAILED') {
+                <span class="badge badge--failed">Non identifiée</span>
+              }
+            </div>
+          </a>
+        }
+      </div>
+
+      <div class="pagination">
+        <button type="button" (click)="goToPrevPage()" [disabled]="!hasPrevPage()">Précédent</button>
+        <span>Page {{ page() }} / {{ totalPages() }}</span>
+        <button type="button" (click)="goToNextPage()" [disabled]="!hasNextPage()">Suivant</button>
+      </div>
+    }
+
+  </div>
+</main>
+
+<app-footer />

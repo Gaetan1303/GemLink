@@ -151,6 +151,18 @@ final class PostServiceTest extends TestCase
         $this->postService->softDelete($publication, $strangerUser);
     }
 
+    public function testRecordViewIncrementsViewCountAndFlushes(): void
+    {
+        $author = $this->makeUser();
+        $publication = new Publication($author, 'https://media.gem-link.org/x.jpg');
+
+        $this->em->expects($this->once())->method('flush');
+
+        $this->postService->recordView($publication);
+
+        $this->assertSame(1, $publication->getViewCount());
+    }
+
     private function makeUser(string $role = 'USER'): User
     {
         $user = new User();

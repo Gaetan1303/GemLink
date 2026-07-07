@@ -8,16 +8,32 @@ import { environment } from '../../../environments/environment';
 export type MediaType = 'IMAGE' | 'VIDEO';
 export type PostStatus = 'PENDING_ANALYSIS' | 'ANALYZED' | 'ANALYSIS_FAILED';
 
+export interface PostAuthor {
+  id:        string;
+  username:  string;
+  avatarUrl: string | null;
+}
+
 export interface Publication {
   id:          string;
-  authorId:    string;
+  author:      PostAuthor;
   title:       string | null;
   description: string | null;
   mediaUrl:    string;
   mediaType:   MediaType;
   status:      PostStatus;
+  viewCount:   number;
   tags:        string[];
   createdAt:   string;
+}
+
+// US 2.2 — Consultation des posts (liste + détail)
+export interface PublicationPage {
+  items:      Publication[];
+  page:       number;
+  limit:      number;
+  total:      number;
+  totalPages: number;
 }
 
 // CA-2 : mêmes limites que le backend (validation client = confort UX,
@@ -61,6 +77,20 @@ export class PostService {
    */
   deletePost(postId: string): Observable<void> {
     return this.#http.delete<void>(`${this.#apiUrl}/${postId}`);
+  }
+
+  /**
+   * US 2.2 — Feed public paginé (accessible aux visiteurs non authentifiés).
+   */
+  listPosts(page = 1, limit = 20): Observable<PublicationPage> {
+    return this.#http.get<PublicationPage>(this.#apiUrl, { params: { page, limit } });
+  }
+
+  /**
+   * US 2.2 — Détail public d'un post.
+   */
+  getPost(postId: string): Observable<Publication> {
+    return this.#http.get<Publication>(`${this.#apiUrl}/${postId}`);
   }
 
   /**

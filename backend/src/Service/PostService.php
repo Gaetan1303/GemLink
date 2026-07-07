@@ -107,6 +107,16 @@ class PostService
         $this->em->flush();
     }
 
+    /**
+     * US 2.2 — comptage de vues best-effort (pas de déduplication par
+     * utilisateur/IP au stade MVP), appelé à chaque consultation du détail.
+     */
+    public function recordView(Publication $post): void
+    {
+        $post->incrementViewCount();
+        $this->em->flush();
+    }
+
     private function assertCanDelete(Publication $post, User $actor): void
     {
         $isAuthor = $post->getUser()->getId()->equals($actor->getId());

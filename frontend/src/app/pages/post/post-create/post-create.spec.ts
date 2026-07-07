@@ -100,11 +100,22 @@ describe('PostCreate — US 2.1 Publication d\'un post MVP', () => {
     Object.defineProperty(input, 'files', { value: [file] });
     component.onFileSelected({ target: input } as unknown as Event);
 
-    const createdPublication: Publication = {
-      id: 'post-uuid', authorId: '1', title: 'Améthyste', description: null,
-      mediaUrl: 'https://media.gem-link.org/x.jpg', mediaType: 'IMAGE',
-      status: 'PENDING_ANALYSIS', tags: [], createdAt: new Date().toISOString(),
-    };
+    const createdPublication: Publication = { // création d'un DTO de publication simulé pour le test
+  id: 'post-uuid',
+  author: {
+    id: '1',
+    username: 'gemuser',
+    avatarUrl: null,
+  },
+  title: 'Améthyste',
+  description: null,
+  mediaUrl: 'https://media.gem-link.org/x.jpg',
+  mediaType: 'IMAGE',
+  status: 'PENDING_ANALYSIS',
+  viewCount: 0,
+  tags: [],
+  createdAt: new Date().toISOString(),
+};
     postServiceMock.createPost.mockReturnValue(of(createdPublication));
 
     component.submit();

@@ -81,6 +81,30 @@ describe('PostService — US 2.1 Publication d\'un post MVP', () => {
     });
   });
 
+  describe('listPosts', () => {
+    it('US 2.2 : envoie une requête GET paginée', () => {
+      service.listPosts(2, 10).subscribe();
+
+      const req = httpTesting.expectOne(r =>
+        r.url === PUBLICATIONS_URL && r.params.get('page') === '2' && r.params.get('limit') === '10'
+      );
+      expect(req.request.method).toBe('GET');
+
+      req.flush({ items: [], page: 2, limit: 10, total: 0, totalPages: 0 });
+    });
+  });
+
+  describe('getPost', () => {
+    it('US 2.2 : envoie une requête GET vers /api/publications/{id}', () => {
+      service.getPost('post-uuid-123').subscribe();
+
+      const req = httpTesting.expectOne(`${PUBLICATIONS_URL}/post-uuid-123`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush({ id: 'post-uuid-123' });
+    });
+  });
+
   describe('validateMediaFile', () => {
     it('CA-2 : accepte une image jpeg valide', () => {
       const file = makeFile('pierre.jpg', 'image/jpeg', 1024);

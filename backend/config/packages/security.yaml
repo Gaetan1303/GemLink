@@ -35,6 +35,8 @@ security:
         - { path: ^/api, roles: PUBLIC_ACCESS, methods: [OPTIONS] }
         # US 1.5 : logout requiert un utilisateur authentifié
         - { path: ^/api/auth/logout$, roles: IS_AUTHENTICATED_FULLY }
+        # US 2.2 : liste/détail des posts publics (visiteur non authentifié inclus)
+        - { path: ^/api/publications, roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

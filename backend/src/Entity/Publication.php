@@ -61,13 +61,13 @@ class Publication
     #[ORM\InverseJoinColumn(name: 'tag_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     private Collection $tags;
 
-    #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
+    #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private DateTimeImmutable $createdAt;
 
-    #[ORM\Column(name: 'updated_at', type: 'datetimetz_immutable', nullable: true)]
+    #[ORM\Column(name: 'updated_at', type: 'datetime_immutable', nullable: true)]
     private ?DateTimeImmutable $updatedAt = null;
 
-    #[ORM\Column(name: 'deleted_at', type: 'datetimetz_immutable', nullable: true)]
+    #[ORM\Column(name: 'deleted_at', type: 'datetime_immutable', nullable: true)]
     private ?DateTimeImmutable $deletedAt = null;
 
     public function __construct(User $user, string $mediaUrl, string $mediaType = self::MEDIA_TYPE_IMAGE)
@@ -150,6 +150,17 @@ class Publication
     public function getViewCount(): int
     {
         return $this->viewCount;
+    }
+
+    /**
+     * US 2.2 — incrémenté à chaque consultation du détail d'un post (best-effort,
+     * pas de déduplication par utilisateur/IP au stade MVP).
+     */
+    public function incrementViewCount(): self
+    {
+        ++$this->viewCount;
+
+        return $this;
     }
 
     /**
