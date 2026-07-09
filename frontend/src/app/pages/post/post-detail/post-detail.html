@@ -1,0 +1,77 @@
+<div><app-header /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
+<main class="post-detail-page" id="main-content">
+  <div class="post-detail-container">
+
+    @if (isLoading()) {
+      <p class="post-detail-loading">Chargement du post...</p>
+    } @else if (loadError()) {
+      <div class="alert alert--error" role="alert">{{ loadError() }}</div>
+    } @else if (post(); as p) {
+
+      <div class="post-media">
+        @if (p.mediaType === 'IMAGE') {
+          <img [src]="p.mediaUrl" [alt]="p.title ?? 'Pierre publiée par ' + p.author.username" />
+        } @else {
+          <video [src]="p.mediaUrl" controls></video>
+        }
+      </div>
+
+      <div class="post-body">
+        <div class="post-header">
+          <h1>{{ p.title || 'Sans titre' }}</h1>
+
+          @if (p.status === 'PENDING_ANALYSIS') {
+            <span class="badge badge--pending">Analyse IA en cours</span>
+          } @else if (p.status === 'ANALYSIS_FAILED') {
+            <span class="badge badge--failed">Pierre non identifiée</span>
+          } @else if (p.status === 'ANALYZED') {
+            <span class="badge badge--analyzed">Identifiée</span>
+          }
+        </div>
+
+        <p class="post-author">
+          Publié par <strong>{{ p.author.username }}</strong>
+          · {{ p.createdAt | date:'d MMMM y' }}
+          · {{ p.viewCount }} vue{{ p.viewCount > 1 ? 's' : '' }}
+        </p>
+
+        @if (p.description) {
+          <p class="post-description">{{ p.description }}</p>
+        }
+
+        @if (p.tags.length > 0) {
+          <div class="post-tags">
+            @for (tag of p.tags; track tag) {
+              <span class="tag">#{{ tag }}</span>
+            }
+          </div>
+        }
+
+        @if (canDelete()) {
+          <div class="post-actions">
+            @if (deleteError()) {
+              <p class="field-error" role="alert">{{ deleteError() }}</p>
+            }
+
+            @if (!showDeleteConfirm()) {
+              <button type="button" class="btn-delete" (click)="confirmDelete()">Supprimer ce post</button>
+            } @else {
+              <div class="delete-confirm">
+                <span>Confirmer la suppression ?</span>
+                <button type="button" class="btn-delete" [disabled]="isDeleting()" (click)="deletePost()">
+                  @if (isDeleting()) { Suppression... } @else { Oui, supprimer }
+                </button>
+                <button type="button" class="btn-secondary" [disabled]="isDeleting()" (click)="cancelDelete()">Annuler</button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+  </div>
+</main>
+
+<app-footer />

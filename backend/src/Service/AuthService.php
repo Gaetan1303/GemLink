@@ -146,7 +146,10 @@ public function __construct(
         $jti = bin2hex(random_bytes(16));
 
         return [
-            'token' => $this->jwtManager->createFromPayload($user, ['jti' => $jti]),
+            'token' => $this->jwtManager->createFromPayload($user, [
+                'jti' => $jti,
+                'email' => $user->getEmail(),
+            ]),
             'refreshToken' => $refreshToken,
             'refreshTokenExpiresAt' => $expiresAt,
         ];
@@ -193,7 +196,10 @@ public function __construct(
         $jti = bin2hex(random_bytes(16));
 
         return [
-            'token' => $this->jwtManager->createFromPayload($user, ['jti' => $jti]),
+            'token' => $this->jwtManager->createFromPayload($user, [
+                'jti' => $jti,
+                'email' => $user->getEmail(),
+            ]),
             'refreshToken' => $newRawToken,
             'refreshTokenExpiresAt' => $expiresAt,
         ];

@@ -18,7 +18,7 @@ class PublicationRepository extends ServiceEntityRepository
     }
 
     /**
-     * US 2.1 CA-4 : un post déjà soft-deleted est exclu (404 fonctionnel côté service).
+     * US 2.2 — Consultation des posts (liste + détail).
      */
     public function findOneActiveById(Uuid $id): ?Publication
     {
@@ -28,6 +28,35 @@ class PublicationRepository extends ServiceEntityRepository
             ->setParameter('id', $id)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+     * Feed public (visiteurs inclus, cf. diagramme "Vitrine publique") : posts
+     * actifs triés du plus récent au plus ancien, sans filtre sur le statut
+     * d'analyse IA (un post PENDING_ANALYSIS reste visible dès sa création, CA-3).
+     *
+     * @return Publication[]
+     */
+    public function findActivePaginated(int $page, int $limit): array
+    {
+        $offset = max(0, ($page - 1) * $limit);
+
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.deletedAt IS NULL')
+            ->orderBy('p.createdAt', 'DESC')
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function countActive(): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->andWhere('p.deletedAt IS NULL')
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
     //    /**
