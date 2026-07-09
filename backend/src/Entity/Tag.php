@@ -26,10 +26,31 @@ class Tag
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $createdAt;
 
-    public function __construct(string $name)
+    public function __construct(string $name, string $scope = 'GLOBAL')
     {
         $this->id = Uuid::v7();
         $this->name = $name;
+        $this->scope = $scope;
         $this->createdAt = new DateTimeImmutable();
+    }
+
+    public function getId(): Uuid
+    {
+        return $this->id;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getScope(): string
+    {
+        return $this->scope;
+    }
+
+    public function getCreatedAt(): DateTimeImmutable
+    {
+        return $this->createdAt;
     }
 }
