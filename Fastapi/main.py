@@ -14,6 +14,7 @@ import aiohttp
 # Import de votre architecture, du détecteur et des utilitaires
 from vit import get_model
 from ultralytics import YOLO
+from open_clip import create_model_and_transforms
 from utils import crop_with_padding
 from schema import StoneAnalysisResponse
 
@@ -85,6 +86,19 @@ async def lifespan(app: FastAPI):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
+        # 5. Chargement du modèle CLIP ViT-B/32 pour les embeddings (512-d)
+        # Séparé du preprocess du classifieur ViT ci-dessus : CLIP a sa propre
+        # normalisation (mean/std différents), on ne doit jamais les mélanger.
+        logger.info(" Chargement du modèle CLIP ViT-B/32 (open_clip)...")
+        clip_model, _, clip_preprocess = create_model_and_transforms(
+            "ViT-B-32", pretrained="openai"
+        )
+        clip_model.to(device)
+        clip_model.eval()
+        app.state.clip_model = clip_model
+        app.state.clip_preprocess = clip_preprocess
+        logger.info(" Modèle CLIP chargé avec succès (embeddings 512 dimensions).")
+
         logger.info(" Pipeline Vision et Client HTTP initialisés avec succès.")
 
     except Exception as e:
@@ -99,6 +113,8 @@ async def lifespan(app: FastAPI):
         del app.state.classifier_model
     if hasattr(app.state, "detector"):
         del app.state.detector
+    if hasattr(app.state, "clip_model"):
+        del app.state.clip_model
 
 
 app = FastAPI(title="GemLink AI Orchestrator API", version="1.1.0", lifespan=lifespan)
@@ -141,6 +157,21 @@ async def chat_proxy(request: Request):
 # SECTION ROUTAGE : PIPELINE VISION (YOLO + ViT)
 # ==============================================================================
 
+@torch.no_grad()
+def compute_embedding(crop_img: Image.Image) -> list[float]:
+    """
+    Génère l'embedding CLIP ViT-B/32 (512-d, L2-normalisé) de la zone recadrée
+    détectée par YOLO — pas de l'image brute, pour que l'embedding représente
+    la pierre elle-même et non le fond de la photo.
+    La normalisation L2 permet une recherche par similarité cosinus via un
+    simple produit scalaire une fois l'embedding stocké en pgvector vector(512).
+    """
+    tensor = app.state.clip_preprocess(crop_img).unsqueeze(0).to(app.state.device)
+    features = app.state.clip_model.encode_image(tensor)
+    features = features / features.norm(dim=-1, keepdim=True)
+    return features.squeeze(0).cpu().tolist()
+
+
 def run_vision_pipeline(image: Image.Image) -> dict:
     """
     Exécute la détection YOLO puis la classification ViT sur une image.
@@ -168,6 +199,8 @@ def run_vision_pipeline(image: Image.Image) -> dict:
         class_name = app.state.classes[top_idx.item()]
         class_conf = float(top_prob.item())
 
+    embedding = compute_embedding(crop_img)
+
     return {
         "bbox": [int(v) for v in bbox],
         "detector_confidence": det_conf,
@@ -177,6 +210,7 @@ def run_vision_pipeline(image: Image.Image) -> dict:
             app.state.classes[i]: float(probabilities[i].item())
             for i in range(len(app.state.classes))
         },
+        "embedding": embedding,
     }
 
 
@@ -198,7 +232,8 @@ async def predict(file: UploadFile = File(...)):
                 "predicted_class": result["predicted_class"],
                 "confidence": result["confidence"],
                 "all_probabilities": result["all_probabilities"],
-            }
+            },
+            "embedding": result["embedding"],
         }
 
     except ValueError as e:
@@ -294,6 +329,7 @@ async def analyze(file: UploadFile = File(...)):
     knowledge_data["confidence"] = vision_result["confidence"]
     knowledge_data["detector_confidence"] = vision_result["detector_confidence"]
     knowledge_data["bbox"] = vision_result["bbox"]
+    knowledge_data["embedding"] = vision_result["embedding"]
 
     try:
         return StoneAnalysisResponse(**knowledge_data)

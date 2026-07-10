@@ -16,7 +16,7 @@ parameters:
 
     # AI SERVICE (IMPORTANT — ton erreur actuelle)
     app.ai_service_url: '%env(resolve:AI_SERVICE_URL)%'
-
+    app.internal_api_key: '%env(resolve:INTERNAL_API_KEY)%'
 services:
     _defaults:
         autowire: true
@@ -26,6 +26,7 @@ services:
             string $fromName: '%app.mailer_from_name%'
             string $frontendUrl: '%app.frontend_url%'
             string $aiServiceUrl: '%app.ai_service_url%'
+            string $internalApiKey: '%app.internal_api_key%'
 
     App\:
         resource: '../src/'
