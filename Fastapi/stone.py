@@ -376,7 +376,7 @@ def traiter_classe(taxon_name, dossier_train, dossier_valid, manquant_train, man
                 titres.append(t)
 
     if not titres:
-        print(f"     Aucun fichier trouvé pour : {taxon_name} — skip")
+        print(f"    ⚠️ Aucun fichier trouvé pour : {taxon_name} — skip")
         return 0, 0
 
     infos = recuperer_infos_images(titres)
@@ -425,7 +425,7 @@ for dossier_nom, taxon in TOUTES_CLASSES.items():
     log(f"    Départ local -> Train : {n_train} | Valid : {n_valid} (Manque : {manquant_train}T / {manquant_valid}V)")
 
     if manquant_train == 0 and manquant_valid == 0:
-        log("     Déjà Complet, skip")
+        log("    ✅ Déjà Complet, skip")
         skipped += 1
         continue
 
@@ -435,15 +435,15 @@ for dossier_nom, taxon in TOUTES_CLASSES.items():
     
     total_train += dt
     total_valid += dv
-    log(f"\n     Ajouté avec succès : +{dt} train  |  +{dv} valid")
+    log(f"\n    ✅ Ajouté avec succès : +{dt} train  |  +{dv} valid")
     time.sleep(0.5)
 
 if toutes_licences:
     licences_file = ENTRAINEMENTS_ROOT / f"licences_{time.strftime('%Y-%m-%d_%H-%M-%S')}.txt"
     licences_file.write_text("\n".join(toutes_licences), encoding="utf-8")
-    log(f"\n   Détail des licences sauvegardé dans : {licences_file}")
+    log(f"\n  📄 Détail des licences sauvegardé dans : {licences_file}")
 
 log(f"\n{'═'*60}")
-log(f"   Session Terminée — Train global +{total_train}  |  Valid global +{total_valid}  |  Classes ignorées : {skipped}")
+log(f"  ✅ Session Terminée — Train global +{total_train}  |  Valid global +{total_valid}  |  Classes ignorées : {skipped}")
 log(f"  Log complet de session : {LOG_FILE}")
 log("═" * 60 + "\n")

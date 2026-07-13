@@ -1,6 +1,6 @@
 # schema.py
 from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 class PhysicalProperties(BaseModel):
     durete: str = Field(..., description="Dureté sur l'échelle de Mohs")
@@ -34,15 +34,3 @@ class StoneAnalysisResponse(BaseModel):
     confidence: float
     detector_confidence: float
     bbox: Optional[list[int]] = None
-
-    # Embedding CLIP ViT-B/32 (pour le pipeline YOLO + ViT + CLIP -> pgvector)
-    embedding: List[float] = Field(
-        ..., description="Embedding CLIP ViT-B/32, 512 dimensions, normalisé L2"
-    )
-
-    @field_validator("embedding")
-    @classmethod
-    def validate_embedding_dim(cls, v: List[float]) -> List[float]:
-        if len(v) != 512:
-            raise ValueError(f"L'embedding doit contenir 512 dimensions, reçu {len(v)}.")
-        return v

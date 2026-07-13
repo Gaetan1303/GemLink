@@ -9,7 +9,8 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-
+# Réutilise EXACTEMENT la même architecture que celle chargée par main.py
+# (c'est ce qui garantit que le checkpoint produit ici sera compatible en prod)
 from vit import get_model
 
 # ── CONFIGURATION DES CHEMINS ──
@@ -32,6 +33,7 @@ def _resolve_dataset_root() -> Path:
         if (c / "train").exists() and (c / "valid").exists():
             return c
 
+    # Rien trouvé : on lève une erreur claire plutôt qu'un FileNotFoundError cryptique
     liste = "\n".join(f"  - {c}" for c in candidats)
     raise FileNotFoundError(
         "Impossible de localiser le dossier du dataset.\n"
@@ -66,7 +68,7 @@ IMAGE_SIZE = 224       # doit rester 224 : c'est la résolution attendue par vit
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"🖥️ Entraînement configuré sur : {device}")
+    print(f"Entraînement configuré sur : {device}")
 
     # Les valeurs de Normalize doivent être identiques à celles utilisées dans
     # main.py (app.state.preprocess), sinon le modèle voit des images "décalées"
@@ -87,7 +89,7 @@ def main():
         ]),
     }
 
-    print("📦 Chargement des datasets locaux...")
+    print(" Chargement des datasets locaux...")
     image_datasets = {
         'train': datasets.ImageFolder(str(TRAIN_DIR), data_transforms['train']),
         'valid': datasets.ImageFolder(str(VALID_DIR), data_transforms['valid'])
@@ -101,10 +103,10 @@ def main():
 
     class_names = image_datasets['train'].classes
     num_classes = len(class_names)
-    print(f"🪨 Nombre de classes détectées : {num_classes}")
+    print(f" Nombre de classes détectées : {num_classes}")
 
     # ── Construction du modèle : ViT pré-entraîné, tête remplacée pour vos classes ──
-    print("💎 Initialisation du Vision Transformer (ViT-B/16)...")
+    print(" Initialisation du Vision Transformer (ViT-B/16)...")
     model = get_model(num_classes=num_classes)
     model = model.to(device)
 
@@ -112,12 +114,12 @@ def main():
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
-    print("\n🚀 Lancement de l'entraînement...")
+    print("\n Lancement de l'entraînement...")
     since = time.time()
     best_acc = 0.0
 
     for epoch in range(EPOCHS):
-        print(f"\n📋 Époque {epoch + 1}/{EPOCHS}")
+        print(f"\n Époque {epoch + 1}/{EPOCHS}")
         print("-" * 10)
 
         for phase in ['train', 'valid']:
@@ -164,14 +166,14 @@ def main():
                     "model": model.state_dict(),
                     "classes": class_names,
                 }, OUTPUT_PATH)
-                print(f"    ⭐ Meilleur modèle sauvegardé → {OUTPUT_PATH}")
+                print(f"Meilleur modèle sauvegardé → {OUTPUT_PATH}")
 
         scheduler.step()
 
     time_elapsed = time.time() - since
-    print(f"\n🎉 Entraînement terminé en {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s")
-    print(f"🏆 Meilleure précision en validation : {best_acc:.4f}")
-    print(f"📦 Checkpoint final : {OUTPUT_PATH.resolve()}")
+    print(f"\n Entraînement terminé en {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s")
+    print(f" Meilleure précision en validation : {best_acc:.4f}")
+    print(f" Checkpoint final : {OUTPUT_PATH.resolve()}")
 
 
 if __name__ == '__main__':
