@@ -16,28 +16,17 @@ class PierreRepository extends ServiceEntityRepository
         parent::__construct($registry, Pierre::class);
     }
 
-    //    /**
-    //     * @return Pierre[] Returns an array of Pierre objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('p.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
-
-    //    public function findOneBySomeField($value): ?Pierre
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    /**
+     * Le classifieur ViT renvoie des labels en minuscules (`class_name.lower()`
+     * côté FastAPI) ; la comparaison insensible à la casse évite de créer des
+     * doublons ("Améthyste" vs "amethyste") au fil des analyses.
+     */
+    public function findOneByNameIgnoreCase(string $name): ?Pierre
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('LOWER(p.name) = LOWER(:name)')
+            ->setParameter('name', $name)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }
