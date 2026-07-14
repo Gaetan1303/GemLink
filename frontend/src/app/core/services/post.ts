@@ -14,17 +14,33 @@ export interface PostAuthor {
   avatarUrl: string | null;
 }
 
+// US 3.1 — Résultat de l'identification IA (Pierre + confidence), renvoyé par
+// PublicationController::serializeIdentification(). `null` tant que le post
+// n'est pas ANALYZED, ou si aucun match n'a été persisté (cas rare mais
+// possible si l'analyse a échoué en base sans mettre à jour le statut).
+export interface PublicationIdentification {
+  nom:               string;
+  categorie:         string | null;
+  durete:            number | null;
+  systemeCristallin: string | null;
+  composition:       string | null;
+  description:       string | null;
+  confidence:        number;
+  isHighConfidence:  boolean;
+}
+
 export interface Publication {
-  id:          string;
-  author:      PostAuthor;
-  title:       string | null;
-  description: string | null;
-  mediaUrl:    string;
-  mediaType:   MediaType;
-  status:      PostStatus;
-  viewCount:   number;
-  tags:        string[];
-  createdAt:   string;
+  id:             string;
+  author:         PostAuthor;
+  title:          string | null;
+  description:    string | null;
+  mediaUrl:       string;
+  mediaType:      MediaType;
+  status:         PostStatus;
+  viewCount:      number;
+  tags:           string[];
+  identification: PublicationIdentification | null;
+  createdAt:      string;
 }
 
 // US 2.2 — Consultation des posts (liste + détail)

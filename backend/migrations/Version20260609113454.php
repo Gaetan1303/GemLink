@@ -216,6 +216,7 @@ final class Version20260609113454 extends AbstractMigration
                 model_type  ai_model_type   NOT NULL,
                 accuracy    NUMERIC(5, 4)   CHECK (accuracy BETWEEN 0 AND 1),
                 f1_score    NUMERIC(5, 4)   CHECK (f1_score BETWEEN 0 AND 1),
+                description TEXT,
                 status      ai_model_status NOT NULL DEFAULT \'TRAINING\',
                 created_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
@@ -457,6 +458,58 @@ final class Version20260609113454 extends AbstractMigration
         ');
 
         // ─────────────────────────────────────────────
+        // 24 BIS. EMAIL_VALIDATION_TOKEN (US 1.1)
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE email_validation_token (
+                id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
+                user_id     UUID        NOT NULL,
+                token       VARCHAR(255) NOT NULL DEFAULT \'\',
+                expires_at  TIMESTAMPTZ NOT NULL,
+                used        BOOLEAN     NOT NULL DEFAULT FALSE,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (id),
+                CONSTRAINT fk_email_validation_token_user FOREIGN KEY (user_id) REFERENCES utilisateur (id) ON DELETE CASCADE,
+                CONSTRAINT uq_email_validation_token_token UNIQUE (token)
+            )
+        ');
+        $this->addSql('CREATE INDEX idx_email_validation_token_user_id ON email_validation_token (user_id)');
+
+        // ─────────────────────────────────────────────
+        // 24 TER. PASSWORD_RESET_TOKEN
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE password_reset_token (
+                id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
+                user_id     UUID        NOT NULL,
+                token       VARCHAR(255) NOT NULL DEFAULT \'\',
+                expires_at  TIMESTAMPTZ NOT NULL,
+                used        BOOLEAN     NOT NULL DEFAULT FALSE,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (id),
+                CONSTRAINT fk_password_reset_token_user FOREIGN KEY (user_id) REFERENCES utilisateur (id) ON DELETE CASCADE,
+                CONSTRAINT uq_password_reset_token_token UNIQUE (token)
+            )
+        ');
+        $this->addSql('CREATE INDEX idx_password_reset_token_user_id ON password_reset_token (user_id)');
+
+        // ─────────────────────────────────────────────
+        // 24 QUATER. NEWSLETTER_SUBSCRIBER
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE newsletter_subscriber (
+                id               UUID        NOT NULL DEFAULT uuid_generate_v4(),
+                email            VARCHAR(255) NOT NULL DEFAULT \'\',
+                status           VARCHAR(20) NOT NULL DEFAULT \'ACTIVE\',
+                subscribed_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                unsubscribed_at  TIMESTAMPTZ,
+                PRIMARY KEY (id),
+                CONSTRAINT uq_newsletter_subscriber_email UNIQUE (email)
+            )
+        ');
+        $this->addSql('CREATE INDEX idx_newsletter_subscriber_status ON newsletter_subscriber (status)');
+
+        // ─────────────────────────────────────────────
         // 25. INDEX RECHERCHE AVANCÉE (FTS & FEED)
         // ─────────────────────────────────────────────
         $this->addSql("CREATE INDEX idx_publication_fts ON publication USING gin(to_tsvector('french', COALESCE(title, '') || ' ' || COALESCE(description, ''))) WHERE deleted_at IS NULL");
@@ -569,6 +622,9 @@ final class Version20260609113454 extends AbstractMigration
         $this->addSql('DROP TABLE IF EXISTS publication');
         $this->addSql('DROP TABLE IF EXISTS tag');
         $this->addSql('DROP TABLE IF EXISTS pierre');
+        $this->addSql('DROP TABLE IF EXISTS newsletter_subscriber');
+        $this->addSql('DROP TABLE IF EXISTS password_reset_token');
+        $this->addSql('DROP TABLE IF EXISTS email_validation_token');
         $this->addSql('DROP TABLE IF EXISTS refresh_token');
         $this->addSql('DROP TABLE IF EXISTS vendeur');
         $this->addSql('DROP TABLE IF EXISTS utilisateur');

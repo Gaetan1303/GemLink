@@ -9,6 +9,11 @@ parameters:
     # MEDIA
     media.upload_dir: '%kernel.project_dir%/public/uploads'
     media.public_base_url: '%env(resolve:APP_URL)%/uploads'
+    # 'local' (dev, disque partagé worker/php) | 'r2' (prod, CDN public)
+    # Valeur de repli utilisée par le processeur d'env "default:" ci-dessous
+    # — doit être un PARAMÈTRE de conteneur classique, pas un env().
+    media.storage_mode_default: 'local'
+    media.storage_mode: '%env(default:media.storage_mode_default:MEDIA_STORAGE_MODE)%'
 
     # INFOMANIAK NEWSLETTER
     infomaniak_newsletter.domain_id: '%env(INFOMANIAK_NEWSLETTER_DOMAIN_ID)%'
@@ -17,6 +22,7 @@ parameters:
     # AI SERVICE (IMPORTANT — ton erreur actuelle)
     app.ai_service_url: '%env(resolve:AI_SERVICE_URL)%'
     app.internal_api_key: '%env(resolve:INTERNAL_API_KEY)%'
+
 services:
     _defaults:
         autowire: true
@@ -61,3 +67,12 @@ services:
         arguments:
             $uploadDir: '%media.upload_dir%'
             $publicBaseUrl: '%media.public_base_url%'
+
+    # AI ANALYSIS WORKER — US 3.1 CA-3 : lecture disque en mode 'local'
+    # (worker et serveur HTTP partagent le même conteneur/volume), GET HTTP
+    # uniquement en mode 'r2' (CDN public, Railway).
+    App\MessageHandler\AnalyzeMediaMessageHandler:
+        arguments:
+            $mediaStorageMode: '%media.storage_mode%'
+            $uploadDir: '%media.upload_dir%'
+            $localPublicBaseUrl: '%media.public_base_url%'

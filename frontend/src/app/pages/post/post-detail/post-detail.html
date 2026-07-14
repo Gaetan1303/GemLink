@@ -41,6 +41,37 @@
           <p class="post-description">{{ p.description }}</p>
         }
 
+        @if (p.status === 'ANALYZED' && p.identification; as id) {
+          <div class="identification-card">
+            <h2>{{ id.nom }}</h2>
+
+            @if (!id.isHighConfidence) {
+              <p class="identification-warning">
+                Identification à confiance modérée ({{ id.confidence | percent }}) — à vérifier.
+              </p>
+            }
+
+            <dl class="identification-properties">
+              @if (id.categorie) {
+                <div><dt>Catégorie</dt><dd>{{ id.categorie }}</dd></div>
+              }
+              @if (id.durete) {
+                <div><dt>Dureté (Mohs)</dt><dd>{{ id.durete }}</dd></div>
+              }
+              @if (id.systemeCristallin) {
+                <div><dt>Système cristallin</dt><dd>{{ id.systemeCristallin }}</dd></div>
+              }
+              @if (id.composition) {
+                <div><dt>Composition</dt><dd>{{ id.composition }}</dd></div>
+              }
+            </dl>
+
+            @if (id.description) {
+              <p class="identification-description">{{ id.description }}</p>
+            }
+          </div>
+        }
+
         @if (p.tags.length > 0) {
           <div class="post-tags">
             @for (tag of p.tags; track tag) {

@@ -16,6 +16,7 @@ from vit import get_model
 from ultralytics import YOLO
 from utils import crop_with_padding
 from schema import StoneAnalysisResponse
+import open_clip
 
 # Configuration des logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -30,7 +31,11 @@ YOLO_MODEL_PATH = os.getenv(
 )
 VIT_MODEL_PATH = os.getenv("VIT_MODEL_PATH", "checkpoints/vit_stones.pth")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
-OLLAMA_TEXT_MODEL = os.getenv("OLLAMA_TEXT_MODEL", "llama3.1")
+OLLAMA_TEXT_MODEL = os.getenv("OLLAMA_TEXT_MODEL", "gemma3:4b")
+# CLIP ViT-B/32 (poids OpenAI) : génère l'embedding 512D persisté par Symfony
+# dans pgvector (table embedding) pour la recherche par similarité entre publications.
+CLIP_MODEL_ARCH = os.getenv("CLIP_MODEL_ARCH", "ViT-B-32")
+CLIP_MODEL_PRETRAINED = os.getenv("CLIP_MODEL_PRETRAINED", "openai")
 
 # Clé partagée avec Symfony : ce service ne doit JAMAIS être appelable
 # directement par le frontend Angular, uniquement par le backend Symfony.
@@ -85,6 +90,16 @@ async def lifespan(app: FastAPI):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
+        # 5. Chargement de CLIP ViT-B/32 (embedding 512D pour la recherche par similarité pgvector)
+        logger.info(f" Chargement de CLIP {CLIP_MODEL_ARCH} ({CLIP_MODEL_PRETRAINED})...")
+        clip_model, _, clip_preprocess = open_clip.create_model_and_transforms(
+            CLIP_MODEL_ARCH, pretrained=CLIP_MODEL_PRETRAINED
+        )
+        clip_model.to(device)
+        clip_model.eval()
+        app.state.clip_model = clip_model
+        app.state.clip_preprocess = clip_preprocess
+
         logger.info(" Pipeline Vision et Client HTTP initialisés avec succès.")
 
     except Exception as e:
@@ -99,6 +114,8 @@ async def lifespan(app: FastAPI):
         del app.state.classifier_model
     if hasattr(app.state, "detector"):
         del app.state.detector
+    if hasattr(app.state, "clip_model"):
+        del app.state.clip_model
 
 
 app = FastAPI(title="GemLink AI Orchestrator API", version="1.1.0", lifespan=lifespan)
@@ -168,11 +185,14 @@ def run_vision_pipeline(image: Image.Image) -> dict:
         class_name = app.state.classes[top_idx.item()]
         class_conf = float(top_prob.item())
 
+    embedding = compute_clip_embedding(crop_img)
+
     return {
         "bbox": [int(v) for v in bbox],
         "detector_confidence": det_conf,
         "predicted_class": class_name,
         "confidence": class_conf,
+        "embedding": embedding,
         "all_probabilities": {
             app.state.classes[i]: float(probabilities[i].item())
             for i in range(len(app.state.classes))
@@ -180,64 +200,70 @@ def run_vision_pipeline(image: Image.Image) -> dict:
     }
 
 
-@app.post("/predict", tags=["Vision Pipeline"], dependencies=[Depends(verify_internal_key)])
-async def predict(file: UploadFile = File(...)):
-    """Agent vision seul : détection + classification, sans enrichissement LLM. Rapide."""
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Le fichier fourni doit être une image.")
+def compute_clip_embedding(crop_img: Image.Image) -> list[float]:
+    """
+    Génère l'embedding CLIP ViT-B/32 (512D) sur le crop YOLO déjà produit —
+    pas de nouveau découpage, on réutilise crop_img de run_vision_pipeline.
+    L2-normalisé pour que la similarité cosinus se calcule comme un simple
+    produit scalaire côté pgvector (index HNSW).
+    """
+    image_input = app.state.clip_preprocess(crop_img).unsqueeze(0).to(app.state.device)
 
-    try:
-        contents = await file.read()
-        image = Image.open(io.BytesIO(contents)).convert("RGB")
-        result = run_vision_pipeline(image)
+    with torch.no_grad():
+        features = app.state.clip_model.encode_image(image_input)
+        features = features / features.norm(dim=-1, keepdim=True)
 
-        return {
-            "success": True,
-            "detection": {"box": result["bbox"], "confidence": result["detector_confidence"]},
-            "classification": {
-                "predicted_class": result["predicted_class"],
-                "confidence": result["confidence"],
-                "all_probabilities": result["all_probabilities"],
-            }
-        }
-
-    except ValueError as e:
-        return JSONResponse(status_code=200, content={"success": False, "message": str(e), "detections": []})
-    except Exception as e:
-        logger.error(f" Erreur durant l'inférence Vision : {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Erreur interne de traitement d'image.")
+    return features.squeeze(0).cpu().tolist()
 
 
 # ==============================================================================
 # SECTION ROUTAGE : ORCHESTRATION COMPLÈTE (AGENT VISION + AGENT CONNAISSANCE)
 # ==============================================================================
 
+# Prompt few-shot : les petits modèles (ex. gemma3:1b, contrainte RAM du
+# serveur de prod) respectent un schéma JSON strict beaucoup plus fiablement
+# avec un exemple complet à imiter qu'avec une simple description abstraite
+# de structure. Les consignes ci-dessous ciblent précisément les erreurs
+# observées en prod : clés accentuées, nombres au lieu de chaînes, blocs
+# entiers ("physique"/"optique") omis.
 ANALYSIS_PROMPT_TEMPLATE = """Tu es un minéralogiste expert. On te donne le nom d'une pierre : "{class_name}".
-Réponds UNIQUEMENT avec un objet JSON valide (aucun texte avant/après, aucun bloc markdown),
-respectant EXACTEMENT cette structure :
+
+Réponds UNIQUEMENT avec un objet JSON valide (aucun texte avant/après, aucun bloc markdown).
+
+RÈGLES STRICTES (ne jamais les enfreindre) :
+1. Les clés JSON sont EXACTEMENT celles de l'exemple ci-dessous, sans accent, sans espace, en minuscules (ex: "durete", jamais "dureté").
+2. TOUTES les valeurs de "physique" et "optique" sont des chaînes de caractères entre guillemets, même les nombres (ex: "densite": "3.06", jamais "densite": 3.06).
+3. Les objets "physique" et "optique" sont TOUJOURS présents et complets avec les 4 champs chacun, même si tu dois indiquer "Non déterminé" pour une valeur incertaine.
+4. Ne jamais omettre une clé de la structure : si tu ne sais pas, écris "Non déterminé" plutôt que d'omettre le champ.
+
+Exemple complet pour la pierre "Améthyste" (respecte EXACTEMENT ce format, adapte seulement les valeurs à "{class_name}") :
 
 {{
-  "nom": "string",
-  "nom_scientifique": "string ou null",
-  "categorie_geologique": "string",
-  "formule_chimique": "string",
-  "provenance_principale": "string",
+  "nom": "Améthyste",
+  "nom_scientifique": "Quartz améthyste",
+  "categorie_geologique": "Silicate (variété de quartz)",
+  "formule_chimique": "SiO2",
+  "provenance_principale": "Brésil, Uruguay, Zambie",
   "physique": {{
-    "durete": "string",
-    "systeme_cristallin": "string",
-    "clivage": "string",
-    "densite": "string"
+    "durete": "7",
+    "systeme_cristallin": "Trigonal",
+    "clivage": "Absent",
+    "densite": "2.65"
   }},
   "optique": {{
-    "couleur": "string",
-    "eclat": "string",
-    "transparence": "string",
-    "indice_refraction": "string ou null"
+    "couleur": "Violet clair à violet foncé",
+    "eclat": "Vitreux",
+    "transparence": "Transparent à translucide",
+    "indice_refraction": "1.544 - 1.553"
   }},
-  "description": "string (3-4 phrases)",
-  "histoire_symbolique": "string ou null"
+  "description": "L'améthyste est une variété violette de quartz, dont la couleur provient de traces de fer sous irradiation naturelle. Elle se forme généralement en géodes tapissées de cristaux prismatiques.",
+  "histoire_symbolique": "Associée à la sobriété depuis l'Antiquité grecque, elle est aussi la pierre de naissance du mois de février."
 }}
+
+Génère maintenant le JSON pour "{class_name}", en respectant strictement cette structure et ces règles.
 """
+
+
 
 
 async def ask_knowledge_agent(class_name: str) -> dict:
@@ -264,22 +290,33 @@ async def ask_knowledge_agent(class_name: str) -> dict:
     except aiohttp.ClientConnectorError:
         raise HTTPException(status_code=503, detail="Le service de langage (Ollama) est indisponible.")
     except json.JSONDecodeError:
-        logger.error(f" Réponse Ollama non parsable en JSON : {raw_content[:300]}")
+        logger.error(f"❌ Réponse Ollama non parsable en JSON : {raw_content[:300]}")
         raise HTTPException(status_code=502, detail="Réponse de l'agent de connaissance invalide (JSON malformé).")
 
 
 @app.post("/analyze", tags=["Orchestration"], dependencies=[Depends(verify_internal_key)], response_model=StoneAnalysisResponse)
-async def analyze(file: UploadFile = File(...)):
+async def analyze(
+    media: UploadFile | None = File(None),
+    file: UploadFile | None = File(None),
+):
     """
     Pipeline complet : Agent Vision (YOLO + ViT) -> Agent Connaissance (Ollama)
     -> validation stricte via StoneAnalysisResponse.
     C'est l'endpoint que Symfony doit appeler (POST /analyze dans votre diagramme).
+
+    Accepte le champ multipart sous le nom 'media' ou 'file' : le worker
+    Symfony (AnalyzeMediaMessageHandler) envoie actuellement 'file'.
     """
-    if not file.content_type.startswith("image/"):
+    upload = media or file
+
+    if upload is None:
+        raise HTTPException(status_code=422, detail="Champ fichier manquant : utilisez 'media' ou 'file'.")
+
+    if not upload.content_type or not upload.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Le fichier fourni doit être une image.")
 
     try:
-        contents = await file.read()
+        contents = await upload.read()
         image = Image.open(io.BytesIO(contents)).convert("RGB")
         vision_result = run_vision_pipeline(image)
     except ValueError as e:
@@ -294,6 +331,10 @@ async def analyze(file: UploadFile = File(...)):
     knowledge_data["confidence"] = vision_result["confidence"]
     knowledge_data["detector_confidence"] = vision_result["detector_confidence"]
     knowledge_data["bbox"] = vision_result["bbox"]
+    # L'embedding ne passe jamais par Ollama : il vient uniquement de CLIP
+    # (calculé dans run_vision_pipeline), persisté ensuite par Symfony dans
+    # pgvector pour la recherche par similarité.
+    knowledge_data["embedding"] = vision_result["embedding"]
 
     try:
         return StoneAnalysisResponse(**knowledge_data)

@@ -33,11 +33,20 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Symfony Messenger (config/packages/messenger.yaml, retry_strategy). La
  * bascule définitive en ANALYSIS_FAILED, une fois les tentatives épuisées,
  * reste gérée par App\EventListener\AnalyzeMediaFailureListener — jamais ici.
+ *
+ * Lecture du média (fetchMedia) : en mode 'local' (dev), le worker et le
+ * serveur HTTP tournent dans le même conteneur Docker et partagent le même
+ * disque -> on lit le fichier directement en filesystem, sans repasser par
+ * HTTP/localhost (qui casse en conteneur à cause du port mapping Docker).
+ * En mode 'r2' (prod/Railway), l'URL est publique -> un GET HTTP classique
+ * reste légitime.
  */
 #[AsMessageHandler]
 final class AnalyzeMediaMessageHandler
 {
     private const CLIP_MODEL_NAME = 'clip-vit-b32-openai';
+    private const STORAGE_MODE_LOCAL = 'local';
+    private const STORAGE_MODE_R2 = 'r2';
 
     public function __construct(
         private readonly PublicationRepository $publications,
@@ -49,6 +58,9 @@ final class AnalyzeMediaMessageHandler
         private readonly HttpClientInterface $httpClient,
         private readonly string $aiServiceUrl,
         private readonly string $internalApiKey,
+        private readonly string $mediaStorageMode,    // 'local' | 'r2'
+        private readonly string $uploadDir,           // '%kernel.project_dir%/public/uploads'
+        private readonly string $localPublicBaseUrl,  // 'http://localhost:8000/uploads'
     ) {
     }
 
@@ -78,24 +90,16 @@ final class AnalyzeMediaMessageHandler
     }
 
     /**
-     * Télécharge le média depuis le CDN puis appelle POST /analyze en
-     * multipart/form-data — l'endpoint FastAPI attend un UploadFile, pas une
-     * URL JSON.
+     * Récupère le média (disque local ou CDN selon l'environnement) puis
+     * appelle POST /analyze en multipart/form-data — l'endpoint FastAPI
+     * attend un UploadFile, pas une URL JSON.
      */
     private function requestAnalysis(Publication $publication): AiAnalysisResult
     {
-        $media = $this->httpClient->request('GET', $publication->getMediaUrl(), ['timeout' => 15]);
-
-        if ($media->getStatusCode() >= 400) {
-            throw AiAnalysisException::unreachableMedia($publication->getMediaUrl(), $media->getStatusCode());
-        }
+        [$content, $mimeType] = $this->fetchMedia($publication->getMediaUrl());
 
         $formData = new FormDataPart([
-            'file' => new DataPart(
-                $media->getContent(),
-                'media',
-                $media->getHeaders()['content-type'][0] ?? 'image/jpeg',
-            ),
+            'file' => new DataPart($content, 'media', $mimeType),
         ]);
 
         $response = $this->httpClient->request('POST', rtrim($this->aiServiceUrl, '/') . '/analyze', [
@@ -104,7 +108,11 @@ final class AnalyzeMediaMessageHandler
                 ['X-Internal-Key' => $this->internalApiKey],
             ),
             'body' => $formData->bodyToIterable(),
-            'timeout' => 30,
+            // 180s : la génération Ollama sur CPU prend 40-90s en régime
+            // chaud, et jusqu'à 200s+ au premier appel (chargement à froid
+            // du modèle). 30s était bien trop court et déclenchait un
+            // "Idle timeout reached" avant même qu'Ollama ait terminé.
+            'timeout' => 180,
         ]);
 
         if ($response->getStatusCode() >= 400) {
@@ -113,6 +121,65 @@ final class AnalyzeMediaMessageHandler
         }
 
         return AiAnalysisResult::fromArray($response->toArray());
+    }
+
+    /**
+     * @return array{0: string, 1: string} [contenu binaire du fichier, mime-type]
+     *
+     * @throws AiAnalysisException si le média est introuvable/inaccessible.
+     *         Cette exception déclenche le retry exponentiel de Messenger.
+     */
+    private function fetchMedia(string $mediaUrl): array
+    {
+        if ($this->mediaStorageMode === self::STORAGE_MODE_LOCAL) {
+            return $this->readFromLocalDisk($mediaUrl);
+        }
+
+        return $this->downloadFromCdn($mediaUrl);
+    }
+
+    /**
+     * Mode dev : le worker (messenger:consume) tourne dans le même
+     * conteneur que le serveur qui a écrit le fichier (voir LocalMediaUploader).
+     * On reconstruit le chemin absolu sur le disque partagé plutôt que de
+     * faire un GET HTTP sur une URL "localhost" qui ne veut rien dire à
+     * l'intérieur du conteneur (le port mapping Docker n'existe que côté host).
+     */
+    private function readFromLocalDisk(string $mediaUrl): array
+    {
+        $relativePath = str_replace(rtrim($this->localPublicBaseUrl, '/') . '/', '', $mediaUrl);
+        $absolutePath = rtrim($this->uploadDir, '/') . '/' . ltrim($relativePath, '/');
+
+        if (!is_file($absolutePath)) {
+            throw AiAnalysisException::unreachableMedia($mediaUrl, 404);
+        }
+
+        $content = file_get_contents($absolutePath);
+
+        if ($content === false) {
+            throw AiAnalysisException::unreachableMedia($mediaUrl, 500);
+        }
+
+        $mimeType = mime_content_type($absolutePath) ?: 'image/jpeg';
+
+        return [$content, $mimeType];
+    }
+
+    /**
+     * Mode prod (R2) : l'URL est publique et accessible depuis n'importe
+     * quel réseau, un GET HTTP classique reste la bonne approche.
+     */
+    private function downloadFromCdn(string $mediaUrl): array
+    {
+        $media = $this->httpClient->request('GET', $mediaUrl, ['timeout' => 15]);
+
+        if ($media->getStatusCode() >= 400) {
+            throw AiAnalysisException::unreachableMedia($mediaUrl, $media->getStatusCode());
+        }
+
+        $mimeType = $media->getHeaders()['content-type'][0] ?? 'image/jpeg';
+
+        return [$media->getContent(), $mimeType];
     }
 
     /**

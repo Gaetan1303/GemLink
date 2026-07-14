@@ -18,12 +18,16 @@ class PublicationPierre
 {
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: Publication::class)]
-    #[ORM\JoinColumn(name: 'publication_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    // Pas de 'nullable' ici : ces colonnes font partie de la clé primaire
+    // composite (#[ORM\Id]), donc Doctrine les force déjà à NOT NULL —
+    // spécifier 'nullable' est un no-op déprécié depuis doctrine/orm et
+    // deviendra une erreur bloquante en 4.0.
+    #[ORM\JoinColumn(name: 'publication_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     private Publication $publication;
 
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: Pierre::class)]
-    #[ORM\JoinColumn(name: 'pierre_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(name: 'pierre_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     private Pierre $pierre;
 
     #[ORM\Column(type: 'decimal', precision: 5, scale: 4)]

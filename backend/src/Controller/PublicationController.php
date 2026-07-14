@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Exception\InvalidMediaException;
 use App\Exception\PostAccessDeniedException;
 use App\Exception\PostValidationException;
+use App\Repository\PublicationPierreRepository;
 use App\Repository\PublicationRepository;
 use App\Service\PostService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -42,6 +43,7 @@ final class PublicationController extends AbstractController
     public function __construct(
         private readonly PostService $postService,
         private readonly PublicationRepository $publications,
+        private readonly PublicationPierreRepository $publicationPierres,
     ) {
     }
 
@@ -210,7 +212,35 @@ final class PublicationController extends AbstractController
                 static fn ($tag) => $tag->getName(),
                 $publication->getTags()->toArray()
             ),
+            // US 3.1 : résultat de l'identification IA (vide tant que le
+            // statut n'est pas ANALYZED, ou si aucun match n'a été persisté).
+            'identification' => $this->serializeIdentification($publication),
             'createdAt' => $publication->getCreatedAt()->format(DATE_ATOM),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function serializeIdentification(Publication $publication): ?array
+    {
+        $match = $this->publicationPierres->findBestMatch($publication);
+
+        if ($match === null) {
+            return null;
+        }
+
+        $pierre = $match->getPierre();
+
+        return [
+            'nom' => $pierre->getName(),
+            'categorie' => $pierre->getCategory(),
+            'durete' => $pierre->getHardness(),
+            'systemeCristallin' => $pierre->getCrystalSystem(),
+            'composition' => $pierre->getComposition(),
+            'description' => $pierre->getDescription(),
+            'confidence' => $match->getConfidence(),
+            'isHighConfidence' => $match->isHighConfidence(),
         ];
     }
 }
