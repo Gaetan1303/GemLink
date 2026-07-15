@@ -21,6 +21,7 @@ function makePublication(id: string, title: string): Publication {
     status: 'PENDING_ANALYSIS',
     viewCount: 0,
     tags: [],
+    identification: null,
     createdAt: new Date().toISOString(),
   };
 }

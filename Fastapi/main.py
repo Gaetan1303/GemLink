@@ -31,7 +31,7 @@ YOLO_MODEL_PATH = os.getenv(
 )
 VIT_MODEL_PATH = os.getenv("VIT_MODEL_PATH", "checkpoints/vit_stones.pth")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
-OLLAMA_TEXT_MODEL = os.getenv("OLLAMA_TEXT_MODEL", "gemma3:4b")
+OLLAMA_TEXT_MODEL = os.getenv("OLLAMA_TEXT_MODEL", "gemma3:1b")
 # CLIP ViT-B/32 (poids OpenAI) : génère l'embedding 512D persisté par Symfony
 # dans pgvector (table embedding) pour la recherche par similarité entre publications.
 CLIP_MODEL_ARCH = os.getenv("CLIP_MODEL_ARCH", "ViT-B-32")
@@ -278,6 +278,11 @@ async def ask_knowledge_agent(class_name: str) -> dict:
     try:
         response = await app.state.http_session.post(f"{OLLAMA_URL}/api/chat", json=payload)
         if response.status != 200:
+            error_body = await response.text()
+            logger.error(
+                f"❌ Ollama a répondu HTTP {response.status} sur /api/chat (modèle={OLLAMA_TEXT_MODEL}) : "
+                f"{error_body[:500]}"
+            )
             raise HTTPException(status_code=502, detail="L'agent de connaissance (Ollama) a répondu avec une erreur.")
 
         data = await response.json()

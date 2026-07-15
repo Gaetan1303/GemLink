@@ -21,6 +21,7 @@ function makePublication(overrides: Partial<Publication> = {}): Publication {
     status: 'PENDING_ANALYSIS',
     viewCount: 3,
     tags: ['violet'],
+    identification: null,
     createdAt: new Date().toISOString(),
     ...overrides,
   };
@@ -140,5 +141,133 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
 
     expect(component['deleteError']()).toBe('Non autorisé.');
     expect(component['isDeleting']()).toBe(false);
+  });
+});
+
+describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', () => {
+  let fixture: ComponentFixture<PostDetail>;
+  let postServiceMock: { getPost: ReturnType<typeof vi.fn>; deletePost: ReturnType<typeof vi.fn> };
+
+  function configure(post: Publication): void {
+    postServiceMock = {
+      getPost: vi.fn().mockReturnValue(of(post)),
+      deletePost: vi.fn(),
+    };
+
+    TestBed.configureTestingModule({
+      imports: [PostDetail],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AuthService, useValue: { currentUser: signal<User | null | undefined>(undefined) } },
+        { provide: PostService, useValue: postServiceMock },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap({ id: post.id }) } },
+        },
+      ],
+    });
+
+    fixture = TestBed.createComponent(PostDetail);
+    fixture.detectChanges();
+  }
+
+  it('affiche la fiche minéralogique quand le post est ANALYZED et qu\'un match existe', () => {
+    configure(makePublication({
+      status: 'ANALYZED',
+      identification: {
+        nom: 'Améthyste',
+        categorie: 'Silicate (variété de quartz)',
+        durete: 7,
+        systemeCristallin: 'Trigonal',
+        composition: 'SiO2',
+        description: 'Variété violette de quartz.',
+        confidence: 0.92,
+        isHighConfidence: true,
+      },
+    }));
+
+    const card = fixture.nativeElement.querySelector('.identification-card');
+    expect(card).not.toBeNull();
+    expect(card.querySelector('h2')?.textContent).toContain('Améthyste');
+    expect(card.textContent).toContain('Trigonal');
+    expect(card.textContent).toContain('SiO2');
+  });
+
+  it('n\'affiche pas d\'avertissement de confiance quand isHighConfidence est true', () => {
+    configure(makePublication({
+      status: 'ANALYZED',
+      identification: {
+        nom: 'Améthyste',
+        categorie: null,
+        durete: null,
+        systemeCristallin: null,
+        composition: null,
+        description: null,
+        confidence: 0.92,
+        isHighConfidence: true,
+      },
+    }));
+
+    expect(fixture.nativeElement.querySelector('.identification-warning')).toBeNull();
+  });
+
+  it('affiche un avertissement de confiance modérée quand isHighConfidence est false', () => {
+    configure(makePublication({
+      status: 'ANALYZED',
+      identification: {
+        nom: 'Andésite',
+        categorie: null,
+        durete: null,
+        systemeCristallin: null,
+        composition: null,
+        description: null,
+        confidence: 0.42,
+        isHighConfidence: false,
+      },
+    }));
+
+    const warning = fixture.nativeElement.querySelector('.identification-warning');
+    expect(warning).not.toBeNull();
+    expect(warning.textContent).toContain('confiance modérée');
+  });
+
+  it('n\'affiche pas la fiche quand identification est null, même si le post est ANALYZED', () => {
+    configure(makePublication({ status: 'ANALYZED', identification: null }));
+
+    expect(fixture.nativeElement.querySelector('.identification-card')).toBeNull();
+  });
+
+  it('n\'affiche pas la fiche tant que le post est PENDING_ANALYSIS', () => {
+    configure(makePublication({
+      status: 'PENDING_ANALYSIS',
+      identification: null,
+    }));
+
+    expect(fixture.nativeElement.querySelector('.identification-card')).toBeNull();
+  });
+
+  it('n\'affiche pas de propriétés physiques/optiques omises (null) dans la fiche', () => {
+    configure(makePublication({
+      status: 'ANALYZED',
+      identification: {
+        nom: 'Quartz',
+        categorie: null,
+        durete: null,
+        systemeCristallin: 'Trigonal',
+        composition: null,
+        description: null,
+        confidence: 0.8,
+        isHighConfidence: true,
+      },
+    }));
+
+    const properties = fixture.nativeElement.querySelector('.identification-properties');
+    // Seul "systemeCristallin" est renseigné : les autres <dt>/<dd> ne
+    // doivent pas apparaître (le template les masque via @if individuels).
+    expect(properties.textContent).toContain('Trigonal');
+    expect(properties.textContent).not.toContain('Catégorie');
+    expect(properties.textContent).not.toContain('Composition');
   });
 });

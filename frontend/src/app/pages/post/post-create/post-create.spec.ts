@@ -1,154 +1,107 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter, Router } from '@angular/router';
-import { signal, computed } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
-import { PostCreate } from './post-create';
+import { PostList } from '../post-list/post-list';
 import { AuthService, User } from '../../../core/services/auth';
-import { PostService, Publication } from '../../../core/services/post';
+import { PostService, Publication, PublicationPage } from '../../../core/services/post';
 
-function makeFile(name: string, type: string, sizeBytes = 1024): File {
-  const blob = new Blob([new Uint8Array(sizeBytes)], { type });
-  return new File([blob], name, { type });
+function makePublication(id: string, title: string): Publication {
+  return {
+    id,
+    author: { id: '1', username: 'gemuser', avatarUrl: null },
+    title,
+    description: null,
+    mediaUrl: 'https://media.gem-link.org/x.jpg',
+    mediaType: 'IMAGE',
+    status: 'PENDING_ANALYSIS',
+    viewCount: 0,
+    tags: [],
+    identification: null,
+    createdAt: new Date().toISOString(),
+  };
 }
 
-describe('PostCreate — US 2.1 Publication d\'un post MVP', () => {
-  let component: PostCreate;
-  let fixture:   ComponentFixture<PostCreate>;
-  let router:    Router;
-
-  let currentUser: ReturnType<typeof signal<User | null | undefined>>;
-  let postServiceMock: {
-    createPost: ReturnType<typeof vi.fn>;
-    deletePost: ReturnType<typeof vi.fn>;
-    validateMediaFile: ReturnType<typeof vi.fn>;
-  };
-
-  const AUTHENTICATED_USER: User = { id: 1, username: 'gemuser', role: 'ROLE_USER' };
+describe('PostList — US 2.2 Consultation des posts (liste)', () => {
+  let component: PostList;
+  let fixture:   ComponentFixture<PostList>;
+  let postServiceMock: { listPosts: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    currentUser = signal<User | null | undefined>(AUTHENTICATED_USER);
-
     const authServiceMock = {
-      currentUser,
-      isAuthenticated: computed(() => !!currentUser()),
+      currentUser: signal<User | null | undefined>(undefined),
     };
 
     postServiceMock = {
-      createPost: vi.fn(),
-      deletePost: vi.fn(),
-      validateMediaFile: vi.fn().mockReturnValue(null),
+      listPosts: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
-      imports: [PostCreate],
+      imports: [PostList],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'auth/login', children: [] }]),
+        provideRouter([]),
         { provide: AuthService, useValue: authServiceMock },
         { provide: PostService, useValue: postServiceMock },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(PostCreate);
+    fixture = TestBed.createComponent(PostList);
     component = fixture.componentInstance;
-    router = TestBed.inject(Router);
   });
 
-  it('should create', () => {
+  it('charge la première page au démarrage, y compris pour un visiteur anonyme', () => {
+    const page: PublicationPage = {
+      items: [makePublication('post-1', 'Améthyste')],
+      page: 1, limit: 20, total: 1, totalPages: 1,
+    };
+    postServiceMock.listPosts.mockReturnValue(of(page));
+
     fixture.detectChanges();
-    expect(component).toBeTruthy();
+
+    expect(postServiceMock.listPosts).toHaveBeenCalledWith(1, 20);
+    expect(component['posts']()).toHaveLength(1);
+    expect(component['posts']()[0].title).toBe('Améthyste');
   });
 
-  it('redirige vers /auth/login si l\'utilisateur n\'est pas authentifié', () => {
-    currentUser.set(null);
-    const navigateSpy = vi.spyOn(router, 'navigate');
+  it('affiche une erreur si le chargement échoue', () => {
+    postServiceMock.listPosts.mockReturnValue(throwError(() => new Error('network error')));
 
-    fixture = TestBed.createComponent(PostCreate);
     fixture.detectChanges();
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
+    expect(component['loadError']()).toContain('Impossible de charger');
+    expect(component['isLoading']()).toBe(false);
   });
 
-  it('CA-1 : le formulaire ne peut pas être soumis sans fichier média', () => {
+  it('goToNextPage() charge la page suivante si elle existe', () => {
+    postServiceMock.listPosts.mockReturnValue(of({
+      items: [makePublication('post-1', 'A')], page: 1, limit: 20, total: 40, totalPages: 2,
+    }));
     fixture.detectChanges();
-    expect(component['canSubmit']()).toBe(false);
+
+    postServiceMock.listPosts.mockReturnValue(of({
+      items: [makePublication('post-2', 'B')], page: 2, limit: 20, total: 40, totalPages: 2,
+    }));
+    component.goToNextPage();
+
+    expect(postServiceMock.listPosts).toHaveBeenCalledWith(2, 20);
+    expect(component['page']()).toBe(2);
   });
 
-  it('CA-2 : un fichier invalide affiche une erreur et n\'est pas retenu', () => {
-    fixture.detectChanges();
-    postServiceMock.validateMediaFile.mockReturnValue('Formats acceptés : JPEG, PNG, WebP...');
-
-    const file = makeFile('pierre.txt', 'text/plain');
-    const input = document.createElement('input');
-    Object.defineProperty(input, 'files', { value: [file] });
-    component.onFileSelected({ target: input } as unknown as Event);
-
-    expect(component['fileError']()).toContain('Formats acceptés');
-    expect(component['selectedFile']()).toBeNull();
-  });
-
-  it('CA-1/CA-3 : soumet le post et affiche la confirmation en cas de succès', () => {
+  it('goToNextPage() ne fait rien sur la dernière page', () => {
+    postServiceMock.listPosts.mockReturnValue(of({
+      items: [], page: 1, limit: 20, total: 0, totalPages: 1,
+    }));
     fixture.detectChanges();
 
-    const file = makeFile('pierre.jpg', 'image/jpeg');
-    const input = document.createElement('input');
-    Object.defineProperty(input, 'files', { value: [file] });
-    component.onFileSelected({ target: input } as unknown as Event);
+    postServiceMock.listPosts.mockClear();
+    component.goToNextPage();
 
-    const createdPublication: Publication = { // création d'un DTO de publication simulé pour le test
-  id: 'post-uuid',
-  author: {
-    id: '1',
-    username: 'gemuser',
-    avatarUrl: null,
-  },
-  title: 'Améthyste',
-  description: null,
-  mediaUrl: 'https://media.gem-link.org/x.jpg',
-  mediaType: 'IMAGE',
-  status: 'PENDING_ANALYSIS',
-  viewCount: 0,
-  tags: [],
-  createdAt: new Date().toISOString(),
-};
-    postServiceMock.createPost.mockReturnValue(of(createdPublication));
-
-    component.submit();
-
-    expect(postServiceMock.createPost).toHaveBeenCalledWith(file, '', '', []);
-    expect(component['createdPost']()).toEqual(createdPublication);
-    expect(component['isSubmitting']()).toBe(false);
-  });
-
-  it('affiche un message d\'erreur si la création échoue', () => {
-    fixture.detectChanges();
-
-    const file = makeFile('pierre.jpg', 'image/jpeg');
-    const input = document.createElement('input');
-    Object.defineProperty(input, 'files', { value: [file] });
-    component.onFileSelected({ target: input } as unknown as Event);
-
-    postServiceMock.createPost.mockReturnValue(
-      throwError(() => ({ error: { message: 'Type de fichier non supporté.' } }))
-    );
-
-    component.submit();
-
-    expect(component['submitError']()).toBe('Type de fichier non supporté.');
-    expect(component['isSubmitting']()).toBe(false);
-  });
-
-  it('CA-1 : refuse la soumission sans fichier et affiche un message', () => {
-    fixture.detectChanges();
-
-    component.submit();
-
-    expect(postServiceMock.createPost).not.toHaveBeenCalled();
-    expect(component['fileError']()).toContain('photo ou une courte vidéo');
+    expect(postServiceMock.listPosts).not.toHaveBeenCalled();
   });
 });
