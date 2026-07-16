@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+
 
 namespace App\Entity;
 
@@ -48,7 +48,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'trust_score', type: 'smallint', options: ['default' => 0])]
     private int $trustScore = 0;
 
-    #[ORM\Column(length: 20, options: ['default' => 'USER'])]
+    #[ORM\Column(length: 20, options: ['default' => 'USER'], columnDefinition: 'user_role')]
     private string $role = 'USER';
 
     #[ORM\Column(options: ['default' => 0])]
@@ -57,9 +57,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'smallint', options: ['default' => 1])]
     private int $level = 1;
 
-    #[ORM\Column(length: 25, options: ['default' => 'PENDING_VALIDATION'])]
+    #[ORM\Column(length: 25, options: ['default' => 'PENDING_VALIDATION'], columnDefinition: 'user_status')]
     private string $status = 'PENDING_VALIDATION';
-
+    
     #[ORM\Column(name: 'created_at')]
     private DateTimeImmutable $createdAt;
 

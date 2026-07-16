@@ -1,0 +1,116 @@
+<div><app-header /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+<app-header-image></app-header-image>
+
+<main class="post-create-page" id="main-content">
+  <div class="post-create-container">
+
+    <span class="eyebrow">Nouvelle entrée de collection</span>
+    <h1>Cataloguer une pierre</h1>
+    <p class="post-create-intro">
+      Déposez la photo ou une courte vidéo de votre trouvaille : notre IA l'identifie et complète la fiche automatiquement.
+    </p>
+
+    @if (submitError()) {
+      <div class="alert alert--error" role="alert">{{ submitError() }}</div>
+    }
+
+    <form [formGroup]="postForm" (ngSubmit)="submit()" class="post-form">
+
+        <div class="form-group">
+          <span class="form-group__caption">Photo ou vidéo <span class="required" aria-hidden="true">*</span></span>
+
+          @if (!selectedFile()) {
+            <label for="media" class="dropzone">
+              <mat-icon class="dropzone__icon">diamond</mat-icon>
+              <span class="dropzone__label">Déposer un spécimen</span>
+              <span class="dropzone__hint">JPEG, PNG, WebP (10 Mo max) ou MP4 (100 Mo max, 60 s max)</span>
+              <input
+                id="media"
+                type="file"
+                class="dropzone__input"
+                accept="image/jpeg,image/png,image/webp,video/mp4"
+                (change)="onFileSelected($event)"
+                [disabled]="isSubmitting()"
+              />
+            </label>
+          } @else {
+            <div class="media-preview">
+              @if (previewUrl(); as url) {
+                <img [src]="url" alt="Aperçu de la pierre" />
+              } @else {
+                <div class="media-preview__video-placeholder">
+                  <mat-icon>videocam</mat-icon>
+                  <span>{{ selectedFile()!.name }}</span>
+                </div>
+              }
+              <div class="media-preview__body">
+                <span class="media-preview__label">Spécimen prêt à être déposé</span>
+                <button type="button" class="btn-remove-media" (click)="removeFile()" [disabled]="isSubmitting()">
+                  Retirer
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (fileError()) {
+            <p class="field-error" role="alert">{{ fileError() }}</p>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="title">Titre</label>
+          <input
+            id="title"
+            type="text"
+            formControlName="title"
+            placeholder="Ex. Améthyste trouvée en Bretagne"
+            [disabled]="isSubmitting()"
+          />
+          @if (postForm.get('title')?.hasError('maxlength')) {
+            <p class="field-error">Le titre ne peut pas dépasser 200 caractères.</p>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea
+            id="description"
+            rows="5"
+            formControlName="description"
+            placeholder="Où et comment l'avez-vous trouvée ?"
+            [disabled]="isSubmitting()"
+          ></textarea>
+          @if (postForm.get('description')?.hasError('maxlength')) {
+            <p class="field-error">La description ne peut pas dépasser 2000 caractères.</p>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="tags">Tags</label>
+          <input
+            id="tags"
+            type="text"
+            formControlName="tagsInput"
+            placeholder="violet, quartz, améthyste (séparés par des virgules)"
+            [disabled]="isSubmitting()"
+          />
+          @if (postForm.get('tagsInput')?.hasError('tooManyTags')) {
+            <p class="field-error">10 tags maximum.</p>
+          }
+        </div>
+
+        <button
+          type="submit"
+          class="btn-submit"
+          [disabled]="!canSubmit()"
+          [attr.aria-busy]="isSubmitting()">
+          @if (isSubmitting()) { Publication en cours... } @else { Ajouter à la collection }
+        </button>
+
+      </form>
+
+  </div>
+</main>
+
+<app-footer />

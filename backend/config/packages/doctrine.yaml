@@ -19,6 +19,7 @@ doctrine:
             user_status: string
             validation_action: string
             vector: vector
+        schema_filter: '~^(?!idx_embedding_vector_hnsw|idx_publication_fts|idx_pierre_fts|idx_publication_feed|set_timestamp_|auto_moderate_|update_trust_score_|protect_audit_log_)~'
         types:
             vector: Pgvector\Doctrine\VectorType
             halfvec: Pgvector\Doctrine\HalfVectorType
