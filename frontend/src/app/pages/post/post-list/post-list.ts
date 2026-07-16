@@ -28,6 +28,7 @@ export class PostList implements OnInit {
   protected readonly posts      = signal<Publication[]>([]);
   protected readonly page       = signal(1);
   protected readonly totalPages = signal(1);
+  protected readonly total      = signal(0);
   protected readonly isLoading  = signal(false);
   protected readonly loadError  = signal<string | null>(null);
 
@@ -59,6 +60,7 @@ export class PostList implements OnInit {
         this.posts.set(result.items);
         this.page.set(result.page);
         this.totalPages.set(Math.max(1, result.totalPages));
+        this.total.set(result.total);
         this.isLoading.set(false);
       },
       error: () => {

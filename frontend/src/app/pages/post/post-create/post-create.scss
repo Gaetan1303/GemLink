@@ -1,30 +1,40 @@
+@use '../post-theme' as theme;
+
 .post-create-page {
   min-height: 100vh;
-  background-color: #040A20;
-  color: #f0f0f0;
-  padding: 2rem 1rem 4rem;
+  background-color: theme.$ink;
+  color: theme.$text;
+  padding: 2.5rem 1rem 4rem;
+  @include theme.mobile-nav-clearance;
 
   .post-create-container {
     max-width: 640px;
     margin: 0 auto;
   }
 
+  .eyebrow {
+    display: inline-block;
+    @include theme.catalog-label;
+    color: theme.$violet;
+    margin-bottom: 0.5rem;
+  }
+
   h1 {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: theme.$font-display;
     font-weight: 800;
     font-size: 2rem;
-    color: #C5A059;
-    margin-bottom: 0.5rem;
+    color: theme.$gold;
+    margin: 0 0 0.5rem;
   }
 
   .post-create-intro {
     line-height: 1.7;
-    color: rgba(240, 240, 240, 0.8);
+    color: theme.$text-dim;
     margin-bottom: 2rem;
   }
 
   .required {
-    color: #C5A059;
+    color: theme.$gold;
   }
 
   .alert {
@@ -33,18 +43,10 @@
     font-size: 0.9rem;
     margin-bottom: 1.5rem;
 
-    &--success {
-      background: rgba(76, 175, 80, 0.15);
-      border: 1px solid rgba(76, 175, 80, 0.4);
-      color: #a5d6a7;
-
-      p { margin-bottom: 1rem; }
-    }
-
     &--error {
       background: rgba(224, 122, 95, 0.15);
       border: 1px solid rgba(224, 122, 95, 0.4);
-      color: #e07a5f;
+      color: theme.$coral;
     }
   }
 
@@ -58,29 +60,29 @@
       flex-direction: column;
       gap: 0.5rem;
 
-      label {
-        font-family: 'Plus Jakarta Sans', sans-serif;
+      label, .form-group__caption {
+        font-family: theme.$font-display;
         font-weight: 600;
         font-size: 0.95rem;
-        color: #f0f0f0;
+        color: theme.$text;
       }
 
-      input[type="text"], input[type="file"], textarea {
+      input[type="text"], textarea {
         background-color: rgba(255, 255, 255, 0.02);
         border: 1px solid rgba(197, 160, 89, 0.25);
         border-radius: 6px;
         padding: 0.8rem 1rem;
-        color: #f0f0f0;
+        color: theme.$text;
         font-family: inherit;
         font-size: 1rem;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
-        &::placeholder { color: rgba(240, 240, 240, 0.3); }
+        &::placeholder { color: theme.$text-faint; }
         &:hover { border-color: rgba(197, 160, 89, 0.6); }
         &:focus {
           outline: none;
-          border-color: #C5A059;
-          box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
+          border-color: theme.$gold;
+          box-shadow: 0 0 0 3px theme.$gold-dim;
         }
       }
 
@@ -88,14 +90,63 @@
 
       .field-hint {
         font-size: 0.8rem;
-        color: rgba(240, 240, 240, 0.5);
+        color: theme.$text-faint;
         margin: 0;
       }
 
       .field-error {
         font-size: 0.8rem;
-        color: #e07a5f;
+        color: theme.$coral;
         margin: 0;
+      }
+    }
+
+    // ── Zone de dépôt ─────────────────────────────────────────────
+    .dropzone {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      text-align: center;
+      padding: 2.75rem 1.5rem;
+      border: 1px dashed rgba(197, 160, 89, 0.35);
+      background: theme.$surface;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+      @include theme.facet-corner;
+
+      &:hover {
+        border-color: theme.$gold;
+        background: theme.$surface-raised;
+      }
+
+      &__icon {
+        color: theme.$gold;
+        opacity: 0.6;
+        font-size: 2.25rem;
+        width: 2.25rem;
+        height: 2.25rem;
+      }
+
+      &__label {
+        font-family: theme.$font-display;
+        font-weight: 700;
+        color: theme.$text;
+      }
+
+      &__hint {
+        @include theme.meta-mono;
+        font-size: 0.72rem;
+        color: theme.$text-faint;
+      }
+
+      &__input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
       }
     }
 
@@ -105,14 +156,15 @@
       gap: 1rem;
       padding: 0.8rem 1rem;
       border: 1px solid rgba(197, 160, 89, 0.25);
-      border-radius: 6px;
-      background-color: rgba(255, 255, 255, 0.02);
+      background-color: theme.$surface;
+      @include theme.facet-corner-sm;
 
       img {
-        width: 72px;
-        height: 72px;
+        width: 76px;
+        height: 76px;
         object-fit: cover;
-        border-radius: 6px;
+        border-radius: 4px;
+        flex-shrink: 0;
       }
 
       &__video-placeholder {
@@ -124,15 +176,27 @@
         flex: 1;
       }
 
+      &__body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        flex: 1;
+        min-width: 0;
+      }
+
+      &__label {
+        @include theme.catalog-label;
+      }
+
       .btn-remove-media {
-        margin-left: auto;
+        align-self: flex-start;
         background: transparent;
         border: 1px solid rgba(224, 122, 95, 0.4);
-        color: #e07a5f;
+        color: theme.$coral;
         border-radius: 6px;
-        padding: 0.4rem 0.9rem;
+        padding: 0.35rem 0.85rem;
         cursor: pointer;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
 
         &:hover { background: rgba(224, 122, 95, 0.1); }
       }
@@ -140,16 +204,16 @@
 
     .btn-submit {
       align-self: flex-start;
-      background-color: #C5A059;
-      color: #040A20;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: theme.$gold;
+      color: theme.$ink;
+      font-family: theme.$font-display;
       font-weight: 700;
       font-size: 1rem;
-      padding: 0.8rem 2.5rem;
+      padding: 0.85rem 2.25rem;
       border: none;
-      border-radius: 6px;
       cursor: pointer;
       transition: background-color 0.2s, transform 0.1s;
+      @include theme.facet-corner-sm;
 
       &:hover:not(:disabled) { background-color: #d4b473; }
       &:active:not(:disabled) { transform: scale(0.98); }
@@ -158,7 +222,7 @@
         cursor: not-allowed;
       }
       &:focus-visible {
-        outline: 2px solid #f0f0f0;
+        outline: 2px solid theme.$text;
         outline-offset: 3px;
       }
 
@@ -170,14 +234,14 @@
 
     .btn-secondary {
       background: transparent;
-      border: 1px solid #C5A059;
-      color: #C5A059;
+      border: 1px solid theme.$gold;
+      color: theme.$gold;
       border-radius: 6px;
       padding: 0.6rem 1.5rem;
       cursor: pointer;
       font-weight: 600;
 
-      &:hover { background: rgba(197, 160, 89, 0.1); }
+      &:hover { background: theme.$gold-dim; }
     }
   }
 }

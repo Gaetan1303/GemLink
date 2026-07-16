@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router, provideRouter, convertToParamMap } from '@angular/router';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
@@ -36,6 +37,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
   let postServiceMock: {
     getPost: ReturnType<typeof vi.fn>;
     deletePost: ReturnType<typeof vi.fn>;
+    pollAnalysis: ReturnType<typeof vi.fn>;
   };
 
   function configure(userValue: User | null | undefined, postId = 'post-1'): void {
@@ -47,6 +49,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
+        provideNoopAnimations(),
         { provide: AuthService, useValue: { currentUser } },
         { provide: PostService, useValue: postServiceMock },
         {
@@ -65,6 +68,9 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     postServiceMock = {
       getPost: vi.fn(),
       deletePost: vi.fn(),
+      // US 3.1 : par défaut aucune émission, pour ne pas déclencher de
+      // comportement de polling non testé dans ces specs-ci.
+      pollAnalysis: vi.fn().mockReturnValue(of()),
     };
   });
 
@@ -86,6 +92,24 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     fixture.detectChanges();
 
     expect(component['loadError']()).toContain('n\'existe pas');
+  });
+
+  it('US 3.1 : démarre le suivi de l\'analyse quand le post est PENDING_ANALYSIS', () => {
+    postServiceMock.getPost.mockReturnValue(of(makePublication({ status: 'PENDING_ANALYSIS' })));
+    configure(undefined);
+
+    fixture.detectChanges();
+
+    expect(postServiceMock.pollAnalysis).toHaveBeenCalledWith('post-1');
+  });
+
+  it('US 3.1 : ne démarre pas de suivi quand le post est déjà ANALYZED', () => {
+    postServiceMock.getPost.mockReturnValue(of(makePublication({ status: 'ANALYZED' })));
+    configure(undefined);
+
+    fixture.detectChanges();
+
+    expect(postServiceMock.pollAnalysis).not.toHaveBeenCalled();
   });
 
   it('CA-4 : l\'auteur du post peut le supprimer', () => {
@@ -121,7 +145,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
 
     fixture.detectChanges();
-    const navigateSpy = vi.spyOn(router, 'navigate');
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     component.deletePost();
 
@@ -146,12 +170,17 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
 
 describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', () => {
   let fixture: ComponentFixture<PostDetail>;
-  let postServiceMock: { getPost: ReturnType<typeof vi.fn>; deletePost: ReturnType<typeof vi.fn> };
+  let postServiceMock: {
+    getPost: ReturnType<typeof vi.fn>;
+    deletePost: ReturnType<typeof vi.fn>;
+    pollAnalysis: ReturnType<typeof vi.fn>;
+  };
 
   function configure(post: Publication): void {
     postServiceMock = {
       getPost: vi.fn().mockReturnValue(of(post)),
       deletePost: vi.fn(),
+      pollAnalysis: vi.fn().mockReturnValue(of()),
     };
 
     TestBed.configureTestingModule({
@@ -160,6 +189,7 @@ describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', ()
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
+        provideNoopAnimations(),
         { provide: AuthService, useValue: { currentUser: signal<User | null | undefined>(undefined) } },
         { provide: PostService, useValue: postServiceMock },
         {

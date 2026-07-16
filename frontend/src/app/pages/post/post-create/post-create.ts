@@ -6,7 +6,7 @@ import { SharedModule } from '../../../shared/shared-module';
 import { NavBarMobile } from '../../../components/nav-bar-mobile/nav-bar-mobile';
 import { AuthService } from '../../../core/services/auth';
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
-import { PostService, Publication } from '../../../core/services/post';
+import { PostService } from '../../../core/services/post';
 
 // US 2.1 — Publication d'un post MVP.
 const TAGS_MAX_COUNT = 10;
@@ -42,7 +42,6 @@ export class PostCreate {
   // ── Soumission ────────────────────────────────────────────────
   protected readonly isSubmitting  = signal(false);
   protected readonly submitError   = signal<string | null>(null);
-  protected readonly createdPost   = signal<Publication | null>(null);
 
   protected readonly canSubmit = computed(() =>
     this.selectedFile() !== null
@@ -113,7 +112,10 @@ export class PostCreate {
     this.postService.createPost(file, title ?? '', description ?? '', tags).subscribe({
       next: (publication) => {
         this.isSubmitting.set(false);
-        this.createdPost.set(publication);
+        // US 3.1 : on redirige vers le détail plutôt que d'afficher un écran
+        // statique — c'est là que l'utilisateur voit l'analyse IA se
+        // dérouler en direct (badge animé + overlay de scan).
+        this.router.navigate(['/posts', publication.id]);
       },
       error: (err) => {
         this.isSubmitting.set(false);
@@ -125,7 +127,6 @@ export class PostCreate {
   }
 
   reset(): void {
-    this.createdPost.set(null);
     this.submitError.set(null);
     this.removeFile();
     this.postForm.reset({ title: '', description: '', tagsInput: '' });

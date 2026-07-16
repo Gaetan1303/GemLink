@@ -1,150 +1,267 @@
+@use '../post-theme' as theme;
+
 .post-list-page {
   min-height: 100vh;
-  background-color: #040A20;
-  color: #f0f0f0;
-  padding: 2rem 1rem 4rem;
+  background-color: theme.$ink;
+  color: theme.$text;
+  @include theme.mobile-nav-clearance(0rem);
+}
 
-  .post-list-container {
-    max-width: 1000px;
+// ── Hero ──────────────────────────────────────────────────────────
+.post-list-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 3.5rem 1.5rem 3rem;
+  border-bottom: 1px solid theme.$line;
+
+  .hero-facet {
+    position: absolute;
+    top: -80px;
+    right: -60px;
+    width: 420px;
+    height: 420px;
+    opacity: 0.14;
+    pointer-events: none;
+  }
+
+  &__content {
+    position: relative;
+    max-width: 640px;
     margin: 0 auto;
-  }
-
-  .post-list-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 2rem;
-
-    h1 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-weight: 800;
-      font-size: 2rem;
-      color: #C5A059;
-      margin: 0;
-    }
-
-    .btn-publish {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      background-color: #C5A059;
-      color: #040A20;
-      font-weight: 700;
-      padding: 0.6rem 1.3rem;
-      border-radius: 6px;
-      text-decoration: none;
-
-      &:hover { background-color: #d4b473; }
-    }
-  }
-
-  .alert--error {
-    padding: 0.85rem 1rem;
-    border-radius: 6px;
-    background: rgba(224, 122, 95, 0.15);
-    border: 1px solid rgba(224, 122, 95, 0.4);
-    color: #e07a5f;
-    margin-bottom: 1.5rem;
-  }
-
-  .post-list-loading, .post-list-empty {
-    color: rgba(240, 240, 240, 0.7);
     text-align: center;
-    padding: 3rem 0;
   }
 
-  .post-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1.25rem;
+  &__subtitle {
+    color: theme.$text-dim;
+    line-height: 1.6;
+    margin: 0.6rem 0 1.75rem;
+    font-size: 1rem;
   }
 
-  .post-card {
-    display: flex;
-    flex-direction: column;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(197, 160, 89, 0.2);
-    border-radius: 10px;
-    overflow: hidden;
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.15s ease, border-color 0.15s ease;
+  .eyebrow {
+    display: inline-block;
+    font-family: theme.$font-mono;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: theme.$violet;
+    margin-bottom: 0.5rem;
+  }
 
-    &:hover {
-      transform: translateY(-3px);
-      border-color: rgba(197, 160, 89, 0.6);
-    }
+  h1 {
+    font-family: theme.$font-display;
+    font-weight: 800;
+    font-size: 2.4rem;
+    color: theme.$gold;
+    margin: 0;
+  }
+}
 
-    img, &__video-thumb {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      background: rgba(255, 255, 255, 0.04);
-    }
+.btn-publish {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: theme.$gold;
+  color: theme.$ink;
+  font-family: theme.$font-display;
+  font-weight: 700;
+  padding: 0.7rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background-color 0.15s ease, transform 0.1s ease;
 
-    &__video-thumb {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: rgba(240, 240, 240, 0.5);
-      font-size: 2rem;
-    }
+  &:hover { background-color: #d4b473; }
+  &:active { transform: scale(0.98); }
+}
 
-    &__info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      padding: 0.85rem 1rem;
-    }
+// ── Corps ─────────────────────────────────────────────────────────
+.post-list-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
 
-    &__title {
-      font-weight: 700;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-    }
+.alert--error {
+  padding: 0.85rem 1rem;
+  border-radius: 6px;
+  background: rgba(224, 122, 95, 0.15);
+  border: 1px solid rgba(224, 122, 95, 0.4);
+  color: theme.$coral;
+  margin-bottom: 1.5rem;
+}
 
-    &__author {
-      font-size: 0.8rem;
-      color: rgba(240, 240, 240, 0.6);
+// ── État vide ─────────────────────────────────────────────────────
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;
+  padding: 4rem 1.5rem;
+  border: 1px dashed theme.$line;
+  border-radius: 14px;
+  background: theme.$surface;
+
+  &__icon {
+    color: theme.$gold;
+    opacity: 0.5;
+    font-size: 2.75rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h2 {
+    font-family: theme.$font-display;
+    font-weight: 700;
+    color: theme.$text;
+    margin: 0;
+  }
+
+  p {
+    color: theme.$text-dim;
+    max-width: 360px;
+    margin: 0 0 0.75rem;
+  }
+}
+
+// ── Grille & cartes ───────────────────────────────────────────────
+.post-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.post-card {
+  display: flex;
+  flex-direction: column;
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  @include theme.facet-corner-sm;
+
+  opacity: 0;
+  animation: cardEnter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: rgba(197, 160, 89, 0.55);
+    background: theme.$surface-raised;
+  }
+
+  &__media {
+    position: relative;
+    height: 180px;
+    background: rgba(255, 255, 255, 0.04);
+
+    &::after {
+      // Fine ligne dorée sous le média, écho du coin facetté.
+      content: '';
+      position: absolute;
+      inset: 0;
+      box-shadow: inset 0 -1px 0 rgba(197, 160, 89, 0.25);
     }
   }
 
-  .badge {
-    align-self: flex-start;
-    font-size: 0.7rem;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    margin-top: 0.25rem;
-
-    &--pending {
-      background: rgba(197, 160, 89, 0.15);
-      color: #C5A059;
-    }
-
-    &--failed {
-      background: rgba(224, 122, 95, 0.15);
-      color: #e07a5f;
-    }
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 
-  .pagination {
+  &__video-thumb {
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1.5rem;
-    margin-top: 2.5rem;
-
-    button {
-      background: transparent;
-      border: 1px solid #C5A059;
-      color: #C5A059;
-      border-radius: 6px;
-      padding: 0.5rem 1.2rem;
-      cursor: pointer;
-
-      &:hover:not(:disabled) { background: rgba(197, 160, 89, 0.1); }
-      &:disabled { opacity: 0.4; cursor: not-allowed; }
-    }
+    color: rgba(240, 240, 240, 0.5);
+    font-size: 2rem;
   }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.9rem 1rem 1rem;
+  }
+
+  &__catalog {
+    @include theme.catalog-label;
+  }
+
+  &__title {
+    font-weight: 700;
+    font-family: theme.$font-display;
+    color: theme.$text;
+  }
+
+  &__author {
+    font-size: 0.8rem;
+    color: theme.$text-dim;
+  }
+
+  app-analysis-status {
+    align-self: flex-start;
+    margin-top: 0.3rem;
+  }
+}
+
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ── Squelette de chargement ───────────────────────────────────────
+.skeleton-card {
+  height: 260px;
+  background: linear-gradient(
+    100deg,
+    theme.$surface 30%,
+    theme.$surface-raised 50%,
+    theme.$surface 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  @include theme.facet-corner-sm;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 140% 0; }
+  100% { background-position: -40% 0; }
+}
+
+// ── Pagination ────────────────────────────────────────────────────
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+
+  &__meta {
+    @include theme.meta-mono;
+  }
+
+  button {
+    background: transparent;
+    border: 1px solid theme.$gold;
+    color: theme.$gold;
+    border-radius: 6px;
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    &:hover:not(:disabled) { background: theme.$gold-dim; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-card { animation: none; opacity: 1; }
+  .skeleton-card { animation: none; }
 }

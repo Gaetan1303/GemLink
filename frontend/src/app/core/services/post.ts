@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, timer } from 'rxjs';
+import { distinctUntilChanged, switchMap, takeWhile } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 // ── US 2.1 — Publication d'un post MVP ──────────────────────────
@@ -60,6 +61,11 @@ export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;   // 10 Mo
 export const MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;  // 100 Mo
 export const MAX_VIDEO_DURATION_SECONDS = 60;
 
+// US 3.1 : intervalle de polling du statut d'analyse. Aligné très en dessous
+// du premier délai de retry backend (30 s, cf. CA-3) pour rester réactif côté
+// UX sans bombarder l'API pendant les tentatives de retry du worker.
+const ANALYSIS_POLL_INTERVAL_MS = 4000;
+
 @Injectable({ providedIn: 'root' })
 export class PostService {
 
@@ -107,6 +113,25 @@ export class PostService {
    */
   getPost(postId: string): Observable<Publication> {
     return this.#http.get<Publication>(`${this.#apiUrl}/${postId}`);
+  }
+
+  /**
+   * US 3.1 — Suit le statut d'analyse IA d'un post tant qu'il est
+   * PENDING_ANALYSIS, en ré-interrogeant GET /publications/{id} à intervalle
+   * régulier (pas de websocket à ce stade du projet). Émet une valeur
+   * immédiatement, puis à chaque changement de statut, et se complète dès
+   * que le post quitte PENDING_ANALYSIS (ANALYZED ou ANALYSIS_FAILED) — y
+   * compris la dernière valeur qui a fait basculer l'état (`inclusive: true`).
+   *
+   * Le composant appelant reste responsable de se désabonner (ngOnDestroy)
+   * si l'utilisateur quitte la page avant la fin de l'analyse.
+   */
+  pollAnalysis(postId: string, intervalMs = ANALYSIS_POLL_INTERVAL_MS): Observable<Publication> {
+    return timer(0, intervalMs).pipe(
+      switchMap(() => this.getPost(postId)),
+      distinctUntilChanged((previous, current) => previous.status === current.status),
+      takeWhile((post) => post.status === 'PENDING_ANALYSIS', true),
+    );
   }
 
   /**

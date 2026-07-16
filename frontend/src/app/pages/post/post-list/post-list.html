@@ -1,43 +1,92 @@
 <div><app-header /></div>
 <div><app-nav-bar-mobile [role]="currentRole()" /></div>
+<app-header-image></app-header-image>
+
 
 <main class="post-list-page" id="main-content">
-  <div class="post-list-container">
 
-    <div class="post-list-header">
-      <h1>Découvertes de la communauté</h1>
+  <div class="post-list-hero">
+    <svg class="hero-facet" viewBox="0 0 480 480" aria-hidden="true">
+      <defs>
+        <linearGradient id="heroFacetGradient" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#C5A059" />
+          <stop offset="55%" stop-color="#8D7FE0" />
+          <stop offset="100%" stop-color="#7BC99A" />
+        </linearGradient>
+      </defs>
+      <g fill="url(#heroFacetGradient)" stroke="#C5A059" stroke-width="1">
+        <polygon points="240,40 340,120 300,240 180,240 140,120" />
+        <polygon points="340,120 420,200 380,320 300,240" />
+        <polygon points="180,240 300,240 260,380 140,340" />
+        <polygon points="60,180 140,120 180,240 90,280" />
+        <polygon points="300,240 380,320 320,420 260,380" />
+        <polygon points="90,280 180,240 140,340 60,340" />
+      </g>
+    </svg>
+
+    <div class="post-list-hero__content">
+      <span class="eyebrow">Collection communautaire</span>
+      <h1>Spécimens partagés</h1>
+      <p class="post-list-hero__subtitle">
+        @if (total() > 0) {
+          {{ total() }} pierre{{ total() > 1 ? 's' : '' }} cataloguée{{ total() > 1 ? 's' : '' }} par la communauté, identifiée{{ total() > 1 ? 's' : '' }} par notre IA.
+        } @else {
+          Chaque trouvaille, identifiée par l'IA et cataloguée par la communauté.
+        }
+      </p>
       <a routerLink="/posts/new" class="btn-publish">
         <mat-icon>add_a_photo</mat-icon>
-        Publier
+        Cataloguer une pierre
       </a>
     </div>
+  </div>
+
+  <div class="post-list-container">
 
     @if (loadError()) {
       <div class="alert alert--error" role="alert">{{ loadError() }}</div>
     }
 
     @if (isLoading()) {
-      <p class="post-list-loading">Chargement des posts...</p>
+      <div class="post-grid post-grid--skeleton" aria-hidden="true">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <div class="skeleton-card"></div>
+        }
+      </div>
     } @else if (posts().length === 0) {
-      <p class="post-list-empty">Aucun post pour le moment. Soyez le premier à partager une découverte !</p>
+      <div class="empty-state">
+        <mat-icon class="empty-state__icon">diamond</mat-icon>
+        <h2>Le tiroir est encore vide</h2>
+        <p>Aucun spécimen catalogué pour le moment. Soyez le premier à partager une découverte.</p>
+        <a routerLink="/posts/new" class="btn-publish">
+          <mat-icon>add_a_photo</mat-icon>
+          Publier la première pierre
+        </a>
+      </div>
     } @else {
       <div class="post-grid">
-        @for (post of posts(); track post.id) {
-          <a [routerLink]="['/posts', post.id]" class="post-card">
-            @if (post.mediaType === 'IMAGE') {
-              <img [src]="post.mediaUrl" [alt]="post.title ?? 'Pierre publiée par ' + post.author.username" />
-            } @else {
-              <div class="post-card__video-thumb">
-                <mat-icon>videocam</mat-icon>
-              </div>
-            }
+        @for (post of posts(); track post.id; let i = $index) {
+          <a
+            [routerLink]="['/posts', post.id]"
+            class="post-card"
+            [style.animation-delay.ms]="i * 60"
+          >
+            <div class="post-card__media">
+              @if (post.mediaType === 'IMAGE') {
+                <img [src]="post.mediaUrl" [alt]="post.title ?? 'Pierre publiée par ' + post.author.username" />
+              } @else {
+                <div class="post-card__video-thumb">
+                  <mat-icon>videocam</mat-icon>
+                </div>
+              }
+            </div>
             <div class="post-card__info">
+              <span class="post-card__catalog">N° {{ post.id.slice(0, 8) | uppercase }}</span>
               <span class="post-card__title">{{ post.title || 'Sans titre' }}</span>
               <span class="post-card__author">{{ post.author.username }}</span>
-              @if (post.status === 'PENDING_ANALYSIS') {
-                <span class="badge badge--pending">Analyse en cours</span>
-              } @else if (post.status === 'ANALYSIS_FAILED') {
-                <span class="badge badge--failed">Non identifiée</span>
+
+              @if (post.status !== 'ANALYZED') {
+                <app-analysis-status [status]="post.status" size="sm" />
               }
             </div>
           </a>
@@ -46,7 +95,7 @@
 
       <div class="pagination">
         <button type="button" (click)="goToPrevPage()" [disabled]="!hasPrevPage()">Précédent</button>
-        <span>Page {{ page() }} / {{ totalPages() }}</span>
+        <span class="pagination__meta">Page {{ page() }} / {{ totalPages() }}</span>
         <button type="button" (click)="goToNextPage()" [disabled]="!hasNextPage()">Suivant</button>
       </div>
     }

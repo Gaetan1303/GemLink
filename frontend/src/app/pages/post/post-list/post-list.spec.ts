@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
@@ -46,6 +47,7 @@ describe('PostList — US 2.2 Consultation des posts (liste)', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
+        provideNoopAnimations(),
         { provide: AuthService, useValue: authServiceMock },
         { provide: PostService, useValue: postServiceMock },
       ],
