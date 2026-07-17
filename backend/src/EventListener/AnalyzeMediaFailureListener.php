@@ -34,7 +34,7 @@ final class AnalyzeMediaFailureListener
         private readonly MailerInterface $mailer,
         private readonly string $fromEmail,
         private readonly string $fromName,
-        private readonly string $adminAlertEmail,
+        // private readonly string $adminAlertEmail,
     ) {
     }
 
@@ -75,7 +75,8 @@ final class AnalyzeMediaFailureListener
         try {
             $email = (new Email())
                 ->from(new Address($this->fromEmail, $this->fromName))
-                ->to(new Address($this->adminAlertEmail, 'GemLink Admin'))
+                // ->to(new Address($this->adminAlertEmail, 'GemLink Admin'))
+                ->to(new Address('admin@gem-link.org', 'GemLink Admin'))
                 ->subject(sprintf('[GemLink] Analyse IA échouée — post %s', $publication->getId()->toRfc4122()))
                 ->html($this->buildAlertHtml($publication, $event));
 

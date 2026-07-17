@@ -2,9 +2,11 @@
 
 namespace App\Repository;
 
+use App\Entity\User;
 use App\Entity\Vitrine;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * @extends ServiceEntityRepository<Vitrine>
@@ -16,28 +18,78 @@ class VitrineRepository extends ServiceEntityRepository
         parent::__construct($registry, Vitrine::class);
     }
 
-    //    /**
-    //     * @return Vitrine[] Returns an array of Vitrine objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('v')
-    //            ->andWhere('v.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('v.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function save(Vitrine $vitrine, bool $flush = true): void
+    {
+        $this->getEntityManager()->persist($vitrine);
 
-    //    public function findOneBySomeField($value): ?Vitrine
-    //    {
-    //        return $this->createQueryBuilder('v')
-    //            ->andWhere('v.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
+    public function findBySlug(string $slug): ?Vitrine
+    {
+        return $this->findOneBy(['slug' => $slug]);
+    }
+
+    /**
+     * @return Vitrine[]
+     */
+    public function findByUser(User $user): array
+    {
+        return $this->createQueryBuilder('v')
+            ->andWhere('v.user = :user')
+            ->setParameter('user', $user)
+            ->orderBy('v.updatedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * CA-1 : slug lowercase, tirets à la place des espaces, sans caractères
+     * spéciaux ; suffixe numérique -2, -3... en cas de collision.
+     */
+    public function generateUniqueSlug(string $title, ?Uuid $excludeId = null): string
+    {
+        $base = $this->slugify($title);
+
+        if ($base === '') {
+            $base = 'vitrine';
+        }
+
+        $slug = $base;
+        $suffix = 2;
+
+        while ($this->slugExists($slug, $excludeId)) {
+            $slug = sprintf('%s-%d', $base, $suffix);
+            ++$suffix;
+        }
+
+        return $slug;
+    }
+
+    private function slugExists(string $slug, ?Uuid $excludeId): bool
+    {
+        $qb = $this->createQueryBuilder('v')
+            ->select('COUNT(v.id)')
+            ->andWhere('v.slug = :slug')
+            ->setParameter('slug', $slug);
+
+        if ($excludeId !== null) {
+            $qb->andWhere('v.id != :excludeId')
+                ->setParameter('excludeId', $excludeId);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult() > 0;
+    }
+
+    private function slugify(string $value): string
+    {
+        $transliterated = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', trim($value));
+        $lower = mb_strtolower($transliterated !== false ? $transliterated : $value);
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $lower) ?? '';
+
+        // VARCHAR(150) en base — on garde de la marge pour un éventuel suffixe.
+        return trim(mb_substr($slug, 0, 140), '-');
+    }
 }
