@@ -1,0 +1,61 @@
+<div><app-header /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
+<main class="vitrine-list-page" id="main-content">
+
+  <div class="vitrine-list-header">
+    <div>
+      <span class="eyebrow">Vos vitrines</span>
+      <h1>Mes collections</h1>
+    </div>
+    <a routerLink="/vitrines/new" class="btn-publish">
+      <mat-icon>add</mat-icon>
+      Nouvelle Vitrine
+    </a>
+  </div>
+
+  @if (loadError()) {
+    <div class="alert alert--error" role="alert">{{ loadError() }}</div>
+  }
+
+  @if (isLoading()) {
+    <div class="vitrine-grid vitrine-grid--skeleton" aria-hidden="true">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="skeleton-card"></div>
+      }
+    </div>
+  } @else if (vitrines().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-state__icon">collections_bookmark</mat-icon>
+      <h2>Aucune Vitrine pour le moment</h2>
+      <p>Regroupez vos plus belles pierres dans une collection organisée et partageable.</p>
+      <a routerLink="/vitrines/new" class="btn-publish">
+        <mat-icon>add</mat-icon>
+        Créer ma première Vitrine
+      </a>
+    </div>
+  } @else {
+    <div class="vitrine-grid">
+      @for (vitrine of vitrines(); track vitrine.id) {
+        <a [routerLink]="['/vitrines', vitrine.id]" class="vitrine-card">
+          <div
+            class="vitrine-card__status"
+            [class.vitrine-card__status--published]="vitrine.status === 'PUBLISHED'"
+          >
+            {{ vitrine.status === 'PUBLISHED' ? 'Publiée' : 'Brouillon' }}
+          </div>
+          <h2 class="vitrine-card__title">{{ vitrine.title }}</h2>
+          @if (vitrine.description) {
+            <p class="vitrine-card__description">{{ vitrine.description }}</p>
+          }
+          <span class="vitrine-card__count">
+            {{ vitrine.itemsCount }} pierre{{ vitrine.itemsCount > 1 ? 's' : '' }}
+          </span>
+        </a>
+      }
+    </div>
+  }
+
+</main>
+
+<app-footer />

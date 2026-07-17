@@ -1,0 +1,114 @@
+@use '../../post/post-theme' as theme;
+
+.vitrine-list-page {
+  min-height: 100vh;
+  background-color: theme.$ink;
+  color: theme.$text;
+  padding: 2.5rem 1.5rem 3rem;
+  @include theme.mobile-nav-clearance(0rem);
+}
+
+.vitrine-list-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1080px;
+  margin: 0 auto 2rem;
+  flex-wrap: wrap;
+
+  .eyebrow {
+    @include theme.catalog-label;
+  }
+
+  h1 {
+    margin: 0.3rem 0 0;
+    font-family: theme.$font-display;
+  }
+}
+
+.vitrine-grid {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.vitrine-card {
+  position: relative;
+  display: block;
+  padding: 1.5rem;
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  color: theme.$text;
+  text-decoration: none;
+  @include theme.facet-corner;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    background: theme.$surface-raised;
+    transform: translateY(-2px);
+  }
+
+  &__status {
+    display: inline-block;
+    @include theme.meta-mono;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid theme.$line;
+    border-radius: 999px;
+    margin-bottom: 0.75rem;
+
+    &--published {
+      color: theme.$emerald;
+      border-color: rgba(123, 201, 154, 0.35);
+    }
+  }
+
+  &__title {
+    margin: 0 0 0.4rem;
+    font-size: 1.1rem;
+  }
+
+  &__description {
+    color: theme.$text-dim;
+    font-size: 0.9rem;
+    margin: 0 0 0.75rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__count {
+    @include theme.meta-mono;
+  }
+}
+
+.skeleton-card {
+  height: 160px;
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  @include theme.facet-corner;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.empty-state {
+  max-width: 480px;
+  margin: 3rem auto;
+  text-align: center;
+  color: theme.$text-dim;
+
+  &__icon {
+    font-size: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: theme.$gold;
+    margin-bottom: 0.75rem;
+  }
+}

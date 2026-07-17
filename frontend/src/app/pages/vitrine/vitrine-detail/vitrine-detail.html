@@ -1,0 +1,181 @@
+<div><app-header /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
+<main class="vitrine-detail-page" id="main-content">
+
+  @if (loadError()) {
+    <div class="alert alert--error" role="alert">{{ loadError() }}</div>
+  }
+
+  @if (isLoading()) {
+    <div class="vitrine-detail-skeleton" aria-hidden="true"></div>
+  } @else if (vitrine(); as v) {
+
+    <header class="vitrine-header">
+      <div
+        class="vitrine-header__status"
+        [class.vitrine-header__status--published]="v.status === 'PUBLISHED'"
+      >
+        <mat-icon>{{ v.status === 'PUBLISHED' ? 'public' : 'lock' }}</mat-icon>
+        {{ v.status === 'PUBLISHED' ? 'Publiée' : 'Brouillon' }}
+      </div>
+
+      @if (!isEditing()) {
+        <h1>{{ v.title }}</h1>
+        @if (v.description) {
+          <p class="vitrine-header__description">{{ v.description }}</p>
+        }
+      } @else {
+        <form [formGroup]="editForm" (ngSubmit)="saveEdits()" class="vitrine-form vitrine-form--inline">
+          <label class="field">
+            <span class="field__label">Titre</span>
+            <input type="text" formControlName="title" maxlength="100" />
+          </label>
+          <label class="field">
+            <span class="field__label">Description</span>
+            <textarea formControlName="description" maxlength="500" rows="3"></textarea>
+          </label>
+          @if (saveError()) {
+            <div class="alert alert--error" role="alert">{{ saveError() }}</div>
+          }
+          <div class="vitrine-form__actions">
+            <button type="submit" class="btn-publish" [disabled]="isSaving()">Enregistrer</button>
+            <button type="button" class="btn-secondary" (click)="cancelEditing()">Annuler</button>
+          </div>
+        </form>
+      }
+
+      @if (isOwner() && !isEditing()) {
+        <div class="vitrine-header__actions">
+          <button type="button" class="btn-secondary" (click)="startEditing()">
+            <mat-icon>edit</mat-icon> Modifier
+          </button>
+
+          @if (v.status === 'DRAFT') {
+            <button
+              type="button"
+              class="btn-publish"
+              [disabled]="!canPublish() || isPublishing()"
+              [title]="!canPublish() ? 'Ajoutez au moins un post avant de publier.' : ''"
+              (click)="publish()"
+            >
+              <mat-icon>publish</mat-icon> Publier
+            </button>
+          } @else {
+            <button type="button" class="btn-secondary" [disabled]="isPublishing()" (click)="unpublish()">
+              <mat-icon>unpublished</mat-icon> Dépublier
+            </button>
+          }
+
+          <button type="button" class="btn-danger" (click)="confirmDelete()">
+            <mat-icon>delete</mat-icon> Supprimer
+          </button>
+        </div>
+
+        @if (!canPublish() && v.status === 'DRAFT') {
+          <p class="vitrine-header__hint">
+            <mat-icon>info</mat-icon>
+            Une Vitrine vide ne peut pas être publiée. Ajoutez au moins un post ci-dessous.
+          </p>
+        }
+
+        @if (publishError()) {
+          <div class="alert alert--error" role="alert">{{ publishError() }}</div>
+        }
+      }
+    </header>
+
+    @if (isOwner()) {
+      <section class="vitrine-add-item">
+        <h2>Ajouter un post</h2>
+        <form [formGroup]="addItemForm" (ngSubmit)="addItem()" class="vitrine-form vitrine-form--inline">
+          <label class="field">
+            <span class="field__label">Identifiant du post</span>
+            <input type="text" formControlName="publicationId" placeholder="Collez l'identifiant du post à ajouter" />
+          </label>
+          @if (addItemError()) {
+            <div class="alert alert--error" role="alert">{{ addItemError() }}</div>
+          }
+          <button type="submit" class="btn-publish" [disabled]="isAddingItem()">Ajouter</button>
+        </form>
+      </section>
+    }
+
+    <section class="vitrine-items">
+      <h2>{{ v.itemsCount }} pierre{{ v.itemsCount > 1 ? 's' : '' }} dans cette collection</h2>
+
+      @if (v.items.length === 0) {
+        <div class="empty-state">
+          <mat-icon class="empty-state__icon">diamond</mat-icon>
+          <p>Aucun post dans cette Vitrine pour le moment.</p>
+        </div>
+      } @else if (isOwner()) {
+        <div class="vitrine-item-grid" cdkDropList (cdkDropListDropped)="onItemDrop($event)">
+          @for (item of v.items; track item.publication.id) {
+            <div class="vitrine-item-card" cdkDrag>
+              <div class="vitrine-item-card__drag-handle" cdkDragHandle>
+                <mat-icon>drag_indicator</mat-icon>
+              </div>
+              <a [routerLink]="['/posts', item.publication.id]" class="vitrine-item-card__media">
+                @if (item.publication.mediaType === 'IMAGE') {
+                  <img [src]="item.publication.mediaUrl" [alt]="item.publication.title ?? 'Pierre'" />
+                } @else {
+                  <div class="vitrine-item-card__video-thumb">
+                    <mat-icon>videocam</mat-icon>
+                  </div>
+                }
+              </a>
+              <span class="vitrine-item-card__title">{{ item.publication.title || 'Sans titre' }}</span>
+              <button
+                type="button"
+                class="vitrine-item-card__remove"
+                (click)="removeItem(item.publication.id)"
+                title="Retirer de la Vitrine"
+              >
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="vitrine-item-grid">
+          @for (item of v.items; track item.publication.id) {
+            <a [routerLink]="['/posts', item.publication.id]" class="vitrine-item-card vitrine-item-card--readonly">
+              <div class="vitrine-item-card__media">
+                @if (item.publication.mediaType === 'IMAGE') {
+                  <img [src]="item.publication.mediaUrl" [alt]="item.publication.title ?? 'Pierre'" />
+                } @else {
+                  <div class="vitrine-item-card__video-thumb">
+                    <mat-icon>videocam</mat-icon>
+                  </div>
+                }
+              </div>
+              <span class="vitrine-item-card__title">{{ item.publication.title || 'Sans titre' }}</span>
+            </a>
+          }
+        </div>
+      }
+    </section>
+
+    @if (showDeleteConfirm()) {
+      <div class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal">
+          <h2>Supprimer cette Vitrine ?</h2>
+          <p>Cette action est irréversible. Les posts qu'elle contient ne seront pas supprimés.</p>
+          @if (deleteError()) {
+            <div class="alert alert--error" role="alert">{{ deleteError() }}</div>
+          }
+          <div class="modal__actions">
+            <button type="button" class="btn-danger" [disabled]="isDeleting()" (click)="deleteVitrine()">
+              Supprimer
+            </button>
+            <button type="button" class="btn-secondary" (click)="cancelDelete()">Annuler</button>
+          </div>
+        </div>
+      </div>
+    }
+
+  }
+</main>
+
+<app-footer />

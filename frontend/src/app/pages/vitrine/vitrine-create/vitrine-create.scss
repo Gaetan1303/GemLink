@@ -1,0 +1,86 @@
+@use '../../post/post-theme' as theme;
+
+.vitrine-create-page {
+  min-height: 100vh;
+  background-color: theme.$ink;
+  color: theme.$text;
+  display: flex;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  @include theme.mobile-nav-clearance(0rem);
+}
+
+.vitrine-create-card {
+  width: 100%;
+  max-width: 560px;
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  padding: 2rem;
+  @include theme.facet-corner;
+
+  .eyebrow {
+    @include theme.catalog-label;
+  }
+
+  h1 {
+    margin: 0.3rem 0 0.5rem;
+    font-family: theme.$font-display;
+  }
+}
+
+.vitrine-create-subtitle {
+  color: theme.$text-dim;
+  margin: 0 0 1.75rem;
+  line-height: 1.5;
+}
+
+.vitrine-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  &--inline {
+    gap: 0.85rem;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  &__label {
+    @include theme.meta-mono;
+    color: theme.$text-dim;
+  }
+
+  &__required {
+    color: theme.$coral;
+  }
+
+  &__error {
+    color: theme.$coral;
+    font-size: 0.82rem;
+  }
+
+  input,
+  textarea {
+    background: theme.$ink;
+    border: 1px solid theme.$line;
+    color: theme.$text;
+    padding: 0.7rem 0.85rem;
+    font-family: theme.$font-display;
+    font-size: 0.95rem;
+    resize: vertical;
+
+    &:focus {
+      outline: none;
+      border-color: theme.$gold;
+    }
+  }
+}

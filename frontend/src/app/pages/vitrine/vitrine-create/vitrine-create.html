@@ -1,0 +1,48 @@
+<div><app-header /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
+<main class="vitrine-create-page" id="main-content">
+  <div class="vitrine-create-card">
+    <span class="eyebrow">Nouvelle collection</span>
+    <h1>Créer une Vitrine</h1>
+    <p class="vitrine-create-subtitle">
+      Regroupez plusieurs de vos posts pour présenter vos pierres de manière organisée.
+    </p>
+
+    <form [formGroup]="vitrineForm" (ngSubmit)="submit()" class="vitrine-form">
+      <label class="field">
+        <span class="field__label">Titre <span class="field__required">*</span></span>
+        <input type="text" formControlName="title" maxlength="100" placeholder="Ma collection d'améthystes" />
+        @if (vitrineForm.get('title')?.touched && vitrineForm.get('title')?.hasError('required')) {
+          <span class="field__error">Le titre est obligatoire.</span>
+        }
+        @if (vitrineForm.get('title')?.hasError('maxlength')) {
+          <span class="field__error">100 caractères maximum.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span class="field__label">Description</span>
+        <textarea
+          formControlName="description"
+          maxlength="500"
+          rows="4"
+          placeholder="Une brève présentation de votre collection (optionnel)"
+        ></textarea>
+        @if (vitrineForm.get('description')?.hasError('maxlength')) {
+          <span class="field__error">500 caractères maximum.</span>
+        }
+      </label>
+
+      @if (submitError()) {
+        <div class="alert alert--error" role="alert">{{ submitError() }}</div>
+      }
+
+      <button type="submit" class="btn-publish" [disabled]="isSubmitting()">
+        @if (isSubmitting()) { Création... } @else { Créer la Vitrine }
+      </button>
+    </form>
+  </div>
+</main>
+
+<app-footer />
