@@ -6,7 +6,9 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Entity\Vitrine;
+use App\Entity\VitrineMedia;
 use App\Entity\VitrinePublication;
+use App\Exception\InvalidMediaException;
 use App\Exception\VitrineAccessDeniedException;
 use App\Exception\VitrineEmptyException;
 use App\Exception\VitrineValidationException;
@@ -22,11 +24,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * US 4.1 — Création et gestion d'une Vitrine.
- *
- * Comme PublicationController : #[IsGranted] posé méthode par méthode.
- * La consultation d'une Vitrine PUBLIÉE est publique ; une Vitrine en
- * brouillon n'est visible que par son propriétaire.
+ * US 4.1 — Création et gestion d'une Vitrine : posts liés ET médias
+ * uploadés directement (CA-2). La consultation d'une Vitrine PUBLIÉE est
+ * publique ; un brouillon n'est visible que par son propriétaire.
  */
 #[Route('/api/vitrines')]
 final class VitrineController extends AbstractController
@@ -38,9 +38,6 @@ final class VitrineController extends AbstractController
     ) {
     }
 
-    /**
-     * Liste des Vitrines de l'utilisateur connecté (brouillons inclus).
-     */
     #[Route('', name: 'vitrine_index', methods: ['GET'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function index(): JsonResponse
@@ -55,14 +52,10 @@ final class VitrineController extends AbstractController
         ]);
     }
 
-    /**
-     * Détail public si publiée ; sinon réservé au propriétaire.
-     */
     #[Route('/{id}', name: 'vitrine_show', methods: ['GET'])]
     public function show(string $id): JsonResponse
     {
         $vitrine = $this->findOrFail($id);
-
         if ($vitrine instanceof JsonResponse) {
             return $vitrine;
         }
@@ -81,10 +74,6 @@ final class VitrineController extends AbstractController
         return $this->json($this->serializeVitrine($vitrine));
     }
 
-    /**
-     * CA-1 : titre obligatoire (max 100), description optionnelle (max 500).
-     * Body JSON : { "title": string, "description"?: string }
-     */
     #[Route('', name: 'vitrine_create', methods: ['POST'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function create(Request $request): JsonResponse
@@ -158,9 +147,6 @@ final class VitrineController extends AbstractController
         return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 
-    /**
-     * CA-2 : ajout individuel d'un post. Body JSON : { "publicationId": string }
-     */
     #[Route('/{id}/items', name: 'vitrine_item_add', methods: ['POST'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function addItem(string $id, Request $request): JsonResponse
@@ -199,13 +185,9 @@ final class VitrineController extends AbstractController
             return $this->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        return $this->json($this->serializeItem($item), Response::HTTP_CREATED);
+        return $this->json($this->serializePostItem($item), Response::HTTP_CREATED);
     }
 
-    /**
-     * Pas d'ID propre à l'item (clé composite vitrine_id+publication_id) :
-     * on retire par publicationId.
-     */
     #[Route('/{id}/items/{publicationId}', name: 'vitrine_item_remove', methods: ['DELETE'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function removeItem(string $id, string $publicationId): JsonResponse
@@ -218,7 +200,14 @@ final class VitrineController extends AbstractController
             return $vitrine;
         }
 
-        $item = $this->findItemOrNull($vitrine, $publicationId);
+        $item = null;
+        foreach ($vitrine->getItems() as $candidate) {
+            if ($candidate->getPublication()->getId()->toRfc4122() === $publicationId) {
+                $item = $candidate;
+                break;
+            }
+        }
+
         if ($item === null) {
             return $this->json(['message' => 'Ce post ne fait pas partie de cette Vitrine.'], Response::HTTP_NOT_FOUND);
         }
@@ -232,9 +221,64 @@ final class VitrineController extends AbstractController
         return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 
-    /**
-     * CA-3 : Body JSON : { "orderedPublicationIds": string[] }
-     */
+    #[Route('/{id}/media', name: 'vitrine_media_add', methods: ['POST'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function addMedia(string $id, Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $vitrine = $this->findOrFail($id);
+        if ($vitrine instanceof JsonResponse) {
+            return $vitrine;
+        }
+
+        $file = $request->files->get('media');
+
+        try {
+            $media = $this->vitrineService->addMedia($vitrine, $user, $file);
+        } catch (VitrineAccessDeniedException $exception) {
+            return $this->json(['message' => $exception->getMessage()], Response::HTTP_FORBIDDEN);
+        } catch (InvalidMediaException $exception) {
+            return $this->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return $this->json($this->serializeMediaItem($media), Response::HTTP_CREATED);
+    }
+
+    #[Route('/{id}/media/{mediaId}', name: 'vitrine_media_remove', methods: ['DELETE'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function removeMedia(string $id, string $mediaId): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $vitrine = $this->findOrFail($id);
+        if ($vitrine instanceof JsonResponse) {
+            return $vitrine;
+        }
+
+        $media = null;
+        foreach ($vitrine->getMediaItems() as $candidate) {
+            if ($candidate->getId()->toRfc4122() === $mediaId) {
+                $media = $candidate;
+                break;
+            }
+        }
+
+        if ($media === null) {
+            return $this->json(['message' => 'Ce média ne fait pas partie de cette Vitrine.'], Response::HTTP_NOT_FOUND);
+        }
+
+        try {
+            $this->vitrineService->removeMedia($vitrine, $user, $media);
+        } catch (VitrineAccessDeniedException $exception) {
+            return $this->json(['message' => $exception->getMessage()], Response::HTTP_FORBIDDEN);
+        }
+
+        return $this->json(null, Response::HTTP_NO_CONTENT);
+    }
+
     #[Route('/{id}/items/reorder', name: 'vitrine_item_reorder', methods: ['PATCH'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function reorderItems(string $id, Request $request): JsonResponse
@@ -248,14 +292,23 @@ final class VitrineController extends AbstractController
         }
 
         $data = json_decode($request->getContent(), true) ?? [];
-        $orderedIds = $data['orderedPublicationIds'] ?? null;
+        $orderedItems = $data['orderedItems'] ?? null;
 
-        if (!is_array($orderedIds) || $orderedIds === []) {
-            return $this->json(['message' => 'orderedPublicationIds doit être un tableau non vide.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        if (!is_array($orderedItems) || $orderedItems === []) {
+            return $this->json(['message' => 'orderedItems doit être un tableau non vide.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        foreach ($orderedItems as $entry) {
+            if (!is_array($entry) || !isset($entry['type'], $entry['id']) || !in_array($entry['type'], ['post', 'media'], true)) {
+                return $this->json(
+                    ['message' => 'Chaque élément doit contenir "type" ("post" ou "media") et "id".'],
+                    Response::HTTP_UNPROCESSABLE_ENTITY
+                );
+            }
         }
 
         try {
-            $this->vitrineService->reorderItems($vitrine, $user, $orderedIds);
+            $this->vitrineService->reorderItems($vitrine, $user, $orderedItems);
         } catch (VitrineAccessDeniedException $exception) {
             return $this->json(['message' => $exception->getMessage()], Response::HTTP_FORBIDDEN);
         } catch (VitrineValidationException $exception) {
@@ -265,9 +318,6 @@ final class VitrineController extends AbstractController
         return $this->json($this->serializeVitrine($vitrine));
     }
 
-    /**
-     * CA-4 : refuse si la Vitrine ne contient aucun item.
-     */
     #[Route('/{id}/publish', name: 'vitrine_publish', methods: ['POST'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function publish(string $id): JsonResponse
@@ -312,10 +362,6 @@ final class VitrineController extends AbstractController
         return $this->json($this->serializeVitrine($vitrine));
     }
 
-    /**
-     * @return Vitrine|JsonResponse une réponse d'erreur (400/404) toute prête,
-     *         ou la Vitrine trouvée
-     */
     private function findOrFail(string $id): Vitrine|JsonResponse
     {
         try {
@@ -333,22 +379,18 @@ final class VitrineController extends AbstractController
         return $vitrine;
     }
 
-    private function findItemOrNull(Vitrine $vitrine, string $publicationId): ?VitrinePublication
-    {
-        foreach ($vitrine->getItems() as $item) {
-            if ($item->getPublication()->getId()->toRfc4122() === $publicationId) {
-                return $item;
-            }
-        }
-
-        return null;
-    }
-
     /**
      * @return array<string, mixed>
      */
     private function serializeVitrine(Vitrine $vitrine): array
     {
+        $items = array_merge(
+            array_map(fn (VitrinePublication $i): array => $this->serializePostItem($i), $vitrine->getItems()->toArray()),
+            array_map(fn (VitrineMedia $i): array => $this->serializeMediaItem($i), $vitrine->getMediaItems()->toArray()),
+        );
+
+        usort($items, static fn (array $a, array $b): int => $a['position'] <=> $b['position']);
+
         return [
             'id' => $vitrine->getId()->toRfc4122(),
             'title' => $vitrine->getTitle(),
@@ -356,8 +398,8 @@ final class VitrineController extends AbstractController
             'description' => $vitrine->getDescription(),
             'status' => $vitrine->getStatus(),
             'viewCount' => $vitrine->getViewCount(),
-            'itemsCount' => $vitrine->getItems()->count(),
-            'items' => array_map($this->serializeItem(...), $vitrine->getItems()->toArray()),
+            'itemsCount' => $vitrine->getItemsCount(),
+            'items' => $items,
             'createdAt' => $vitrine->getCreatedAt()->format(DATE_ATOM),
             'updatedAt' => $vitrine->getUpdatedAt()->format(DATE_ATOM),
         ];
@@ -366,11 +408,13 @@ final class VitrineController extends AbstractController
     /**
      * @return array<string, mixed>
      */
-    private function serializeItem(VitrinePublication $item): array
+    private function serializePostItem(VitrinePublication $item): array
     {
         $publication = $item->getPublication();
 
         return [
+            'type' => 'post',
+            'id' => $publication->getId()->toRfc4122(),
             'position' => $item->getPosition(),
             'addedAt' => $item->getAddedAt()->format(DATE_ATOM),
             'publication' => [
@@ -380,6 +424,21 @@ final class VitrineController extends AbstractController
                 'mediaType' => $publication->getMediaType(),
                 'status' => $publication->getStatus(),
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeMediaItem(VitrineMedia $media): array
+    {
+        return [
+            'type' => 'media',
+            'id' => $media->getId()->toRfc4122(),
+            'position' => $media->getPosition(),
+            'addedAt' => $media->getCreatedAt()->format(DATE_ATOM),
+            'mediaUrl' => $media->getMediaUrl(),
+            'mediaType' => $media->getMediaType(),
         ];
     }
 }

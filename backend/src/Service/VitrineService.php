@@ -35,17 +35,6 @@ class VitrineService
     ) {
     }
 
-    /**
-     * CA-1 : titre obligatoire (max 100), description optionnelle (max 500),
-     * slug généré automatiquement avec gestion des collisions.
-     *
-     * @throws VitrineValidationException si le titre/la description sont
-     *         invalides, OU si une collision de slug survient malgré la
-     *         vérification préalable (race condition entre deux créations
-     *         concurrentes du même titre — la contrainte unique en base
-     *         (uq_vitrine_slug) reste le dernier rempart, celle-ci la traduit
-     *         en erreur métier 422 plutôt qu'un 500 brut).
-     */
     public function createVitrine(User $user, ?string $title, ?string $description): Vitrine
     {
         $cleanTitle = $this->sanitizeTitle($title);
@@ -105,15 +94,6 @@ class VitrineService
         $this->em->flush();
     }
 
-    /**
-     * CA-2 : ajout individuel d'un post, position = fin de la collection.
-     *
-     * @throws VitrineValidationException si le post est déjà présent —
-     *         détecté soit par la vérification applicative ci-dessous, soit
-     *         (race condition entre deux ajouts concurrents du même post)
-     *         par la contrainte de clé primaire composite en base sur
-     *         vitrine_publication, traduite ici en la même erreur métier.
-     */
     public function addItem(Vitrine $vitrine, User $actor, Publication $publication): VitrinePublication
     {
         $this->assertOwner($vitrine, $actor);
@@ -172,11 +152,6 @@ class VitrineService
     }
 
     /**
-     * CA-3 : réordonnancement unifié posts + médias. Toute la validation
-     * (cohérence de la liste, appartenance des éléments à cette Vitrine)
-     * vit ici plutôt que dans Vitrine::reorderItems() — cohérent avec le
-     * reste du projet où PostService porte la validation, pas Publication.
-     *
      * @param array<int, array{type: string, id: string}> $orderedItems
      */
     public function reorderItems(Vitrine $vitrine, User $actor, array $orderedItems): void
@@ -220,9 +195,6 @@ class VitrineService
         $this->em->flush();
     }
 
-    /**
-     * CA-4 : refuse la publication si la Vitrine ne contient ni post ni média.
-     */
     public function publish(Vitrine $vitrine, User $actor): void
     {
         $this->assertOwner($vitrine, $actor);
