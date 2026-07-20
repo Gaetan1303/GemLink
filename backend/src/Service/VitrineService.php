@@ -7,20 +7,20 @@ namespace App\Service;
 use App\Entity\Publication;
 use App\Entity\User;
 use App\Entity\Vitrine;
+use App\Entity\VitrineMedia;
 use App\Entity\VitrinePublication;
 use App\Exception\VitrineAccessDeniedException;
 use App\Exception\VitrineEmptyException;
 use App\Exception\VitrineValidationException;
+use App\Repository\VitrineMediaRepository;
 use App\Repository\VitrinePublicationRepository;
 use App\Repository\VitrineRepository;
+use App\Service\Media\MediaUploadService;
+use DateTimeImmutable;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
-/**
- * US 4.1 : logique métier de la Vitrine (CA-1 à CA-4).
- * Même partage des responsabilités que PostService : les entités portent
- * les transitions d'état simples (publish/unpublish, touch), le service
- * porte la validation et les règles d'autorisation.
- */
 class VitrineService
 {
     private const TITLE_MAX_LENGTH = 100;
@@ -30,12 +30,21 @@ class VitrineService
         private readonly EntityManagerInterface $em,
         private readonly VitrineRepository $vitrines,
         private readonly VitrinePublicationRepository $vitrinePublications,
+        private readonly VitrineMediaRepository $vitrineMedias,
+        private readonly MediaUploadService $mediaUploadService,
     ) {
     }
 
     /**
      * CA-1 : titre obligatoire (max 100), description optionnelle (max 500),
      * slug généré automatiquement avec gestion des collisions.
+     *
+     * @throws VitrineValidationException si le titre/la description sont
+     *         invalides, OU si une collision de slug survient malgré la
+     *         vérification préalable (race condition entre deux créations
+     *         concurrentes du même titre — la contrainte unique en base
+     *         (uq_vitrine_slug) reste le dernier rempart, celle-ci la traduit
+     *         en erreur métier 422 plutôt qu'un 500 brut).
      */
     public function createVitrine(User $user, ?string $title, ?string $description): Vitrine
     {
@@ -49,7 +58,13 @@ class VitrineService
             $vitrine->setDescription($cleanDescription);
         }
 
-        $this->vitrines->save($vitrine);
+        try {
+            $this->vitrines->save($vitrine);
+        } catch (UniqueConstraintViolationException) {
+            throw new VitrineValidationException(
+                'Une Vitrine avec un titre très similaire vient d\'être créée au même moment. Merci de réessayer.'
+            );
+        }
 
         return $vitrine;
     }
@@ -71,7 +86,13 @@ class VitrineService
             $vitrine->setDescription($this->sanitizeDescription($description));
         }
 
-        $this->em->flush();
+        try {
+            $this->em->flush();
+        } catch (UniqueConstraintViolationException) {
+            throw new VitrineValidationException(
+                'Une Vitrine avec un titre très similaire existe déjà. Merci de réessayer avec un autre titre.'
+            );
+        }
 
         return $vitrine;
     }
@@ -86,6 +107,12 @@ class VitrineService
 
     /**
      * CA-2 : ajout individuel d'un post, position = fin de la collection.
+     *
+     * @throws VitrineValidationException si le post est déjà présent —
+     *         détecté soit par la vérification applicative ci-dessous, soit
+     *         (race condition entre deux ajouts concurrents du même post)
+     *         par la contrainte de clé primaire composite en base sur
+     *         vitrine_publication, traduite ici en la même erreur métier.
      */
     public function addItem(Vitrine $vitrine, User $actor, Publication $publication): VitrinePublication
     {
@@ -104,7 +131,11 @@ class VitrineService
         $item = new VitrinePublication($vitrine, $publication, $vitrine->getNextPosition());
         $vitrine->addItem($item);
 
-        $this->vitrinePublications->save($item);
+        try {
+            $this->vitrinePublications->save($item);
+        } catch (UniqueConstraintViolationException) {
+            throw new VitrineValidationException('Ce post est déjà présent dans cette Vitrine.');
+        }
 
         return $item;
     }
@@ -117,28 +148,86 @@ class VitrineService
         $this->vitrinePublications->remove($item);
     }
 
-    /**
-     * CA-3 : réordonnancement complet (glisser-déposer côté front envoie la
-     * liste ordonnée des publicationId).
-     *
-     * @param string[] $orderedPublicationIds
-     */
-    public function reorderItems(Vitrine $vitrine, User $actor, array $orderedPublicationIds): void
+    public function addMedia(Vitrine $vitrine, User $actor, ?UploadedFile $file): VitrineMedia
     {
         $this->assertOwner($vitrine, $actor);
 
-        $vitrine->reorderItems($orderedPublicationIds);
+        $directory = sprintf('vitrines/%s', (new DateTimeImmutable())->format('Y/m'));
+        $uploaded = $this->mediaUploadService->upload($file, $directory);
+
+        $media = new VitrineMedia($vitrine, $uploaded->mediaUrl, $uploaded->mediaType, $vitrine->getNextPosition());
+        $vitrine->addMedia($media);
+
+        $this->vitrineMedias->save($media);
+
+        return $media;
+    }
+
+    public function removeMedia(Vitrine $vitrine, User $actor, VitrineMedia $media): void
+    {
+        $this->assertOwner($vitrine, $actor);
+
+        $vitrine->removeMedia($media);
+        $this->vitrineMedias->remove($media);
+    }
+
+    /**
+     * CA-3 : réordonnancement unifié posts + médias. Toute la validation
+     * (cohérence de la liste, appartenance des éléments à cette Vitrine)
+     * vit ici plutôt que dans Vitrine::reorderItems() — cohérent avec le
+     * reste du projet où PostService porte la validation, pas Publication.
+     *
+     * @param array<int, array{type: string, id: string}> $orderedItems
+     */
+    public function reorderItems(Vitrine $vitrine, User $actor, array $orderedItems): void
+    {
+        $this->assertOwner($vitrine, $actor);
+
+        $postsByPublicationId = [];
+        foreach ($vitrine->getItems() as $item) {
+            $postsByPublicationId[$item->getPublication()->getId()->toRfc4122()] = $item;
+        }
+
+        $mediaById = [];
+        foreach ($vitrine->getMediaItems() as $media) {
+            $mediaById[$media->getId()->toRfc4122()] = $media;
+        }
+
+        if (count($orderedItems) !== count($postsByPublicationId) + count($mediaById)) {
+            throw new VitrineValidationException('La liste fournie ne correspond pas au contenu de la Vitrine.');
+        }
+
+        foreach ($orderedItems as $index => $entry) {
+            $type = $entry['type'] ?? null;
+            $id = $entry['id'] ?? null;
+
+            if ($type === 'post' && isset($postsByPublicationId[$id])) {
+                $postsByPublicationId[$id]->setPosition($index);
+                unset($postsByPublicationId[$id]);
+                continue;
+            }
+
+            if ($type === 'media' && isset($mediaById[$id])) {
+                $mediaById[$id]->setPosition($index);
+                unset($mediaById[$id]);
+                continue;
+            }
+
+            throw new VitrineValidationException('Un élément de la liste ne fait pas partie de cette Vitrine.');
+        }
+
+        $vitrine->touch();
         $this->em->flush();
     }
 
     /**
-     * CA-4 : refuse la publication si la Vitrine ne contient aucun item.
+     * CA-4 : refuse la publication si la Vitrine ne contient ni post ni média.
      */
     public function publish(Vitrine $vitrine, User $actor): void
     {
         $this->assertOwner($vitrine, $actor);
 
-        if ($vitrine->getItems()->isEmpty()) {
+        if ($vitrine->isEmpty()) {
             throw new VitrineEmptyException();
         }
 

@@ -3,14 +3,14 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { concatMap, from } from 'rxjs';
 import { SharedModule } from '../../../shared/shared-module';
 import { NavBarMobile } from '../../../components/nav-bar-mobile/nav-bar-mobile';
 import { AuthService } from '../../../core/services/auth';
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
-import { VitrineService, Vitrine, VitrineItem } from '../../../core/services/vitrine';
+import { PostService } from '../../../core/services/post';
+import { VitrineService, Vitrine, VitrineItem, OrderedItemRef } from '../../../core/services/vitrine';
 
-// US 4.1 — Gestion d'une Vitrine : édition (CA-1), items (CA-2),
-// glisser-déposer (CA-3), publication (CA-4).
 @Component({
   selector: 'app-vitrine-detail',
   imports: [CommonModule, RouterLink, ReactiveFormsModule, DragDropModule, SharedModule, NavBarMobile],
@@ -23,6 +23,7 @@ export class VitrineDetail implements OnInit {
   private readonly router         = inject(Router);
   private readonly fb             = inject(FormBuilder);
   private readonly authService    = inject(AuthService);
+  private readonly postService    = inject(PostService);
   private readonly vitrineService = inject(VitrineService);
 
   protected readonly currentRole = computed<MenuRole>(
@@ -33,18 +34,8 @@ export class VitrineDetail implements OnInit {
   protected readonly isLoading = signal(true);
   protected readonly loadError = signal<string | null>(null);
 
-  // CA-4 : le serveur reste la source de vérité (422 si vide), mais on
-  // désactive déjà le bouton côté client pour éviter l'aller-retour inutile.
   protected readonly canPublish = computed(() => (this.vitrine()?.itemsCount ?? 0) > 0);
 
-  // L'API ne renvoie pas de champ "isOwner" explicite : pour un brouillon,
-  // GET /api/vitrines/{id} répond 404 côté serveur à quiconque n'est pas
-  // le propriétaire (cf. VitrineController::show) — donc si on a réussi à
-  // charger la Vitrine en étant connecté, les contrôles de gestion peuvent
-  // être affichés. Pour une Vitrine publiée, un visiteur connecté qui n'est
-  // pas propriétaire tenterait une action qui échouerait en 403 côté
-  // serveur ; c'est un compromis MVP à affiner plus tard avec un champ
-  // dédié dans la réponse API si besoin.
   protected readonly isOwner = computed(
     () => this.authService.isAuthenticated() && this.vitrine() !== null
   );
@@ -63,8 +54,16 @@ export class VitrineDetail implements OnInit {
   protected readonly isAddingItem = signal(false);
   protected readonly addItemError = signal<string | null>(null);
 
-  protected readonly isPublishing = signal(false);
-  protected readonly publishError = signal<string | null>(null);
+  // Upload multiple de photos/vidéos.
+  protected readonly isUploadingMedia = signal(false);
+  protected readonly uploadMediaError = signal<string | null>(null);
+  protected readonly uploadedCount    = signal(0);
+  protected readonly totalToUpload    = signal(0);
+
+  // Confirmation explicite avant publication.
+  protected readonly showPublishConfirm = signal(false);
+  protected readonly isPublishing        = signal(false);
+  protected readonly publishError        = signal<string | null>(null);
 
   protected readonly isDeleting        = signal(false);
   protected readonly showDeleteConfirm = signal(false);
@@ -145,7 +144,7 @@ export class VitrineDetail implements OnInit {
     });
   }
 
-  // ── CA-2 : items ─────────────────────────────────────────────
+  // ── CA-2 : lier un post existant ──────────────────────────────
 
   addItem(): void {
     if (this.addItemForm.invalid) {
@@ -171,16 +170,75 @@ export class VitrineDetail implements OnInit {
     });
   }
 
-  removeItem(publicationId: string): void {
-    this.vitrineService.removeItem(this.vitrineId, publicationId).subscribe({
-      next: () => this.load(),
+  // ── CA-2 (extension) : upload multiple de photos/vidéos ────────
+
+  onMediaFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+
+    if (files.length === 0) {
+      return;
+    }
+
+    const errors: string[] = [];
+    const validFiles: File[] = [];
+
+    for (const file of files) {
+      const error = this.postService.validateMediaFile(file);
+      if (error) {
+        errors.push(`${file.name} : ${error}`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (errors.length > 0) {
+      this.uploadMediaError.set(errors.join(' '));
+    } else {
+      this.uploadMediaError.set(null);
+    }
+
+    if (validFiles.length === 0) {
+      return;
+    }
+
+    this.isUploadingMedia.set(true);
+    this.uploadedCount.set(0);
+    this.totalToUpload.set(validFiles.length);
+
+    from(validFiles).pipe(
+      concatMap((file) => this.vitrineService.addMedia(this.vitrineId, file)),
+    ).subscribe({
+      next: () => this.uploadedCount.update((n) => n + 1),
       error: (err) => {
-        this.addItemError.set(err?.error?.message ?? 'La suppression de l\'item a échoué.');
+        this.isUploadingMedia.set(false);
+        this.uploadMediaError.set(err?.error?.message ?? 'L\'ajout de certains médias a échoué.');
+        this.load();
+      },
+      complete: () => {
+        this.isUploadingMedia.set(false);
+        this.load();
       },
     });
   }
 
-  // ── CA-3 : glisser-déposer ───────────────────────────────────
+  // ── Suppression d'un item (post ou média) ───────────────────────
+
+  removeItem(item: VitrineItem): void {
+    const request$ = item.type === 'post'
+      ? this.vitrineService.removeItem(this.vitrineId, item.id)
+      : this.vitrineService.removeMedia(this.vitrineId, item.id);
+
+    request$.subscribe({
+      next: () => this.load(),
+      error: (err) => {
+        this.addItemError.set(err?.error?.message ?? 'La suppression a échoué.');
+      },
+    });
+  }
+
+  // ── CA-3 : glisser-déposer unifié ───────────────────────────────
 
   onItemDrop(event: CdkDragDrop<VitrineItem[]>): void {
     const current = this.vitrine();
@@ -191,21 +249,28 @@ export class VitrineDetail implements OnInit {
     const reordered = [...current.items];
     moveItemInArray(reordered, event.previousIndex, event.currentIndex);
 
-    // Optimiste : le nouvel ordre s'affiche immédiatement, confirmé ensuite
-    // côté serveur (source de vérité des positions).
     this.vitrine.set({ ...current, items: reordered });
 
-    const orderedPublicationIds = reordered.map((item) => item.publication.id);
+    const orderedItems: OrderedItemRef[] = reordered.map((item) => ({ type: item.type, id: item.id }));
 
-    this.vitrineService.reorderItems(this.vitrineId, orderedPublicationIds).subscribe({
+    this.vitrineService.reorderItems(this.vitrineId, orderedItems).subscribe({
       next: (vitrine) => this.vitrine.set(vitrine),
-      error: () => this.load(), // annule le déplacement optimiste en cas d'échec serveur
+      error: () => this.load(),
     });
   }
 
-  // ── CA-4 : publication ────────────────────────────────────────
+  // ── CA-4 : confirmation puis publication ────────────────────────
 
-  publish(): void {
+  askPublishConfirmation(): void {
+    this.publishError.set(null);
+    this.showPublishConfirm.set(true);
+  }
+
+  cancelPublishConfirmation(): void {
+    this.showPublishConfirm.set(false);
+  }
+
+  confirmPublish(): void {
     this.isPublishing.set(true);
     this.publishError.set(null);
 
@@ -213,10 +278,10 @@ export class VitrineDetail implements OnInit {
       next: (vitrine) => {
         this.vitrine.set(vitrine);
         this.isPublishing.set(false);
+        this.showPublishConfirm.set(false);
       },
       error: (err) => {
         this.isPublishing.set(false);
-        // CA-4 : message explicite renvoyé par le serveur (422) affiché tel quel.
         this.publishError.set(err?.error?.message ?? 'La publication a échoué. Merci de réessayer.');
       },
     });
@@ -238,7 +303,7 @@ export class VitrineDetail implements OnInit {
     });
   }
 
-  // ── Suppression ──────────────────────────────────────────────
+  // ── Suppression de la Vitrine ──────────────────────────────────
 
   confirmDelete(): void {
     this.showDeleteConfirm.set(true);
@@ -260,5 +325,17 @@ export class VitrineDetail implements OnInit {
         this.deleteError.set(err?.error?.message ?? 'La suppression a échoué. Merci de réessayer.');
       },
     });
+  }
+
+  protected itemThumbnailUrl(item: VitrineItem): string {
+    return item.type === 'post' ? (item.publication?.mediaUrl ?? '') : (item.mediaUrl ?? '');
+  }
+
+  protected itemMediaType(item: VitrineItem): 'IMAGE' | 'VIDEO' {
+    return item.type === 'post' ? (item.publication?.mediaType ?? 'IMAGE') : (item.mediaType ?? 'IMAGE');
+  }
+
+  protected itemLabel(item: VitrineItem): string {
+    return item.type === 'post' ? (item.publication?.title || 'Sans titre') : 'Photo/vidéo';
   }
 }

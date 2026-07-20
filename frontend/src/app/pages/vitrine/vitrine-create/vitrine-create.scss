@@ -18,14 +18,29 @@
   padding: 2rem;
   @include theme.facet-corner;
 
-  .eyebrow {
-    @include theme.catalog-label;
-  }
+  .eyebrow { @include theme.catalog-label; }
 
   h1 {
     margin: 0.3rem 0 0.5rem;
     font-family: theme.$font-display;
   }
+
+  &--confirmation { text-align: center; }
+}
+
+.confirmation-icon {
+  font-size: 2.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: theme.$emerald;
+  margin-bottom: 0.5rem;
+}
+
+.confirmation-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
 }
 
 .vitrine-create-subtitle {
@@ -38,15 +53,6 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-
-  &--inline {
-    gap: 0.85rem;
-  }
-
-  &__actions {
-    display: flex;
-    gap: 0.75rem;
-  }
 }
 
 .field {
@@ -59,9 +65,7 @@
     color: theme.$text-dim;
   }
 
-  &__required {
-    color: theme.$coral;
-  }
+  &__required { color: theme.$coral; }
 
   &__error {
     color: theme.$coral;
@@ -82,5 +86,118 @@
       outline: none;
       border-color: theme.$gold;
     }
+  }
+}
+
+.upload-dropzone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px dashed theme.$line;
+  padding: 1.25rem;
+  cursor: pointer;
+  color: theme.$text-dim;
+  @include theme.facet-corner-sm;
+
+  input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  &:hover {
+    border-color: theme.$gold;
+    color: theme.$gold;
+  }
+
+  &--busy {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+.selected-files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.selected-file {
+  position: relative;
+  aspect-ratio: 1;
+  border: 1px solid theme.$line;
+  overflow: hidden;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+
+  &__video {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: theme.$surface-raised;
+    color: theme.$gold;
+  }
+
+  &__remove {
+    position: absolute;
+    top: 0.2rem;
+    right: 0.2rem;
+    background: rgba(4, 10, 32, 0.7);
+    border: none;
+    color: theme.$text;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    cursor: pointer;
+
+    mat-icon { font-size: 0.9rem; width: 0.9rem; height: 0.9rem; }
+
+    &:hover { background: theme.$coral; }
+  }
+}
+
+.selected-files-count {
+  @include theme.meta-mono;
+  color: theme.$text-dim;
+  margin: 0.5rem 0 0;
+}
+
+.upload-progress {
+  @include theme.meta-mono;
+  color: theme.$gold;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 10, 32, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1.5rem;
+}
+
+.modal {
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  padding: 1.75rem;
+  max-width: 420px;
+  width: 100%;
+  @include theme.facet-corner;
+
+  h2 { margin-top: 0; }
+  p { color: theme.$text-dim; }
+
+  &__actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
   }
 }

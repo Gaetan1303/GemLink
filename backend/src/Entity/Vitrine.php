@@ -1,8 +1,9 @@
 <?php
 
+
+
 namespace App\Entity;
 
-use App\Exception\VitrineValidationException;
 use App\Repository\VitrineRepository;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -11,7 +12,14 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * US 4.1 — Vitrine : collection ordonnée de posts appartenant à un User.
+ * US 4.1 — Vitrine : collection ordonnée de posts existants ET de médias
+ * uploadés directement, appartenant à un User. Les deux types de contenu
+ * partagent un même espace de positions pour un glisser-déposer unifié.
+ *
+ * Toute validation métier (réordonnancement, garde-fou "vide") vit dans
+ * VitrineService, pas ici — cette entité ne fait que porter l'état et les
+ * transitions triviales (publish/unpublish, ajout/retrait de collection),
+ * cohérent avec Publication qui ne valide rien elle-même non plus.
  */
 #[ORM\Entity(repositoryClass: VitrineRepository::class)]
 #[ORM\Table(name: 'vitrine')]
@@ -31,7 +39,7 @@ class Vitrine
     #[ORM\Column(length: 100)]
     private string $title = '';
 
-    #[ORM\Column(length: 150)]
+    #[ORM\Column(length: 150, unique: true)]
     private string $slug = '';
 
     #[ORM\Column(type: 'text', nullable: true)]
@@ -55,6 +63,18 @@ class Vitrine
     #[ORM\OrderBy(['position' => 'ASC'])]
     private Collection $items;
 
+    /**
+     * @var Collection<int, VitrineMedia>
+     */
+    #[ORM\OneToMany(
+        mappedBy: 'vitrine',
+        targetEntity: VitrineMedia::class,
+        cascade: ['persist'],
+        orphanRemoval: true
+    )]
+    #[ORM\OrderBy(['position' => 'ASC'])]
+    private Collection $mediaItems;
+
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $createdAt;
 
@@ -68,6 +88,7 @@ class Vitrine
         $this->title = $title;
         $this->slug = $slug;
         $this->items = new ArrayCollection();
+        $this->mediaItems = new ArrayCollection();
         $this->createdAt = new DateTimeImmutable();
         $this->updatedAt = new DateTimeImmutable();
     }
@@ -130,12 +151,6 @@ class Vitrine
         return $this->status === self::STATUS_PUBLISHED;
     }
 
-    /**
-     * CA-4 : ne fait AUCUNE vérification métier elle-même (pas d'accès aux
-     * items depuis ici au-delà du count) — le garde-fou "vitrine vide" est
-     * porté par VitrineService::publish(), pas par l'entité, pour rester
-     * cohérent avec PostService qui porte déjà toute la validation métier.
-     */
     public function publish(): void
     {
         $this->status = self::STATUS_PUBLISHED;
@@ -158,6 +173,16 @@ class Vitrine
         ++$this->viewCount;
 
         return $this;
+    }
+
+    public function isEmpty(): bool
+    {
+        return $this->items->isEmpty() && $this->mediaItems->isEmpty();
+    }
+
+    public function getItemsCount(): int
+    {
+        return $this->items->count() + $this->mediaItems->count();
     }
 
     /**
@@ -188,50 +213,42 @@ class Vitrine
         return $this;
     }
 
-    public function getNextPosition(): int
+    /**
+     * @return Collection<int, VitrineMedia>
+     */
+    public function getMediaItems(): Collection
     {
-        if ($this->items->isEmpty()) {
-            return 0;
-        }
-
-        $positions = array_map(
-            static fn (VitrinePublication $item): int => $item->getPosition(),
-            $this->items->toArray()
-        );
-
-        return max($positions) + 1;
+        return $this->mediaItems;
     }
 
-    /**
-     * CA-3 : réordonne les items à partir d'une liste ordonnée d'IDs de
-     * publication (pas d'ID propre à VitrinePublication : clé composite).
-     *
-     * @param string[] $orderedPublicationIds
-     */
-    public function reorderItems(array $orderedPublicationIds): void
+    public function addMedia(VitrineMedia $media): self
     {
-        $itemsByPublicationId = [];
-        foreach ($this->items as $item) {
-            $itemsByPublicationId[$item->getPublication()->getId()->toRfc4122()] = $item;
+        if (!$this->mediaItems->contains($media)) {
+            $this->mediaItems->add($media);
+            $media->setVitrine($this);
+            $this->touch();
         }
 
-        if (count($orderedPublicationIds) !== count($itemsByPublicationId)) {
-            throw new VitrineValidationException('La liste fournie ne correspond pas au contenu de la Vitrine.');
+        return $this;
+    }
+
+    public function removeMedia(VitrineMedia $media): self
+    {
+        if ($this->mediaItems->removeElement($media)) {
+            $this->touch();
         }
 
-        foreach ($orderedPublicationIds as $index => $publicationId) {
-            if (!isset($itemsByPublicationId[$publicationId])) {
-                throw new VitrineValidationException(sprintf(
-                    'Le post "%s" ne fait pas partie de cette Vitrine.',
-                    $publicationId
-                ));
-            }
+        return $this;
+    }
 
-            $itemsByPublicationId[$publicationId]->setPosition($index);
-            unset($itemsByPublicationId[$publicationId]);
-        }
+    public function getNextPosition(): int
+    {
+        $positions = array_merge(
+            array_map(static fn (VitrinePublication $i): int => $i->getPosition(), $this->items->toArray()),
+            array_map(static fn (VitrineMedia $i): int => $i->getPosition(), $this->mediaItems->toArray()),
+        );
 
-        $this->touch();
+        return $positions === [] ? 0 : max($positions) + 1;
     }
 
     public function getCreatedAt(): DateTimeImmutable
@@ -244,7 +261,12 @@ class Vitrine
         return $this->updatedAt;
     }
 
-    private function touch(): void
+    /**
+     * Public : VitrineService a besoin de marquer la Vitrine comme modifiée
+     * après un réordonnancement, qui manipule les positions des items
+     * directement plutôt que de passer par un setter de Vitrine.
+     */
+    public function touch(): void
     {
         $this->updatedAt = new DateTimeImmutable();
     }

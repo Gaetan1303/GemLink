@@ -128,7 +128,7 @@ services:
   # ══════════════════════════════════════════════════════════════════════
   gl-ai-brain:
     build:
-      context: ./fastapi
+      context: ./Fastapi
       dockerfile: Dockerfile
     image: gemlink-ai:latest
     container_name: gl-ai-brain

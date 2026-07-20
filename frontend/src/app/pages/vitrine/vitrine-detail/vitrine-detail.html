@@ -56,8 +56,8 @@
               type="button"
               class="btn-publish"
               [disabled]="!canPublish() || isPublishing()"
-              [title]="!canPublish() ? 'Ajoutez au moins un post avant de publier.' : ''"
-              (click)="publish()"
+              [title]="!canPublish() ? 'Ajoutez au moins une photo ou une vidéo avant de publier.' : ''"
+              (click)="askPublishConfirmation()"
             >
               <mat-icon>publish</mat-icon> Publier
             </button>
@@ -75,61 +75,95 @@
         @if (!canPublish() && v.status === 'DRAFT') {
           <p class="vitrine-header__hint">
             <mat-icon>info</mat-icon>
-            Une Vitrine vide ne peut pas être publiée. Ajoutez au moins un post ci-dessous.
+            Une Vitrine vide ne peut pas être publiée. Ajoutez au moins une photo, une vidéo ou un post ci-dessous.
           </p>
-        }
-
-        @if (publishError()) {
-          <div class="alert alert--error" role="alert">{{ publishError() }}</div>
         }
       }
     </header>
 
     @if (isOwner()) {
-      <section class="vitrine-add-item">
-        <h2>Ajouter un post</h2>
-        <form [formGroup]="addItemForm" (ngSubmit)="addItem()" class="vitrine-form vitrine-form--inline">
-          <label class="field">
-            <span class="field__label">Identifiant du post</span>
-            <input type="text" formControlName="publicationId" placeholder="Collez l'identifiant du post à ajouter" />
-          </label>
-          @if (addItemError()) {
-            <div class="alert alert--error" role="alert">{{ addItemError() }}</div>
-          }
-          <button type="submit" class="btn-publish" [disabled]="isAddingItem()">Ajouter</button>
-        </form>
+      <section class="vitrine-add-content">
+        <h2>Ajouter du contenu</h2>
+
+        <div class="vitrine-add-content__grid">
+          <div class="vitrine-add-content__block">
+            <span class="field__label">Uploader des photos ou vidéos</span>
+            <label class="upload-dropzone" [class.upload-dropzone--busy]="isUploadingMedia()">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,video/mp4"
+                multiple
+                (change)="onMediaFilesSelected($event)"
+                [disabled]="isUploadingMedia()"
+              />
+              <mat-icon>add_photo_alternate</mat-icon>
+              <span>
+                @if (isUploadingMedia()) {
+                  Envoi en cours... {{ uploadedCount() }}/{{ totalToUpload() }}
+                } @else {
+                  Choisir une ou plusieurs photos/vidéos
+                }
+              </span>
+            </label>
+            @if (uploadMediaError()) {
+              <div class="alert alert--error" role="alert">{{ uploadMediaError() }}</div>
+            }
+          </div>
+
+          <div class="vitrine-add-content__block">
+            <span class="field__label">Ou lier un post déjà publié</span>
+            <form [formGroup]="addItemForm" (ngSubmit)="addItem()" class="vitrine-form vitrine-form--inline">
+              <input type="text" formControlName="publicationId" placeholder="Identifiant du post" />
+              @if (addItemError()) {
+                <div class="alert alert--error" role="alert">{{ addItemError() }}</div>
+              }
+              <button type="submit" class="btn-secondary" [disabled]="isAddingItem()">Lier ce post</button>
+            </form>
+          </div>
+        </div>
       </section>
     }
 
     <section class="vitrine-items">
-      <h2>{{ v.itemsCount }} pierre{{ v.itemsCount > 1 ? 's' : '' }} dans cette collection</h2>
+      <h2>{{ v.itemsCount }} élément{{ v.itemsCount > 1 ? 's' : '' }} dans cette collection</h2>
 
       @if (v.items.length === 0) {
         <div class="empty-state">
           <mat-icon class="empty-state__icon">diamond</mat-icon>
-          <p>Aucun post dans cette Vitrine pour le moment.</p>
+          <p>Aucune photo, vidéo ou post dans cette Vitrine pour le moment.</p>
         </div>
       } @else if (isOwner()) {
         <div class="vitrine-item-grid" cdkDropList (cdkDropListDropped)="onItemDrop($event)">
-          @for (item of v.items; track item.publication.id) {
+          @for (item of v.items; track item.type + ':' + item.id) {
             <div class="vitrine-item-card" cdkDrag>
               <div class="vitrine-item-card__drag-handle" cdkDragHandle>
                 <mat-icon>drag_indicator</mat-icon>
               </div>
-              <a [routerLink]="['/posts', item.publication.id]" class="vitrine-item-card__media">
-                @if (item.publication.mediaType === 'IMAGE') {
-                  <img [src]="item.publication.mediaUrl" [alt]="item.publication.title ?? 'Pierre'" />
-                } @else {
-                  <div class="vitrine-item-card__video-thumb">
-                    <mat-icon>videocam</mat-icon>
-                  </div>
-                }
-              </a>
-              <span class="vitrine-item-card__title">{{ item.publication.title || 'Sans titre' }}</span>
+
+              @if (item.type === 'post') {
+                <a [routerLink]="['/posts', item.id]" class="vitrine-item-card__media">
+                  @if (itemMediaType(item) === 'IMAGE') {
+                    <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" />
+                  } @else {
+                    <div class="vitrine-item-card__video-thumb"><mat-icon>videocam</mat-icon></div>
+                  }
+                </a>
+                <span class="vitrine-item-card__badge">Post</span>
+              } @else {
+                <div class="vitrine-item-card__media">
+                  @if (itemMediaType(item) === 'IMAGE') {
+                    <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" />
+                  } @else {
+                    <div class="vitrine-item-card__video-thumb"><mat-icon>videocam</mat-icon></div>
+                  }
+                </div>
+              }
+
+              <span class="vitrine-item-card__title">{{ itemLabel(item) }}</span>
               <button
                 type="button"
                 class="vitrine-item-card__remove"
-                (click)="removeItem(item.publication.id)"
+                (click)="removeItem(item)"
                 title="Retirer de la Vitrine"
               >
                 <mat-icon>close</mat-icon>
@@ -139,29 +173,59 @@
         </div>
       } @else {
         <div class="vitrine-item-grid">
-          @for (item of v.items; track item.publication.id) {
-            <a [routerLink]="['/posts', item.publication.id]" class="vitrine-item-card vitrine-item-card--readonly">
-              <div class="vitrine-item-card__media">
-                @if (item.publication.mediaType === 'IMAGE') {
-                  <img [src]="item.publication.mediaUrl" [alt]="item.publication.title ?? 'Pierre'" />
-                } @else {
-                  <div class="vitrine-item-card__video-thumb">
-                    <mat-icon>videocam</mat-icon>
-                  </div>
-                }
+          @for (item of v.items; track item.type + ':' + item.id) {
+            @if (item.type === 'post') {
+              <a [routerLink]="['/posts', item.id]" class="vitrine-item-card vitrine-item-card--readonly">
+                <div class="vitrine-item-card__media">
+                  @if (itemMediaType(item) === 'IMAGE') {
+                    <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" />
+                  } @else {
+                    <div class="vitrine-item-card__video-thumb"><mat-icon>videocam</mat-icon></div>
+                  }
+                </div>
+                <span class="vitrine-item-card__title">{{ itemLabel(item) }}</span>
+              </a>
+            } @else {
+              <div class="vitrine-item-card vitrine-item-card--readonly">
+                <div class="vitrine-item-card__media">
+                  @if (itemMediaType(item) === 'IMAGE') {
+                    <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" />
+                  } @else {
+                    <div class="vitrine-item-card__video-thumb"><mat-icon>videocam</mat-icon></div>
+                  }
+                </div>
               </div>
-              <span class="vitrine-item-card__title">{{ item.publication.title || 'Sans titre' }}</span>
-            </a>
+            }
           }
         </div>
       }
     </section>
 
+    <!-- Confirmation de publication (CA-4) -->
+    @if (showPublishConfirm()) {
+      <div class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal">
+          <h2>Publier cette Vitrine ?</h2>
+          <p>Une fois publiée, elle sera visible par tout le monde, y compris les visiteurs non connectés.</p>
+          @if (publishError()) {
+            <div class="alert alert--error" role="alert">{{ publishError() }}</div>
+          }
+          <div class="modal__actions">
+            <button type="button" class="btn-publish" [disabled]="isPublishing()" (click)="confirmPublish()">
+              Oui, publier
+            </button>
+            <button type="button" class="btn-secondary" (click)="cancelPublishConfirmation()">Annuler</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Confirmation de suppression -->
     @if (showDeleteConfirm()) {
       <div class="modal-overlay" role="dialog" aria-modal="true">
         <div class="modal">
           <h2>Supprimer cette Vitrine ?</h2>
-          <p>Cette action est irréversible. Les posts qu'elle contient ne seront pas supprimés.</p>
+          <p>Cette action est irréversible. Les posts liés ne seront pas supprimés ; les médias uploadés directement dans cette Vitrine le seront.</p>
           @if (deleteError()) {
             <div class="alert alert--error" role="alert">{{ deleteError() }}</div>
           }
