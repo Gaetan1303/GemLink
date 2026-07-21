@@ -1,0 +1,198 @@
+@use '../../post/post-theme' as theme;
+
+.vitrine-detail-page {
+  min-height: 100vh;
+  background-color: theme.$ink;
+  color: theme.$text;
+  padding: 2.5rem 1.5rem 3rem;
+  max-width: 960px;
+  margin: 0 auto;
+  @include theme.mobile-nav-clearance(0rem);
+}
+
+.vitrine-detail-skeleton {
+  height: 240px;
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  @include theme.facet-corner;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.vitrine-header {
+  border-bottom: 1px solid theme.$line;
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+
+  &__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    @include theme.meta-mono;
+    padding: 0.25rem 0.7rem;
+    border: 1px solid theme.$line;
+    border-radius: 999px;
+    margin-bottom: 0.75rem;
+
+    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+
+    &--published {
+      color: theme.$emerald;
+      border-color: rgba(123, 201, 154, 0.35);
+    }
+  }
+
+  h1 { margin: 0 0 0.5rem; font-family: theme.$font-display; }
+
+  &__description {
+    color: theme.$text-dim;
+    line-height: 1.5;
+    margin: 0 0 1.25rem;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+
+  &__hint {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: theme.$gold;
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+
+    mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; }
+  }
+}
+
+.vitrine-add-item {
+  margin-bottom: 2.5rem;
+
+  h2 { font-size: 1rem; @include theme.catalog-label; margin-bottom: 0.75rem; }
+}
+
+.vitrine-items h2 {
+  font-size: 1.1rem;
+  font-family: theme.$font-display;
+  margin-bottom: 1rem;
+}
+
+.vitrine-item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.vitrine-item-card {
+  position: relative;
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: theme.$text;
+  text-decoration: none;
+  @include theme.facet-corner-sm;
+  cursor: grab;
+
+  &.cdk-drag-preview {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  &.cdk-drag-placeholder {
+    opacity: 0.3;
+  }
+
+  &--readonly {
+    cursor: pointer;
+  }
+
+  &__drag-handle {
+    position: absolute;
+    top: 0.3rem;
+    left: 0.3rem;
+    color: theme.$text-faint;
+    cursor: grab;
+  }
+
+  &__media {
+    aspect-ratio: 1;
+    overflow: hidden;
+    display: block;
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+  }
+
+  &__video-thumb {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: theme.$surface-raised;
+    color: theme.$gold;
+  }
+
+  &__title {
+    font-size: 0.85rem;
+    padding: 0 0.2rem 0.2rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__remove {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.3rem;
+    background: rgba(4, 10, 32, 0.7);
+    border: none;
+    color: theme.$text;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 999px;
+    cursor: pointer;
+
+    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+
+    &:hover { background: theme.$coral; }
+  }
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 10, 32, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1.5rem;
+}
+
+.modal {
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  padding: 1.75rem;
+  max-width: 420px;
+  width: 100%;
+  @include theme.facet-corner;
+
+  h2 { margin-top: 0; }
+  p { color: theme.$text-dim; }
+
+  &__actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+  }
+}

@@ -40,6 +40,18 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/post/post-detail/post-detail').then(m => m.PostDetail)
   },
   {
+    path: 'vitrine',
+    loadComponent: () => import('./pages/vitrine/vitrine-list/vitrine-list').then(m => m.VitrineList)
+  },
+  {
+    path: 'vitrines/new',
+    loadComponent: () => import('./pages/vitrine/vitrine-create/vitrine-create').then(m => m.VitrineCreate)
+  },
+  {
+    path: 'vitrines/:id',
+    loadComponent: () => import('./pages/vitrine/vitrine-detail/vitrine-detail').then(m => m.VitrineDetail)
+  },
+  {
     path: 'users/me',
     loadComponent: () => import('./pages/user/profile/profile').then(m => m.Profile)
   },
