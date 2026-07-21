@@ -21,6 +21,17 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
+/**
+ * US 4.1 : logique métier de la Vitrine (création, contenu, réordonnancement,
+ * publication).
+ *
+ * La publication génère un post dans le feed principal (cf. publish()) qui
+ * doit suivre exactement le même pipeline qu'un post créé via
+ * PostService::createPost() : statut initial PENDING_ANALYSIS, puis
+ * déclenchement de l'analyse via AiOrchestrationService::requestAnalysis()
+ * une fois la ligne flushée — jamais avant, le worker Messenger tournant
+ * dans un autre process.
+ */
 class VitrineService
 {
     private const TITLE_MAX_LENGTH = 100;
@@ -32,6 +43,7 @@ class VitrineService
         private readonly VitrinePublicationRepository $vitrinePublications,
         private readonly VitrineMediaRepository $vitrineMedias,
         private readonly MediaUploadService $mediaUploadService,
+        private readonly AiOrchestrationService $aiOrchestration,
     ) {
     }
 
@@ -203,13 +215,39 @@ class VitrineService
             throw new VitrineEmptyException();
         }
 
+        $generatedPost = $vitrine->getGeneratedPost();
+        $isNewGeneratedPost = false;
+
+        if ($generatedPost === null) {
+            $generatedPost = $this->createGeneratedPost($vitrine);
+            $vitrine->setGeneratedPost($generatedPost);
+            $isNewGeneratedPost = true;
+        } elseif ($generatedPost->isDeleted()) {
+            $generatedPost->setDeletedAt(null);
+        }
+
         $vitrine->publish();
         $this->em->flush();
+
+        // CA-3 (US 2.1) : même règle que PostService::createPost() — ne
+        // jamais déclencher l'analyse avant que la ligne soit flushée, le
+        // worker Messenger tournant dans un autre process doit pouvoir la
+        // relire. Et uniquement pour un post fraîchement généré : republier
+        // une Vitrine dont le post a déjà été analysé ne doit pas relancer
+        // une analyse inutile.
+        if ($isNewGeneratedPost) {
+            $this->aiOrchestration->requestAnalysis($generatedPost);
+        }
     }
 
     public function unpublish(Vitrine $vitrine, User $actor): void
     {
         $this->assertOwner($vitrine, $actor);
+
+        $generatedPost = $vitrine->getGeneratedPost();
+        if ($generatedPost !== null && !$generatedPost->isDeleted()) {
+            $generatedPost->setDeletedAt(new DateTimeImmutable());
+        }
 
         $vitrine->unpublish();
         $this->em->flush();
@@ -226,6 +264,54 @@ class VitrineService
         if (!$vitrine->getUser()->getId()->equals($actor->getId())) {
             throw new VitrineAccessDeniedException('Vous n\'êtes pas propriétaire de cette Vitrine.');
         }
+    }
+
+    private function createGeneratedPost(Vitrine $vitrine): Publication
+    {
+        $cover = $this->resolveCoverMedia($vitrine);
+
+        $post = new Publication($vitrine->getUser(), $cover['mediaUrl'], $cover['mediaType']);
+        $post->setTitle($vitrine->getTitle());
+
+        if ($vitrine->getDescription() !== null) {
+            $post->setDescription($vitrine->getDescription());
+        }
+
+        // Statut par défaut de l'entité (PENDING_ANALYSIS) conservé — ne
+        // JAMAIS appeler setStatus('PUBLISHED') ici. C'est
+        // AiOrchestrationService::requestAnalysis(), appelé depuis
+        // publish() une fois le flush effectué, qui fait progresser ce
+        // statut, exactement comme pour un post créé via
+        // PostService::createPost().
+        $this->em->persist($post);
+
+        return $post;
+    }
+
+    /**
+     * @return array{mediaUrl: string, mediaType: string}
+     */
+    private function resolveCoverMedia(Vitrine $vitrine): array
+    {
+        $candidates = [];
+
+        foreach ($vitrine->getItems() as $item) {
+            $candidates[$item->getPosition()] = [
+                'mediaUrl' => $item->getPublication()->getMediaUrl(),
+                'mediaType' => $item->getPublication()->getMediaType(),
+            ];
+        }
+
+        foreach ($vitrine->getMediaItems() as $media) {
+            $candidates[$media->getPosition()] = [
+                'mediaUrl' => $media->getMediaUrl(),
+                'mediaType' => $media->getMediaType(),
+            ];
+        }
+
+        ksort($candidates);
+
+        return array_values($candidates)[0];
     }
 
     private function sanitizeTitle(?string $title): string

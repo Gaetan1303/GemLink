@@ -15,11 +15,6 @@ use Symfony\Component\Uid\Uuid;
  * US 4.1 — Vitrine : collection ordonnée de posts existants ET de médias
  * uploadés directement, appartenant à un User. Les deux types de contenu
  * partagent un même espace de positions pour un glisser-déposer unifié.
- *
- * Toute validation métier (réordonnancement, garde-fou "vide") vit dans
- * VitrineService, pas ici — cette entité ne fait que porter l'état et les
- * transitions triviales (publish/unpublish, ajout/retrait de collection),
- * cohérent avec Publication qui ne valide rien elle-même non plus.
  */
 #[ORM\Entity(repositoryClass: VitrineRepository::class)]
 #[ORM\Table(name: 'vitrine')]
@@ -50,6 +45,14 @@ class Vitrine
 
     #[ORM\Column(name: 'view_count', type: 'integer', options: ['default' => 0])]
     private int $viewCount = 0;
+
+    /**
+     * Post généré automatiquement dans le feed principal lors de la
+     * publication de cette Vitrine (cf. VitrineService::publish()).
+     */
+    #[ORM\ManyToOne(targetEntity: Publication::class)]
+    #[ORM\JoinColumn(name: 'publication_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Publication $generatedPost = null;
 
     /**
      * @var Collection<int, VitrinePublication>
@@ -163,6 +166,18 @@ class Vitrine
         $this->touch();
     }
 
+    public function getGeneratedPost(): ?Publication
+    {
+        return $this->generatedPost;
+    }
+
+    public function setGeneratedPost(?Publication $generatedPost): self
+    {
+        $this->generatedPost = $generatedPost;
+
+        return $this;
+    }
+
     public function getViewCount(): int
     {
         return $this->viewCount;
@@ -261,11 +276,6 @@ class Vitrine
         return $this->updatedAt;
     }
 
-    /**
-     * Public : VitrineService a besoin de marquer la Vitrine comme modifiée
-     * après un réordonnancement, qui manipule les positions des items
-     * directement plutôt que de passer par un setter de Vitrine.
-     */
     public function touch(): void
     {
         $this->updatedAt = new DateTimeImmutable();
