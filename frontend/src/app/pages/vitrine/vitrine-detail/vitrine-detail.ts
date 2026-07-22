@@ -13,7 +13,7 @@ import { VitrineService, Vitrine, VitrineItem, OrderedItemRef } from '../../../c
 
 @Component({
   selector: 'app-vitrine-detail',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, DragDropModule, SharedModule, NavBarMobile],
+  imports: [CommonModule, ReactiveFormsModule, DragDropModule, SharedModule, NavBarMobile],
   templateUrl: './vitrine-detail.html',
   styleUrls: ['./vitrine-detail.scss'],
 })
@@ -35,7 +35,6 @@ export class VitrineDetail implements OnInit {
   protected readonly loadError = signal<string | null>(null);
 
   protected readonly canPublish = computed(() => (this.vitrine()?.itemsCount ?? 0) > 0);
-
   protected readonly isOwner = computed(
     () => this.authService.isAuthenticated() && this.vitrine() !== null
   );
@@ -54,16 +53,14 @@ export class VitrineDetail implements OnInit {
   protected readonly isAddingItem = signal(false);
   protected readonly addItemError = signal<string | null>(null);
 
-  // Upload multiple de photos/vidéos.
   protected readonly isUploadingMedia = signal(false);
   protected readonly uploadMediaError = signal<string | null>(null);
   protected readonly uploadedCount    = signal(0);
   protected readonly totalToUpload    = signal(0);
 
-  // Confirmation explicite avant publication.
   protected readonly showPublishConfirm = signal(false);
-  protected readonly isPublishing        = signal(false);
-  protected readonly publishError        = signal<string | null>(null);
+  protected readonly isPublishing       = signal(false);
+  protected readonly publishError       = signal<string | null>(null);
 
   protected readonly isDeleting        = signal(false);
   protected readonly showDeleteConfirm = signal(false);
@@ -105,8 +102,6 @@ export class VitrineDetail implements OnInit {
     });
   }
 
-  // ── CA-1 : édition ────────────────────────────────────────────
-
   startEditing(): void {
     this.saveError.set(null);
     this.isEditing.set(true);
@@ -144,8 +139,6 @@ export class VitrineDetail implements OnInit {
     });
   }
 
-  // ── CA-2 : lier un post existant ──────────────────────────────
-
   addItem(): void {
     if (this.addItemForm.invalid) {
       this.addItemForm.markAllAsTouched();
@@ -170,16 +163,12 @@ export class VitrineDetail implements OnInit {
     });
   }
 
-  // ── CA-2 (extension) : upload multiple de photos/vidéos ────────
-
   onMediaFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     input.value = '';
 
-    if (files.length === 0) {
-      return;
-    }
+    if (files.length === 0) return;
 
     const errors: string[] = [];
     const validFiles: File[] = [];
@@ -193,15 +182,9 @@ export class VitrineDetail implements OnInit {
       validFiles.push(file);
     }
 
-    if (errors.length > 0) {
-      this.uploadMediaError.set(errors.join(' '));
-    } else {
-      this.uploadMediaError.set(null);
-    }
+    this.uploadMediaError.set(errors.length > 0 ? errors.join(' ') : null);
 
-    if (validFiles.length === 0) {
-      return;
-    }
+    if (validFiles.length === 0) return;
 
     this.isUploadingMedia.set(true);
     this.uploadedCount.set(0);
@@ -223,8 +206,6 @@ export class VitrineDetail implements OnInit {
     });
   }
 
-  // ── Suppression d'un item (post ou média) ───────────────────────
-
   removeItem(item: VitrineItem): void {
     const request$ = item.type === 'post'
       ? this.vitrineService.removeItem(this.vitrineId, item.id)
@@ -232,23 +213,16 @@ export class VitrineDetail implements OnInit {
 
     request$.subscribe({
       next: () => this.load(),
-      error: (err) => {
-        this.addItemError.set(err?.error?.message ?? 'La suppression a échoué.');
-      },
+      error: (err) => this.addItemError.set(err?.error?.message ?? 'La suppression a échoué.'),
     });
   }
 
-  // ── CA-3 : glisser-déposer unifié ───────────────────────────────
-
   onItemDrop(event: CdkDragDrop<VitrineItem[]>): void {
     const current = this.vitrine();
-    if (!current) {
-      return;
-    }
+    if (!current) return;
 
     const reordered = [...current.items];
     moveItemInArray(reordered, event.previousIndex, event.currentIndex);
-
     this.vitrine.set({ ...current, items: reordered });
 
     const orderedItems: OrderedItemRef[] = reordered.map((item) => ({ type: item.type, id: item.id }));
@@ -258,8 +232,6 @@ export class VitrineDetail implements OnInit {
       error: () => this.load(),
     });
   }
-
-  // ── CA-4 : confirmation puis publication ────────────────────────
 
   askPublishConfirmation(): void {
     this.publishError.set(null);
@@ -302,8 +274,6 @@ export class VitrineDetail implements OnInit {
       },
     });
   }
-
-  // ── Suppression de la Vitrine ──────────────────────────────────
 
   confirmDelete(): void {
     this.showDeleteConfirm.set(true);

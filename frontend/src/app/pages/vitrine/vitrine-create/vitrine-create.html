@@ -7,6 +7,7 @@
     <div class="vitrine-create-card">
       <span class="eyebrow">Nouvelle collection</span>
       <h1>Créer une Vitrine</h1>
+      <div class="engraved-rule"><span class="diamond"></span></div>
       <p class="vitrine-create-subtitle">
         Rassemblez plusieurs photos et vidéos de vos pierres dans une collection organisée.
       </p>
@@ -25,12 +26,7 @@
 
         <label class="field">
           <span class="field__label">Description</span>
-          <textarea
-            formControlName="description"
-            maxlength="500"
-            rows="4"
-            placeholder="Une brève présentation de votre collection (optionnel)"
-          ></textarea>
+          <textarea formControlName="description" maxlength="500" rows="4" placeholder="Une brève présentation de votre collection (optionnel)"></textarea>
           @if (vitrineForm.get('description')?.hasError('maxlength')) {
             <span class="field__error">500 caractères maximum.</span>
           }
@@ -52,13 +48,12 @@
 
           @if (fileErrors().length > 0) {
             <div class="alert alert--error" role="alert">
-              @for (error of fileErrors(); track error) {
-                <p>{{ error }}</p>
-              }
+              @for (error of fileErrors(); track error) { <p>{{ error }}</p> }
             </div>
           }
 
           @if (selectedFiles().length > 0) {
+            <!-- Mosaïque fixe des fichiers sélectionnés — jamais de carrousel. -->
             <div class="selected-files-grid">
               @for (item of selectedFiles(); track item.previewUrl; let i = $index) {
                 <div class="selected-file">
@@ -67,12 +62,7 @@
                   } @else {
                     <img [src]="item.previewUrl" [alt]="item.file.name" />
                   }
-                  <button
-                    type="button"
-                    class="selected-file__remove"
-                    (click)="removeSelectedFile(i)"
-                    title="Retirer"
-                  >
+                  <button type="button" class="selected-file__remove" (click)="removeSelectedFile(i)" title="Retirer">
                     <mat-icon>close</mat-icon>
                   </button>
                 </div>
@@ -98,17 +88,17 @@
       </form>
     </div>
   } @else {
-    <!-- Confirmation de création -->
-    <div class="vitrine-create-card vitrine-create-card--confirmation">
-      <mat-icon class="confirmation-icon">check_circle</mat-icon>
+    <div class="vitrine-create-card vitrine-confirmation">
+      <mat-icon class="vitrine-confirmation__icon">check_circle</mat-icon>
       <h1>Vitrine créée !</h1>
+      <div class="engraved-rule"><span class="diamond"></span></div>
       <p class="vitrine-create-subtitle">
         « {{ createdVitrine()!.title }} » a été créée avec {{ createdVitrine()!.itemsCount }}
         élément{{ createdVitrine()!.itemsCount > 1 ? 's' : '' }}. Elle est pour l'instant en brouillon,
         visible uniquement par vous.
       </p>
 
-      <div class="confirmation-actions">
+      <div class="vitrine-confirmation__actions">
         <button type="button" class="btn-publish" (click)="askPublishConfirmation()">
           <mat-icon>publish</mat-icon> Publier maintenant
         </button>
@@ -118,7 +108,6 @@
       </div>
     </div>
 
-    <!-- Deuxième confirmation, avant publication -->
     @if (showPublishConfirm()) {
       <div class="modal-overlay" role="dialog" aria-modal="true">
         <div class="modal">
@@ -128,9 +117,7 @@
             <div class="alert alert--error" role="alert">{{ publishError() }}</div>
           }
           <div class="modal__actions">
-            <button type="button" class="btn-publish" [disabled]="isPublishing()" (click)="confirmPublish()">
-              Oui, publier
-            </button>
+            <button type="button" class="btn-publish" [disabled]="isPublishing()" (click)="confirmPublish()">Oui, publier</button>
             <button type="button" class="btn-secondary" (click)="cancelPublishConfirmation()">Annuler</button>
           </div>
         </div>

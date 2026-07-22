@@ -3,30 +3,30 @@
 
 <main class="vitrine-list-page" id="main-content">
 
-  <div class="vitrine-list-header">
-    <div>
-      <span class="eyebrow">Vos vitrines</span>
-      <h1>Mes collections</h1>
-    </div>
+  <header class="vitrine-page-header">
+    <span class="eyebrow">Vos vitrines</span>
+    <h1>Mes collections</h1>
+    <div class="engraved-rule"><span class="diamond"></span></div>
+    <p class="vitrine-page-header__subtitle">Chaque pièce mise en lumière, comme sous verre.</p>
     <a routerLink="/vitrines/new" class="btn-publish">
       <mat-icon>add</mat-icon>
       Nouvelle Vitrine
     </a>
-  </div>
+  </header>
 
   @if (loadError()) {
     <div class="alert alert--error" role="alert">{{ loadError() }}</div>
   }
 
   @if (isLoading()) {
-    <div class="vitrine-grid vitrine-grid--skeleton" aria-hidden="true">
+    <div class="vitrine-grid" aria-hidden="true">
       @for (i of [1, 2, 3]; track i) {
         <div class="skeleton-card"></div>
       }
     </div>
   } @else if (vitrines().length === 0) {
     <div class="empty-state">
-      <mat-icon class="empty-state__icon">collections_bookmark</mat-icon>
+      <mat-icon class="empty-state__icon">diamond</mat-icon>
       <h2>Aucune Vitrine pour le moment</h2>
       <p>Regroupez vos plus belles pierres dans une collection organisée et partageable.</p>
       <a routerLink="/vitrines/new" class="btn-publish">
@@ -36,21 +36,48 @@
     </div>
   } @else {
     <div class="vitrine-grid">
-      @for (vitrine of vitrines(); track vitrine.id) {
-        <a [routerLink]="['/vitrines', vitrine.id]" class="vitrine-card">
-          <div
-            class="vitrine-card__status"
-            [class.vitrine-card__status--published]="vitrine.status === 'PUBLISHED'"
+      @for (vitrine of vitrines(); track vitrine.id; let i = $index) {
+        <a
+          [routerLink]="['/vitrines', vitrine.id]"
+          class="piece"
+          [style.--reveal-delay]="(i * 60) + 'ms'"
+        >
+          <div class="piece-cover"
+            [class.piece-cover--1]="coverTiles(vitrine).length === 1"
+            [class.piece-cover--2]="coverTiles(vitrine).length === 2"
+            [class.piece-cover--3]="coverTiles(vitrine).length >= 3"
           >
-            {{ vitrine.status === 'PUBLISHED' ? 'Publiée' : 'Brouillon' }}
+            @if (coverTiles(vitrine).length === 0) {
+              <div class="piece-cover__empty"><mat-icon>diamond</mat-icon></div>
+            } @else {
+              @for (tile of coverTiles(vitrine); track $index; let ti = $index) {
+                <div class="piece-cover__tile">
+                  @if (tile.isVideo) {
+                    <div class="piece-cover__video"><mat-icon>videocam</mat-icon></div>
+                  } @else {
+                    <img [src]="tile.url" alt="" loading="lazy" />
+                  }
+                  @if (ti === 2 && overflowCount(vitrine) > 0) {
+                    <span class="piece-cover__more">+{{ overflowCount(vitrine) }}</span>
+                  }
+                </div>
+              }
+            }
           </div>
-          <h2 class="vitrine-card__title">{{ vitrine.title }}</h2>
-          @if (vitrine.description) {
-            <p class="vitrine-card__description">{{ vitrine.description }}</p>
-          }
-          <span class="vitrine-card__count">
-            {{ vitrine.itemsCount }} pierre{{ vitrine.itemsCount > 1 ? 's' : '' }}
-          </span>
+
+          <div class="piece-body">
+            <span class="piece-status" [class.piece-status--published]="vitrine.status === 'PUBLISHED'">
+              {{ vitrine.status === 'PUBLISHED' ? 'Publiée' : 'Brouillon' }}
+            </span>
+            <h3 class="piece-title">{{ vitrine.title }}</h3>
+            @if (vitrine.description) {
+              <p class="piece-description">{{ vitrine.description }}</p>
+            }
+            <div class="plaque">
+              <span>{{ vitrine.itemsCount }} pièce{{ vitrine.itemsCount > 1 ? 's' : '' }}</span>
+              <span>{{ vitrine.viewCount }} vue{{ vitrine.viewCount > 1 ? 's' : '' }}</span>
+            </div>
+          </div>
         </a>
       }
     </div>

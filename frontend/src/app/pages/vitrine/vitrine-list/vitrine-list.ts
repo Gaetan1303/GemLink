@@ -5,9 +5,16 @@ import { SharedModule } from '../../../shared/shared-module';
 import { NavBarMobile } from '../../../components/nav-bar-mobile/nav-bar-mobile';
 import { AuthService } from '../../../core/services/auth';
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
-import { VitrineService, Vitrine } from '../../../core/services/vitrine';
+import { VitrineService, Vitrine, VitrineItem } from '../../../core/services/vitrine';
 
-// US 4.1 — Liste des Vitrines de l'utilisateur connecté.
+interface CoverTile {
+  url:     string;
+  isVideo: boolean;
+}
+
+// US 4.1 — Liste des Vitrines, concept "écrin" : chaque carte affiche
+// une mosaïque fixe de ses 3 premières pièces (jamais de carrousel —
+// une grille statique avec badge "+N" pour le reste).
 @Component({
   selector: 'app-vitrine-list',
   imports: [CommonModule, RouterLink, SharedModule, NavBarMobile],
@@ -38,5 +45,20 @@ export class VitrineList implements OnInit {
         this.isLoading.set(false);
       },
     });
+  }
+
+  protected coverTiles(vitrine: Vitrine): CoverTile[] {
+    return vitrine.items.slice(0, 3).map((item) => this.toTile(item));
+  }
+
+  protected overflowCount(vitrine: Vitrine): number {
+    return Math.max(0, vitrine.itemsCount - 3);
+  }
+
+  private toTile(item: VitrineItem): CoverTile {
+    if (item.type === 'post') {
+      return { url: item.publication?.mediaUrl ?? '', isVideo: item.publication?.mediaType === 'VIDEO' };
+    }
+    return { url: item.mediaUrl ?? '', isVideo: item.mediaType === 'VIDEO' };
   }
 }

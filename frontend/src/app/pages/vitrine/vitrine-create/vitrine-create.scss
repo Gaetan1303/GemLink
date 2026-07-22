@@ -1,4 +1,5 @@
 @use '../../post/post-theme' as theme;
+@use '../vitrine-shared' as shared;
 
 .vitrine-create-page {
   min-height: 100vh;
@@ -6,198 +7,124 @@
   color: theme.$text;
   display: flex;
   justify-content: center;
-  padding: 3rem 1.5rem;
+  padding: 3.5rem 1.5rem;
   @include theme.mobile-nav-clearance(0rem);
 }
 
 .vitrine-create-card {
   width: 100%;
   max-width: 560px;
-  background: theme.$surface;
-  border: 1px solid theme.$line;
-  padding: 2rem;
-  @include theme.facet-corner;
+  text-align: center;
 
-  .eyebrow { @include theme.catalog-label; }
+  .eyebrow { @include shared.catalog-eyebrow; }
 
   h1 {
-    margin: 0.3rem 0 0.5rem;
+    margin: 0.6rem 0 1rem;
     font-family: theme.$font-display;
+    font-weight: 800;
+    font-size: 1.85rem;
+    color: theme.$gold;
   }
-
-  &--confirmation { text-align: center; }
 }
 
-.confirmation-icon {
-  font-size: 2.75rem;
-  width: 2.75rem;
-  height: 2.75rem;
-  color: theme.$emerald;
-  margin-bottom: 0.5rem;
-}
+.engraved-rule { @include shared.engraved-rule; margin: 0 auto 1.25rem; }
 
-.confirmation-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
+.vitrine-confirmation {
+  &__icon { font-size: 2.75rem; width: 2.75rem; height: 2.75rem; color: theme.$emerald; margin-bottom: 0.5rem; }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+
+    button { justify-content: center; }
+  }
 }
 
 .vitrine-create-subtitle {
   color: theme.$text-dim;
+  line-height: 1.7;
   margin: 0 0 1.75rem;
-  line-height: 1.5;
 }
 
 .vitrine-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
+  text-align: left;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.5rem;
 
-  &__label {
-    @include theme.meta-mono;
-    color: theme.$text-dim;
-  }
+  &__label { @include shared.form-field-label; }
+  &__required { color: theme.$gold; }
+  &__error { font-size: 0.8rem; color: theme.$coral; margin: 0; }
 
-  &__required { color: theme.$coral; }
-
-  &__error {
-    color: theme.$coral;
-    font-size: 0.82rem;
-  }
-
-  input,
-  textarea {
-    background: theme.$ink;
-    border: 1px solid theme.$line;
-    color: theme.$text;
-    padding: 0.7rem 0.85rem;
-    font-family: theme.$font-display;
-    font-size: 0.95rem;
-    resize: vertical;
-
-    &:focus {
-      outline: none;
-      border-color: theme.$gold;
-    }
-  }
+  input, textarea { @include shared.form-field-input; }
+  textarea { resize: vertical; }
 }
 
 .upload-dropzone {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border: 1px dashed theme.$line;
-  padding: 1.25rem;
-  cursor: pointer;
-  color: theme.$text-dim;
-  @include theme.facet-corner-sm;
+  @include shared.upload-dropzone;
+  flex-direction: column;
+  padding: 2.25rem 1.5rem;
+  text-align: center;
 
-  input[type="file"] {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-  }
-
-  &:hover {
-    border-color: theme.$gold;
-    color: theme.$gold;
-  }
-
-  &--busy {
-    opacity: 0.6;
-    pointer-events: none;
-  }
+  mat-icon { font-size: 2rem; width: 2rem; height: 2rem; }
+  span { font-family: theme.$font-display; font-weight: 600; }
 }
 
+.alert { @include shared.alert-base; &--error { @include shared.alert-error; } }
+
+// Mosaïque des fichiers sélectionnés — grille fixe, pas de carrousel.
 .selected-files-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   gap: 0.6rem;
-  margin-top: 0.75rem;
+  margin-top: 0.9rem;
 }
 
 .selected-file {
   position: relative;
   aspect-ratio: 1;
-  border: 1px solid theme.$line;
+  border: 1px solid rgba(197, 160, 89, 0.25);
   overflow: hidden;
+  border-radius: 4px;
 
   img { width: 100%; height: 100%; object-fit: cover; }
 
   &__video {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
     background: theme.$surface-raised;
     color: theme.$gold;
   }
 
   &__remove {
     position: absolute;
-    top: 0.2rem;
-    right: 0.2rem;
-    background: rgba(4, 10, 32, 0.7);
-    border: none;
-    color: theme.$text;
-    width: 1.4rem;
-    height: 1.4rem;
-    border-radius: 999px;
-    cursor: pointer;
+    top: 0.15rem;
+    right: 0.15rem;
+    @include shared.btn-icon-remove;
+    width: 1.3rem;
+    height: 1.3rem;
 
-    mat-icon { font-size: 0.9rem; width: 0.9rem; height: 0.9rem; }
-
-    &:hover { background: theme.$coral; }
+    mat-icon { font-size: 0.85rem; width: 0.85rem; height: 0.85rem; }
   }
 }
 
-.selected-files-count {
-  @include theme.meta-mono;
-  color: theme.$text-dim;
-  margin: 0.5rem 0 0;
-}
+.selected-files-count { @include theme.meta-mono; color: theme.$text-dim; margin: 0.5rem 0 0; }
 
-.upload-progress {
-  @include theme.meta-mono;
-  color: theme.$gold;
-}
+.upload-progress { @include theme.meta-mono; color: theme.$gold; }
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(4, 10, 32, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-  padding: 1.5rem;
-}
+.btn-publish { @include shared.btn-publish; }
+.btn-secondary { @include shared.btn-secondary; }
 
+.modal-overlay { @include shared.modal-overlay; }
 .modal {
-  background: theme.$surface;
-  border: 1px solid theme.$line;
-  padding: 1.75rem;
-  max-width: 420px;
-  width: 100%;
-  @include theme.facet-corner;
-
-  h2 { margin-top: 0; }
-  p { color: theme.$text-dim; }
-
-  &__actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 1.25rem;
-  }
+  @include shared.modal;
+  &__actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; flex-wrap: wrap; }
 }
