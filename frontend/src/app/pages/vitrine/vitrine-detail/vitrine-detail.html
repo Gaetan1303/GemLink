@@ -12,16 +12,14 @@
   } @else if (vitrine(); as v) {
 
     <header class="vitrine-header">
-      <div
-        class="vitrine-header__status"
-        [class.vitrine-header__status--published]="v.status === 'PUBLISHED'"
-      >
+      <span class="vitrine-header__status" [class.vitrine-header__status--published]="v.status === 'PUBLISHED'">
         <mat-icon>{{ v.status === 'PUBLISHED' ? 'public' : 'lock' }}</mat-icon>
         {{ v.status === 'PUBLISHED' ? 'Publiée' : 'Brouillon' }}
-      </div>
+      </span>
 
       @if (!isEditing()) {
         <h1>{{ v.title }}</h1>
+        <div class="engraved-rule"><span class="diamond"></span></div>
         @if (v.description) {
           <p class="vitrine-header__description">{{ v.description }}</p>
         }
@@ -78,13 +76,16 @@
             Une Vitrine vide ne peut pas être publiée. Ajoutez au moins une photo, une vidéo ou un post ci-dessous.
           </p>
         }
+
+        @if (publishError() && !showPublishConfirm()) {
+          <div class="alert alert--error" role="alert">{{ publishError() }}</div>
+        }
       }
     </header>
 
     @if (isOwner()) {
       <section class="vitrine-add-content">
         <h2>Ajouter du contenu</h2>
-
         <div class="vitrine-add-content__grid">
           <div class="vitrine-add-content__block">
             <span class="field__label">Uploader des photos ou vidéos</span>
@@ -125,7 +126,7 @@
     }
 
     <section class="vitrine-items">
-      <h2>{{ v.itemsCount }} élément{{ v.itemsCount > 1 ? 's' : '' }} dans cette collection</h2>
+      <h2>{{ v.itemsCount }} pièce{{ v.itemsCount > 1 ? 's' : '' }} dans cette collection</h2>
 
       @if (v.items.length === 0) {
         <div class="empty-state">
@@ -134,38 +135,26 @@
         </div>
       } @else if (isOwner()) {
         <div class="vitrine-item-grid" cdkDropList (cdkDropListDropped)="onItemDrop($event)">
-          @for (item of v.items; track item.type + ':' + item.id) {
-            <div class="vitrine-item-card" cdkDrag>
-              <div class="vitrine-item-card__drag-handle" cdkDragHandle>
+          @for (item of v.items; track item.type + ':' + item.id; let i = $index) {
+            <div class="piece piece--item" cdkDrag [style.--reveal-delay]="(i * 45) + 'ms'">
+              <div class="piece--item__drag-handle" cdkDragHandle>
                 <mat-icon>drag_indicator</mat-icon>
               </div>
 
-              @if (item.type === 'post') {
-                <a [routerLink]="['/posts', item.id]" class="vitrine-item-card__media">
-                  @if (itemMediaType(item) === 'IMAGE') {
-                    <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" />
-                  } @else {
-                    <div class="vitrine-item-card__video-thumb"><mat-icon>videocam</mat-icon></div>
-                  }
-                </a>
-                <span class="vitrine-item-card__badge">Post</span>
-              } @else {
-                <div class="vitrine-item-card__media">
-                  @if (itemMediaType(item) === 'IMAGE') {
-                    <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" />
-                  } @else {
-                    <div class="vitrine-item-card__video-thumb"><mat-icon>videocam</mat-icon></div>
-                  }
-                </div>
-              }
+              <div class="piece-cover piece-cover--1">
+                @if (itemMediaType(item) === 'IMAGE') {
+                  <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" />
+                } @else {
+                  <div class="piece-cover__video"><mat-icon>videocam</mat-icon></div>
+                }
+                @if (item.type === 'post') {
+                  <span class="piece-cover__badge">Post</span>
+                }
+              </div>
 
-              <span class="vitrine-item-card__title">{{ itemLabel(item) }}</span>
-              <button
-                type="button"
-                class="vitrine-item-card__remove"
-                (click)="removeItem(item)"
-                title="Retirer de la Vitrine"
-              >
+              <div class="piece--item__title">{{ itemLabel(item) }}</div>
+
+              <button type="button" class="piece--item__remove" (click)="removeItem(item)" title="Retirer de la Vitrine">
                 <mat-icon>close</mat-icon>
               </button>
             </div>
@@ -174,34 +163,21 @@
       } @else {
         <div class="vitrine-item-grid">
           @for (item of v.items; track item.type + ':' + item.id) {
-            @if (item.type === 'post') {
-              <a [routerLink]="['/posts', item.id]" class="vitrine-item-card vitrine-item-card--readonly">
-                <div class="vitrine-item-card__media">
-                  @if (itemMediaType(item) === 'IMAGE') {
-                    <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" />
-                  } @else {
-                    <div class="vitrine-item-card__video-thumb"><mat-icon>videocam</mat-icon></div>
-                  }
-                </div>
-                <span class="vitrine-item-card__title">{{ itemLabel(item) }}</span>
-              </a>
-            } @else {
-              <div class="vitrine-item-card vitrine-item-card--readonly">
-                <div class="vitrine-item-card__media">
-                  @if (itemMediaType(item) === 'IMAGE') {
-                    <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" />
-                  } @else {
-                    <div class="vitrine-item-card__video-thumb"><mat-icon>videocam</mat-icon></div>
-                  }
-                </div>
+            <div class="piece piece--item piece--item--readonly">
+              <div class="piece-cover piece-cover--1">
+                @if (itemMediaType(item) === 'IMAGE') {
+                  <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" />
+                } @else {
+                  <div class="piece-cover__video"><mat-icon>videocam</mat-icon></div>
+                }
               </div>
-            }
+              <div class="piece--item__title">{{ itemLabel(item) }}</div>
+            </div>
           }
         </div>
       }
     </section>
 
-    <!-- Confirmation de publication (CA-4) -->
     @if (showPublishConfirm()) {
       <div class="modal-overlay" role="dialog" aria-modal="true">
         <div class="modal">
@@ -211,16 +187,13 @@
             <div class="alert alert--error" role="alert">{{ publishError() }}</div>
           }
           <div class="modal__actions">
-            <button type="button" class="btn-publish" [disabled]="isPublishing()" (click)="confirmPublish()">
-              Oui, publier
-            </button>
+            <button type="button" class="btn-publish" [disabled]="isPublishing()" (click)="confirmPublish()">Oui, publier</button>
             <button type="button" class="btn-secondary" (click)="cancelPublishConfirmation()">Annuler</button>
           </div>
         </div>
       </div>
     }
 
-    <!-- Confirmation de suppression -->
     @if (showDeleteConfirm()) {
       <div class="modal-overlay" role="dialog" aria-modal="true">
         <div class="modal">
@@ -230,9 +203,7 @@
             <div class="alert alert--error" role="alert">{{ deleteError() }}</div>
           }
           <div class="modal__actions">
-            <button type="button" class="btn-danger" [disabled]="isDeleting()" (click)="deleteVitrine()">
-              Supprimer
-            </button>
+            <button type="button" class="btn-danger" [disabled]="isDeleting()" (click)="deleteVitrine()">Supprimer</button>
             <button type="button" class="btn-secondary" (click)="cancelDelete()">Annuler</button>
           </div>
         </div>
