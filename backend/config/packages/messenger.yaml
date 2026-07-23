@@ -5,10 +5,24 @@ framework:
         transports:
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 5
+                    delay: 1000
+                    multiplier: 2
+                    max_delay: 60000
 
-       
+            # US 4.2 - CA-2 : uniquement si vous choisissez le Symfony
+            # Scheduler pour le flush périodique des vues (Option B, cf.
+            # CONFIG_A_AJOUTER.md section 5). Si vous partez sur la boucle
+            # bash + FlushVitrineViewsCommand (Option A), supprimez ce
+            # transport et l'entrée de routing correspondante.
+            scheduler_vitrine_views:
+                dsn: 'scheduler://vitrine_views'
+
             failed:
                 dsn: '%env(MESSENGER_FAILED_TRANSPORT_DSN)%'
 
         routing:
             'App\Message\SendEmailMessage': async
+            'App\Message\AnalyzeMediaMessage': async
+            'App\Message\FlushVitrineViewsMessage': scheduler_vitrine_views

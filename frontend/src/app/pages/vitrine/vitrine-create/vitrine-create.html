@@ -1,0 +1,130 @@
+<div><app-header /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
+<main class="vitrine-create-page" id="main-content">
+
+  @if (!createdVitrine()) {
+    <div class="vitrine-create-card">
+      <span class="eyebrow">Nouvelle collection</span>
+      <h1>Créer une Vitrine</h1>
+      <div class="engraved-rule"><span class="diamond"></span></div>
+      <p class="vitrine-create-subtitle">
+        Rassemblez plusieurs photos et vidéos de vos pierres dans une collection organisée.
+      </p>
+
+      <form [formGroup]="vitrineForm" (ngSubmit)="submit()" class="vitrine-form">
+        <label class="field">
+          <span class="field__label">Titre <span class="field__required">*</span></span>
+          <input type="text" formControlName="title" maxlength="100" placeholder="Ma collection d'améthystes" />
+          @if (vitrineForm.get('title')?.touched && vitrineForm.get('title')?.hasError('required')) {
+            <span class="field__error">Le titre est obligatoire.</span>
+          }
+          @if (vitrineForm.get('title')?.hasError('maxlength')) {
+            <span class="field__error">100 caractères maximum.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">Description</span>
+          <textarea formControlName="description" maxlength="500" rows="4" placeholder="Une brève présentation de votre collection (optionnel)"></textarea>
+          @if (vitrineForm.get('description')?.hasError('maxlength')) {
+            <span class="field__error">500 caractères maximum.</span>
+          }
+        </label>
+
+        <div class="field">
+          <span class="field__label">Photos et vidéos</span>
+          <label class="upload-dropzone" [class.upload-dropzone--busy]="isSubmitting()">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,video/mp4"
+              multiple
+              (change)="onFilesSelected($event)"
+              [disabled]="isSubmitting()"
+            />
+            <mat-icon>add_photo_alternate</mat-icon>
+            <span>Choisir une ou plusieurs photos/vidéos</span>
+          </label>
+
+          @if (fileErrors().length > 0) {
+            <div class="alert alert--error" role="alert">
+              @for (error of fileErrors(); track error) { <p>{{ error }}</p> }
+            </div>
+          }
+
+          @if (selectedFiles().length > 0) {
+            <!-- Mosaïque fixe des fichiers sélectionnés — jamais de carrousel. -->
+            <div class="selected-files-grid">
+              @for (item of selectedFiles(); track item.previewUrl; let i = $index) {
+                <div class="selected-file">
+                  @if (item.isVideo) {
+                    <div class="selected-file__video"><mat-icon>videocam</mat-icon></div>
+                  } @else {
+                    <img [src]="item.previewUrl" [alt]="item.file.name" />
+                  }
+                  <button type="button" class="selected-file__remove" (click)="removeSelectedFile(i)" title="Retirer">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+            <p class="selected-files-count">
+              {{ selectedFiles().length }} fichier{{ selectedFiles().length > 1 ? 's' : '' }} sélectionné{{ selectedFiles().length > 1 ? 's' : '' }}
+            </p>
+          }
+        </div>
+
+        @if (submitError()) {
+          <div class="alert alert--error" role="alert">{{ submitError() }}</div>
+        }
+
+        @if (isSubmitting() && totalToUpload() > 0) {
+          <p class="upload-progress">Envoi en cours... {{ uploadedCount() }}/{{ totalToUpload() }}</p>
+        }
+
+        <button type="submit" class="btn-publish" [disabled]="isSubmitting()">
+          @if (isSubmitting()) { Création en cours... } @else { Créer la Vitrine }
+        </button>
+      </form>
+    </div>
+  } @else {
+    <div class="vitrine-create-card vitrine-confirmation">
+      <mat-icon class="vitrine-confirmation__icon">check_circle</mat-icon>
+      <h1>Vitrine créée !</h1>
+      <div class="engraved-rule"><span class="diamond"></span></div>
+      <p class="vitrine-create-subtitle">
+        « {{ createdVitrine()!.title }} » a été créée avec {{ createdVitrine()!.itemsCount }}
+        élément{{ createdVitrine()!.itemsCount > 1 ? 's' : '' }}. Elle est pour l'instant en brouillon,
+        visible uniquement par vous.
+      </p>
+
+      <div class="vitrine-confirmation__actions">
+        <button type="button" class="btn-publish" (click)="askPublishConfirmation()">
+          <mat-icon>publish</mat-icon> Publier maintenant
+        </button>
+        <button type="button" class="btn-secondary" (click)="viewVitrine()">
+          Voir ma Vitrine (rester en brouillon)
+        </button>
+      </div>
+    </div>
+
+    @if (showPublishConfirm()) {
+      <div class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal">
+          <h2>Publier cette Vitrine ?</h2>
+          <p>Une fois publiée, votre Vitrine sera visible par tout le monde, y compris les visiteurs non connectés.</p>
+          @if (publishError()) {
+            <div class="alert alert--error" role="alert">{{ publishError() }}</div>
+          }
+          <div class="modal__actions">
+            <button type="button" class="btn-publish" [disabled]="isPublishing()" (click)="confirmPublish()">Oui, publier</button>
+            <button type="button" class="btn-secondary" (click)="cancelPublishConfirmation()">Annuler</button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+</main>
+
+<app-footer />

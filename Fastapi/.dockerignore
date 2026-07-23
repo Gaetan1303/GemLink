@@ -1,0 +1,29 @@
+# .dockerignore
+
+# 💡 ON IGNORE L'ENVIRONNEMENT VIRTUEL LOCAL (Le coupable des 5 Go)
+.venv/
+venv/
+env/
+
+# On ignore les caches Python
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# On ignore les dossiers de versioning et d'IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# On ignore les gros volumes de données ou datasets si tu en as stocké localement
+# (Laisse tes fichiers dans 'checkpoints/' s'ils font moins de quelques centaines de Mo)
+# datasets/
+# ou *.zip, *.tar.gz
+/data
+/dataset
+/raw_data
+/trash
+/tests

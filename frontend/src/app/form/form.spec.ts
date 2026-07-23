@@ -1,7 +1,7 @@
-
+import { signal } from '@angular/core'; // ◄ Ajouté pour le Header
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { provideRouter, Router } from '@angular/router'; // ◄ Ajout de provideRouter
 import { of, throwError } from 'rxjs';
 import { vi, type MockInstance } from 'vitest';
 
@@ -27,33 +27,33 @@ describe('Form — US 1.3 Connexion', () => {
   let loginSpy:    MockInstance;
   let navigateSpy: MockInstance;
 
-  let authServiceMock: Partial<AuthService>;
-  let routerMock:      Partial<Router>;
+  let authServiceMock: any; // Simplifié pour accueillir le signal facilement
 
   beforeEach(async () => {
-    loginSpy    = vi.fn();
-    navigateSpy = vi.fn();
+    loginSpy = vi.fn();
 
     authServiceMock = {
-      login:         loginSpy as any,
+      login:         loginSpy,
       register:      vi.fn(),
       validateEmail: vi.fn(),
-    };
-
-    routerMock = {
-      navigate: navigateSpy as any,
+      currentUser:   signal(null), // ◄ Sécurise le Header globalement
     };
 
     await TestBed.configureTestingModule({
       imports: [Form, ReactiveFormsModule, SharedModule],
       providers: [
+        provideRouter([]), // ◄ Règle l'erreur ActivatedRoute de manière propre
         { provide: AuthService, useValue: authServiceMock },
-        { provide: Router,      useValue: routerMock },
       ],
     }).compileComponents();
 
     fixture   = TestBed.createComponent(Form);
     component = fixture.componentInstance;
+
+    // Récupération de l'instance réelle du routeur générée par provideRouter
+    const router = TestBed.inject(Router);
+    navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
     fixture.detectChanges();
   });
 

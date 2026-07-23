@@ -80,3 +80,45 @@
   </app-button>
 
 </form>
+
+<button type="button" class="register-form__toggle-button" (click)="toggleResendForm()">
+  @if (!showResendForm) {
+    Afficher le formulaire de renvoi
+  } @else {
+    Masquer le formulaire de renvoi
+  }
+</button>
+
+<div class="register-form__resend-panel" [class.register-form__resend-panel--open]="showResendForm">
+<form [formGroup]="resendForm" (ngSubmit)="onResendValidationEmail()" class="register-form register-form--resend" novalidate>
+  <hr class="register-form__divider" />
+
+  <p class="register-form__resend-label">Adresse non validee ?</p>
+
+  @if (resendSuccessMessage) {
+    <div class="alert alert-success">{{ resendSuccessMessage }}</div>
+  }
+  @if (resendErrorMessage) {
+    <div class="alert alert-danger">{{ resendErrorMessage }}</div>
+  }
+
+  <div class="input-group">
+    <div class="input-field-frame" [class.is-invalid]="resendForm.get('email')?.invalid && resendForm.get('email')?.touched">
+      <input
+        type="email"
+        formControlName="email"
+        placeholder="EMAIL DE VALIDATION"
+      />
+    </div>
+    @if (resendForm.get('email')?.invalid && resendForm.get('email')?.touched) {
+      <span class="error-text">Email requis ou format invalide</span>
+    }
+  </div>
+
+  <app-button
+    type="submit"
+    label="Renvoyer l'email de validation"
+    [disabled]="isResendLoading">
+  </app-button>
+</form>
+</div>

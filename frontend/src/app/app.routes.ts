@@ -25,7 +25,32 @@ export const routes: Routes = [
     path: 'rgpd',
     loadComponent: () => import('./pages/home/rgpd/rgpd').then(m => m.Rgpd)
   },
-
+// US 2.1 — Publication d'un post MVP
+  // US 2.2 — Consultation des posts (liste + détail), publiques
+  {
+    path: 'posts',
+    loadComponent: () => import('./pages/post/post-list/post-list').then(m => m.PostList)
+  },
+  {
+    path: 'posts/new',
+    loadComponent: () => import('./pages/post/post-create/post-create').then(m => m.PostCreate)
+  },
+  {
+    path: 'posts/:id',
+    loadComponent: () => import('./pages/post/post-detail/post-detail').then(m => m.PostDetail)
+  },
+  {
+    path: 'vitrine',
+    loadComponent: () => import('./pages/vitrine/vitrine-list/vitrine-list').then(m => m.VitrineList)
+  },
+  {
+    path: 'vitrines/new',
+    loadComponent: () => import('./pages/vitrine/vitrine-create/vitrine-create').then(m => m.VitrineCreate)
+  },
+  {
+    path: 'vitrines/:id',
+    loadComponent: () => import('./pages/vitrine/vitrine-detail/vitrine-detail').then(m => m.VitrineDetail)
+  },
   {
     path: 'users/me',
     loadComponent: () => import('./pages/user/profile/profile').then(m => m.Profile)
@@ -45,6 +70,20 @@ export const routes: Routes = [
       {
         path: 'validate-email/:token',
         loadComponent: () => import('./core/auth/validate-email/validate-email').then(m => m.ValidateEmail)
+      },
+      {
+        path: 'logout',
+        loadComponent: () => import('./core/auth/logout/logout').then(m => m.Logout)
+      },
+            // US 1.6 — Étape 1 : formulaire de demande de réinitialisation (CA-1)
+      {
+        path: 'reset-password',
+        loadComponent: () => import('./core/auth/reset-password/reset-password').then(m => m.ResetPassword)
+      },
+      // US 1.6 — Étape 2 : formulaire de saisie du nouveau mot de passe (CA-2, CA-3, CA-4)
+      {
+        path: 'reset-password/:token',
+        loadComponent: () => import('./core/auth/reset-password-confirm/reset-password-confirm').then(m => m.ResetPasswordConfirm)
       }
     ]
   }

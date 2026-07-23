@@ -1,0 +1,192 @@
+
+services:
+  # ══════════════════════════════════════════════════════════════════════
+  # BACKEND SYMFONY
+  # ══════════════════════════════════════════════════════════════════════
+  gemlink-php:
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile
+    container_name: gemlink_php
+    restart: unless-stopped
+
+    environment:
+      # Base de données de test — utilisée quand APP_ENV=test (phpunit.xml.dist
+      # doit pointer DATABASE_URL vers gl-db-test:5432)
+      DB_TEST_HOST: gl-db-test
+      DB_TEST_PORT: 5432
+      DB_TEST_NAME: ${POSTGRES_TEST_DB:-gemlink_test}
+
+      REDIS_HOST: gl-cache-redis
+      REDIS_PORT: 6379
+
+      AI_SERVICE_URL: http://gl-ai-brain:3000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-changeme-en-production}
+
+    ports:
+      - "8000:8080"
+
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+
+    networks:
+      - gl-core-net
+      - gl-test-net   # accès à gl-db-test pour lancer les tests depuis ce même conteneur
+
+  # ══════════════════════════════════════════════════════════════════════
+  # BASE DE DONNÉES PRINCIPALE (dev/prod)
+  # ══════════════════════════════════════════════════════════════════════
+  database:
+    image: pgvector/pgvector:pg16
+    container_name: gemlink_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gemlink}
+      POSTGRES_USER: ${POSTGRES_USER:-gemlink}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-MimineForEver}
+
+    ports:
+      - "5432:5432"
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gemlink} -d ${POSTGRES_DB:-gemlink}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    networks:
+      - gl-core-net
+
+  # ══════════════════════════════════════════════════════════════════════
+  # BASE DE DONNÉES DE TEST — totalement isolée (réseau + volume séparés)
+  # Jamais touchée par le dev/prod, jetable sans risque (docker compose down -v)
+  # ══════════════════════════════════════════════════════════════════════
+  gl-db-test:
+    image: pgvector/pgvector:pg16
+    container_name: gl-db-test
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-gemlink_test}
+      POSTGRES_USER: ${POSTGRES_USER:-gemlink}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-MimineForEver}
+
+    ports:
+      - "5433:5432"   # port hôte différent de gl-db-main (5432) : accès direct possible en debug
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gemlink} -d ${POSTGRES_TEST_DB:-gemlink_test}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    tmpfs:
+      # Données en RAM, jamais persistées sur disque : chaque run de tests
+      # démarre sur une base propre si vous faites un `down -v` avant.
+      - /var/lib/postgresql/data
+
+    networks:
+      - gl-test-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: gemlink_redis
+    restart: unless-stopped
+
+    command:
+      - redis-server
+      - --appendonly
+      - yes
+
+    ports:
+      - "6380:6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - gl-core-net
+
+
+
+  # ══════════════════════════════════════════════════════════════════════
+  # STACK IA (FastAPI + YOLO/ViT + Ollama) — accès interne uniquement
+  # ══════════════════════════════════════════════════════════════════════
+  gl-ai-brain:
+    build:
+      context: ./Fastapi
+      dockerfile: Dockerfile
+    image: gemlink-ai:latest
+    container_name: gl-ai-brain
+    restart: unless-stopped
+
+    expose:
+      - "3000"
+
+    environment:
+      ENV: production
+      PORT: 3000
+      OLLAMA_URL: http://gl-ai-llm:11434
+      VIT_MODEL_PATH: checkpoints/vit_stones.pth
+      YOLO_MODEL_PATH: runs/detect/runs/stone_detector/weights/best.pt
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-changeme-en-production}
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+    depends_on:
+      gl-ai-llm:
+        condition: service_started
+
+
+    networks:
+      - gl-core-net
+
+  gl-ai-llm:
+    image: ollama/ollama:latest
+    container_name: gl-ai-llm
+    restart: unless-stopped
+
+    expose:
+      - "11434"
+
+    volumes:
+      - gl_ollama_storage:/root/.ollama
+
+    networks:
+      - gl-core-net
+
+
+volumes:
+  database_data:
+  redis_data:
+  gl_ai_checkpoints:
+  gl_ollama_storage:
+  gl_ai_brain:
+  # Pas de volume pour gl-db-test : elle utilise tmpfs (RAM), jetable par design
+
+networks:
+  gl-core-net:
+    name: gl-core-net
+    driver: bridge
+  gl-test-net:
+    name: gl-test-net
+    driver: bridge

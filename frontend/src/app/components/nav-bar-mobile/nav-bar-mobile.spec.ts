@@ -44,6 +44,6 @@ describe('NavBarMobile', () => {
     fixture.componentRef.setInput('role', 'ROLE_ADMIN');
     fixture.detectChanges();
     const links = fixture.nativeElement.querySelectorAll('.nav-bar-mobile__link');
-    expect(links.length).toBe(3); // Dashboard, Modération, Retour
+    expect(links.length).toBe(4); // Dashboard, Modération, Retour
   });
 });
