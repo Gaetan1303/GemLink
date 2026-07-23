@@ -13,6 +13,15 @@ security:
         dev:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
+        # US 4.2 - CA-1 : page publique d'une Vitrine, accessible sans JWT.
+        # Pattern avec le slash final : ^/api/public seul matcherait aussi
+        # /api/publications (préfixe commun "public"), ce qui désactiverait
+        # la sécurité sur une route qui doit rester authentifiée pour ses
+        # actions d'écriture. Doit être déclaré avant le firewall "api"
+        # (les firewalls sont évalués dans l'ordre, premier match gagnant).
+        vitrine_public:
+            pattern: ^/api/public/
+            security: false
         login:
             pattern: ^/api/login_check$
             stateless: true

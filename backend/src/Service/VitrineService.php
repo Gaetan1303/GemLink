@@ -31,6 +31,14 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
  * déclenchement de l'analyse via AiOrchestrationService::requestAnalysis()
  * une fois la ligne flushée — jamais avant, le worker Messenger tournant
  * dans un autre process.
+ *
+ * US 4.2 : ajout de la génération du QR code à la création (CA-3). La vue
+ * publique (CA-1/CA-2) est gérée par VitrinePublicController +
+ * VitrineViewCounterService, en dehors de ce service — recordView()
+ * ci-dessous reste disponible pour un incrément synchrone ponctuel (ex:
+ * back-office) mais n'est plus le chemin utilisé par la page publique,
+ * précisément parce qu'un flush à chaque vue est ce que CA-2 demande
+ * d'éviter.
  */
 class VitrineService
 {
@@ -44,6 +52,7 @@ class VitrineService
         private readonly VitrineMediaRepository $vitrineMedias,
         private readonly MediaUploadService $mediaUploadService,
         private readonly AiOrchestrationService $aiOrchestration,
+        private readonly VitrineQrCodeService $qrCodeService,
     ) {
     }
 
@@ -58,6 +67,13 @@ class VitrineService
         if ($cleanDescription !== null) {
             $vitrine->setDescription($cleanDescription);
         }
+
+        // US 4.2 - CA-3 : id (Uuid::v7()) et slug sont déjà connus à ce
+        // stade (générés côté PHP dans le constructeur / avant persist),
+        // donc pas besoin d'un flush intermédiaire pour obtenir l'id avant
+        // de générer le QR code — un seul save() suffit.
+        $qrCodeUrl = $this->qrCodeService->generateAndStore($vitrine->getSlug(), $vitrine->getId());
+        $vitrine->setQrCodeUrl($qrCodeUrl);
 
         try {
             $this->vitrines->save($vitrine);
@@ -253,6 +269,13 @@ class VitrineService
         $this->em->flush();
     }
 
+    /**
+     * @deprecated Incrément synchrone avec flush immédiat — c'est
+     * exactement le coût que US 4.2 CA-2 demande d'éviter sur la page
+     * publique. Conservé pour un éventuel usage back-office ponctuel ;
+     * la page publique doit passer par VitrineViewCounterService
+     * (buffer Redis + flush périodique par lot), pas par cette méthode.
+     */
     public function recordView(Vitrine $vitrine): void
     {
         $vitrine->incrementViewCount();

@@ -19,7 +19,7 @@ parameters:
     infomaniak_newsletter.domain_id: '%env(INFOMANIAK_NEWSLETTER_DOMAIN_ID)%'
     infomaniak_newsletter.token: '%env(INFOMANIAK_NEWSLETTER_TOKEN)%'
 
-    # AI SERVICE (IMPORTANT — ton erreur actuelle)
+    # AI SERVICE
     app.ai_service_url: '%env(resolve:AI_SERVICE_URL)%'
     app.internal_api_key: '%env(resolve:INTERNAL_API_KEY)%'
 
@@ -67,6 +67,15 @@ services:
         arguments:
             $uploadDir: '%media.upload_dir%'
             $publicBaseUrl: '%media.public_base_url%'
+
+    # US 4.2 - CA-2 : client Redis natif pour VitrineViewCounterService.
+    # Service à part entière, au même niveau que les autres sous `services:`
+    # (surtout pas imbriqué sous LocalMediaUploader ci-dessus).
+    Redis:
+        class: Redis
+        factory: ['Symfony\Component\Cache\Adapter\RedisAdapter', 'createConnection']
+        arguments:
+            - '%env(REDIS_URL)%'
 
     # AI ANALYSIS WORKER — US 3.1 CA-3 : lecture disque en mode 'local'
     # (worker et serveur HTTP partagent le même conteneur/volume), GET HTTP
