@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Controller\Api;
+namespace App\Controller;
 
 use App\Repository\VitrineRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -10,16 +10,6 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * US 4.2 - CA-3
- *
- * Permet au propriétaire d'une Vitrine de télécharger son QR code
- * depuis l'interface de gestion. Route authentifiée (firewall JWT standard).
- *
- * ⚠️ Suppose l'existence d'un Voter "VIEW" sur Vitrine restreignant l'accès
- * au propriétaire. Si ce Voter n'existe pas encore, l'ajouter ou adapter
- * la vérification d'accès à votre mécanisme existant.
- */
 #[Route('/api/vitrines')]
 class VitrineQrCodeController extends AbstractController
 {

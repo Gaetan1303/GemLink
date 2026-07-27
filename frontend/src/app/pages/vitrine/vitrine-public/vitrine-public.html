@@ -1,0 +1,84 @@
+<div><app-header /></div>
+<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
+<main class="vitrine-detail-page" id="main-content">
+
+  @if (loadError()) {
+    <div class="alert alert--error" role="alert">{{ loadError() }}</div>
+  }
+
+  @if (isLoading()) {
+    <div class="vitrine-detail-skeleton" aria-hidden="true"></div>
+  } @else if (vitrine(); as v) {
+
+    <header class="vitrine-header">
+      <span class="vitrine-header__status vitrine-header__status--published">
+        <mat-icon>public</mat-icon>
+        Vitrine publique
+      </span>
+
+      <h1>{{ v.title }}</h1>
+      <div class="engraved-rule"><span class="diamond"></span></div>
+      @if (v.description) {
+        <p class="vitrine-header__description">{{ v.description }}</p>
+      }
+
+      <p class="vitrine-header__hint">
+        <mat-icon>visibility</mat-icon>
+        {{ v.viewCount }} vue{{ v.viewCount > 1 ? 's' : '' }}
+        · par
+        @if (v.creator.avatarUrl) {
+          <img class="vitrine-header__avatar" [src]="v.creator.avatarUrl" [alt]="v.creator.username" />
+        }
+        {{ v.creator.username }}
+      </p>
+    </header>
+
+    <section class="vitrine-items">
+      <h2>{{ v.items.length }} pièce{{ v.items.length > 1 ? 's' : '' }} dans cette collection</h2>
+
+      @if (v.items.length === 0) {
+        <div class="empty-state">
+          <mat-icon class="empty-state__icon">diamond</mat-icon>
+          <p>Cette Vitrine ne contient pas encore de pièce.</p>
+        </div>
+      } @else {
+        <div class="vitrine-item-grid">
+          @for (item of v.items; track item.type + ':' + item.id) {
+            <div class="piece piece--item piece--item--readonly">
+              <div class="piece-cover piece-cover--1">
+                @if (itemMediaType(item) === 'IMAGE') {
+                  <img [src]="itemThumbnailUrl(item)" [alt]="itemLabel(item)" loading="lazy" />
+                } @else {
+                  <div class="piece-cover__video"><mat-icon>videocam</mat-icon></div>
+                }
+                @if (item.type === 'post') {
+                  <span class="piece-cover__badge">Post</span>
+                }
+              </div>
+
+              <div class="piece--item__title">{{ itemLabel(item) }}</div>
+
+              @if (item.type === 'post' && item.publication?.aiResults?.length) {
+                <ul class="piece--item__ai-results">
+                  @for (result of item.publication!.aiResults; track result.pierre) {
+                    <li>
+                      {{ result.pierre }}
+                      @if (result.confidence !== null) {
+                        <span class="piece--item__confidence">
+                          {{ (result.confidence * 100) | number: '1.0-0' }}%
+                        </span>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+</main>
+
+<app-footer />

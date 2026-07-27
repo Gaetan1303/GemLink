@@ -399,6 +399,7 @@ final class VitrineController extends AbstractController
             'status' => $vitrine->getStatus(),
             'viewCount' => $vitrine->getViewCount(),
             'itemsCount' => $vitrine->getItemsCount(),
+            'qrCodeUrl' => $vitrine->getQrCodeUrl(),
             'items' => $items,
             'createdAt' => $vitrine->getCreatedAt()->format(DATE_ATOM),
             'updatedAt' => $vitrine->getUpdatedAt()->format(DATE_ATOM),

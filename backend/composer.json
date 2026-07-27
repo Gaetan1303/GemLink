@@ -12,7 +12,7 @@
         "doctrine/doctrine-bundle": "^3.2",
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6",
-        "endroid/qr-code": "^5.0",
+        "endroid/qr-code": "^6.1",
         "league/flysystem-aws-s3-v3": "^3.35",
         "league/flysystem-bundle": "^3.7",
         "lexik/jwt-authentication-bundle": "^3.2",
