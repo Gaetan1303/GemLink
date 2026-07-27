@@ -18,12 +18,16 @@ use Symfony\Component\Routing\Attribute\Route;
  *
  * Expose la page publique d'une Vitrine, accessible sans authentification.
  *
- * La route /api/public/* est hexclue du firewall JWT dans
- * config/packages/security.yaml
+ * La route /api/public/* doit être exclue du firewall JWT dans
+ * config/packages/security.yaml (cf. CONFIG_A_AJOUTER.md).
  *
- *  Vitrine n'expose pas de getOrderedItems() : ce contrôleur fusionne
+ * Vitrine n'expose pas de getOrderedItems() : ce contrôleur fusionne
  * lui-même getItems() (VitrinePublication) et getMediaItems() (VitrineMedia)
  * par position, comme le fait déjà VitrineService::resolveCoverMedia().
+ *
+ * aiResults est un stub vide (cf. serializeAiResults()) : Publication.php
+ * n'a pas de relation directe vers PublicationPierre, il faudra injecter
+ * son repository une fois partagé.
  */
 #[Route('/api/public/vitrines')]
 class VitrinePublicController
@@ -110,14 +114,15 @@ class VitrinePublicController
         $publication = $item->getPublication();
 
         return [
-            'type' => 'publication',
+            'type' => 'post',
+            'id' => $publication->getId()->toRfc4122(),
             'position' => $item->getPosition(),
             'publication' => [
                 'id' => $publication->getId()->toRfc4122(),
-                'mediaUrl' => $publication->getMediaUrl(),
-                'mediaType' => $publication->getMediaType(),
                 'title' => $publication->getTitle(),
                 'description' => $publication->getDescription(),
+                'mediaUrl' => $publication->getMediaUrl(),
+                'mediaType' => $publication->getMediaType(),
                 'aiResults' => $this->serializeAiResults($publication),
             ],
         ];
@@ -130,18 +135,19 @@ class VitrinePublicController
     {
         return [
             'type' => 'media',
+            'id' => $media->getId()->toRfc4122(),
             'position' => $media->getPosition(),
-            'media' => [
-                'id' => $media->getId()->toRfc4122(),
-                'mediaUrl' => $media->getMediaUrl(),
-                'mediaType' => $media->getMediaType(),
-            ],
+            'mediaUrl' => $media->getMediaUrl(),
+            'mediaType' => $media->getMediaType(),
         ];
     }
 
     /**
-     *  Publication.php (confirmé) n'expose aucune relation directe vers
-     * PublicationPierre 
+     * Publication.php (confirmé) n'expose aucune relation directe vers
+     * PublicationPierre — contrairement à ce que je supposais. Les
+     * résultats IA doivent donc être récupérés via un repository dédié
+     * (ex: PublicationPierreRepository::findByPublication($publication))
+     * injecté dans ce contrôleur, plutôt que lus depuis l'entité elle-même.
      * Retourne un tableau vide en attendant — à brancher une fois
      * PublicationPierre.php partagé.
      *

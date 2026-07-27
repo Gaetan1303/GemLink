@@ -19,6 +19,7 @@ use App\Service\Media\MediaUploadService;
 use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
@@ -53,6 +54,7 @@ class VitrineService
         private readonly MediaUploadService $mediaUploadService,
         private readonly AiOrchestrationService $aiOrchestration,
         private readonly VitrineQrCodeService $qrCodeService,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -72,8 +74,22 @@ class VitrineService
         // stade (générés côté PHP dans le constructeur / avant persist),
         // donc pas besoin d'un flush intermédiaire pour obtenir l'id avant
         // de générer le QR code — un seul save() suffit.
-        $qrCodeUrl = $this->qrCodeService->generateAndStore($vitrine->getSlug(), $vitrine->getId());
-        $vitrine->setQrCodeUrl($qrCodeUrl);
+        //
+        // Volontairement non-bloquant : une panne d'infra (GD absent,
+        // CDN indisponible...) sur un aspect secondaire (CA-3) ne doit pas
+        // empêcher CA-1/CA-2 de fonctionner, c'est-à-dire empêcher
+        // l'utilisateur de créer sa Vitrine. En cas d'échec, qrCodeUrl
+        // reste null et peut être rattrapé après coup via
+        // bin/console app:vitrine:backfill-qr-codes.
+        try {
+            $qrCodeUrl = $this->qrCodeService->generateAndStore($vitrine->getSlug(), $vitrine->getId());
+            $vitrine->setQrCodeUrl($qrCodeUrl);
+        } catch (\Throwable $exception) {
+            $this->logger->error('Échec de génération du QR code à la création de la Vitrine', [
+                'vitrineSlug' => $vitrine->getSlug(),
+                'exception' => $exception,
+            ]);
+        }
 
         try {
             $this->vitrines->save($vitrine);

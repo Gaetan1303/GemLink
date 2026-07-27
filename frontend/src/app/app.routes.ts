@@ -47,6 +47,14 @@ export const routes: Routes = [
     path: 'vitrines/new',
     loadComponent: () => import('./pages/vitrine/vitrine-create/vitrine-create').then(m => m.VitrineCreate)
   },
+  // US 4.2 - CA-1 : page publique par slug, sans authentification.
+  // Doit être déclarée AVANT 'vitrines/:id' (owner, par UUID) — sinon le
+  // router matcherait 'public' comme une valeur de :id et ne l'atteindrait
+  // jamais, exactement comme 'vitrines/new' doit précéder 'vitrines/:id'.
+  {
+    path: 'vitrines/public/:slug',
+    loadComponent: () => import('./pages/vitrine/vitrine-public/vitrine-public').then(m => m.VitrinePublic)
+  },
   {
     path: 'vitrines/:id',
     loadComponent: () => import('./pages/vitrine/vitrine-detail/vitrine-detail').then(m => m.VitrineDetail)

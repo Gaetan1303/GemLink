@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Service\Media\MediaUploaderInterface;
-use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Color\Color;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -26,13 +26,8 @@ use Symfony\Component\Uid\Uuid;
  * pour des uploads utilisateur), ce qui n'a pas de sens pour un asset
  * généré côté serveur. On appelle donc directement l'uploader.
  *
- * Prérequis composer :
- *   docker compose exec php composer require endroid/qr-code:^5.0
- *
- * L'API Builder/ErrorCorrectionLevel/Encoding/Color ci-dessous correspond
- * à endroid/qr-code v5. Si votre composer.json cible une autre version,
- * il faudra adapter la construction du Builder (à vérifier une fois la
- * dépendance installée : `composer show endroid/qr-code`).
+ * API endroid/qr-code v6.1.3 confirmée par `composer show` : la classe
+ * Builder n'existe plus 
  */
 class VitrineQrCodeService
 {
@@ -61,16 +56,17 @@ class VitrineQrCodeService
     {
         $publicUrl = $this->buildPublicUrl($slug);
 
-        $result = Builder::create()
-            ->writer(new PngWriter())
-            ->data($publicUrl)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
-            ->size(400)
-            ->margin(16)
-            ->foregroundColor(new Color(self::BRAND_COLOR_R, self::BRAND_COLOR_G, self::BRAND_COLOR_B))
-            ->backgroundColor(new Color(255, 255, 255))
-            ->build();
+        $qrCode = new QrCode(
+            data: $publicUrl,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: 400,
+            margin: 16,
+            foregroundColor: new Color(self::BRAND_COLOR_R, self::BRAND_COLOR_G, self::BRAND_COLOR_B),
+            backgroundColor: new Color(255, 255, 255),
+        );
+
+        $result = (new PngWriter())->write($qrCode);
 
         $tmpPath = tempnam(sys_get_temp_dir(), 'gemlink_qr_');
 
@@ -103,6 +99,6 @@ class VitrineQrCodeService
 
     public function buildPublicUrl(string $slug): string
     {
-        return sprintf('%s/vitrines/%s', rtrim($this->frontendUrl, '/'), $slug);
+        return sprintf('%s/vitrines/public/%s', rtrim($this->frontendUrl, '/'), $slug);
     }
 }

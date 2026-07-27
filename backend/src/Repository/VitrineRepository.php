@@ -33,6 +33,20 @@ class VitrineRepository extends ServiceEntityRepository
     }
 
     /**
+     * US 4.2 - CA-3 (rattrapage) : Vitrines créées avant que la génération
+     * du QR code soit câblée dans VitrineService::createVitrine().
+     *
+     * @return Vitrine[]
+     */
+    public function findAllWithoutQrCode(): array
+    {
+        return $this->createQueryBuilder('v')
+            ->andWhere('v.qrCodeUrl IS NULL')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * US 4.2 - CA-1 : variante de findBySlug() restreinte aux Vitrines
      * publiées, utilisée par la page publique (VitrinePublicController).
      * Une Vitrine en DRAFT ne doit jamais être accessible via son slug par
