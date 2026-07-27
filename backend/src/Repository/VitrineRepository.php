@@ -33,6 +33,56 @@ class VitrineRepository extends ServiceEntityRepository
     }
 
     /**
+     * US 4.2 - CA-3 (rattrapage) : Vitrines créées avant que la génération
+     * du QR code soit câblée dans VitrineService::createVitrine().
+     *
+     * @return Vitrine[]
+     */
+    public function findAllWithoutQrCode(): array
+    {
+        return $this->createQueryBuilder('v')
+            ->andWhere('v.qrCodeUrl IS NULL')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * US 4.2 - CA-1 : variante de findBySlug() restreinte aux Vitrines
+     * publiées, utilisée par la page publique (VitrinePublicController).
+     * Une Vitrine en DRAFT ne doit jamais être accessible via son slug par
+     * un visiteur non authentifié.
+     */
+    public function findOnePublishedBySlug(string $slug): ?Vitrine
+    {
+        return $this->createQueryBuilder('v')
+            ->andWhere('v.slug = :slug')
+            ->andWhere('v.status = :status')
+            ->setParameter('slug', $slug)
+            ->setParameter('status', Vitrine::STATUS_PUBLISHED)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * US 4.2 - CA-2 : incrément atomique en base du compteur de vues,
+     * appelé par le worker de flush périodique (toutes les 60s) avec le
+     * total accumulé en Redis depuis le dernier flush. Volontairement une
+     * requête UPDATE directe (pas de find() + flush()) : pas besoin
+     * d'hydrater l'entité pour un simple incrément, et ça évite tout
+     * risque d'écraser une valeur avec une entité potentiellement obsolète
+     * si elle était déjà en mémoire ailleurs dans la requête.
+     */
+    public function incrementViewCount(string $vitrineId, int $increment): void
+    {
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\Entity\Vitrine v SET v.viewCount = v.viewCount + :increment WHERE v.id = :id'
+        )
+            ->setParameter('increment', $increment)
+            ->setParameter('id', Uuid::fromString($vitrineId))
+            ->execute();
+    }
+
+    /**
      * @return Vitrine[]
      */
     public function findByUser(User $user): array

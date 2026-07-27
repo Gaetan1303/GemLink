@@ -49,6 +49,14 @@
             <mat-icon>edit</mat-icon> Modifier
           </button>
 
+          <a type="button" class="btn-secondary" [href]="qrCodeDownloadUrl()" download>
+            <mat-icon>qr_code_2</mat-icon> Télécharger le QR code
+          </a>
+
+          <button type="button" class="btn-secondary" (click)="copyPublicUrl()">
+            <mat-icon>content_copy</mat-icon> Copier le lien public
+          </button>
+
           @if (v.status === 'DRAFT') {
             <button
               type="button"

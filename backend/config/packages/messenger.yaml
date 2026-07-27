@@ -11,7 +11,6 @@ framework:
                     multiplier: 2
                     max_delay: 60000
 
-       
             failed:
                 dsn: '%env(MESSENGER_FAILED_TRANSPORT_DSN)%'
 

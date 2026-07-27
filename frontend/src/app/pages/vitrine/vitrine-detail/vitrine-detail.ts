@@ -308,4 +308,22 @@ export class VitrineDetail implements OnInit {
   protected itemLabel(item: VitrineItem): string {
     return item.type === 'post' ? (item.publication?.title || 'Sans titre') : 'Photo/vidéo';
   }
+
+  // US 4.2 - CA-3 : qrCodeUrl pointe déjà vers le CDN R2 (public — l'image
+  // n'a rien de confidentiel, elle encode juste l'URL publique de la
+  // Vitrine). Un <a href download> ne peut pas passer par une route JWT
+  // (une navigation top-level n'attache jamais l'Authorization header,
+  // contrairement à HttpClient) — on utilise donc directement l'URL CDN.
+  protected qrCodeDownloadUrl(): string {
+    return this.vitrine()?.qrCodeUrl ?? '';
+  }
+
+  protected publicUrl(): string {
+    const slug = this.vitrine()?.slug ?? '';
+    return this.vitrineService.publicUrl(slug);
+  }
+
+  protected copyPublicUrl(): void {
+    navigator.clipboard?.writeText(this.publicUrl());
+  }
 }

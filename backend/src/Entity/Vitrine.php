@@ -15,6 +15,13 @@ use Symfony\Component\Uid\Uuid;
  * US 4.1 — Vitrine : collection ordonnée de posts existants ET de médias
  * uploadés directement, appartenant à un User. Les deux types de contenu
  * partagent un même espace de positions pour un glisser-déposer unifié.
+ *
+ * US 4.2 — Ajout de qrCodeUrl (CA-3). Le compteur de vues (viewCount) reste
+ * mis à jour en base par lots via VitrineRepository::incrementViewCount(),
+ * appelé par le worker de flush périodique (CA-2) — pas par
+ * incrementViewCount() de cette entité, qui reste disponible pour un usage
+ * synchrone ponctuel (ex: back-office) mais n'est plus utilisée par la page
+ * publique.
  */
 #[ORM\Entity(repositoryClass: VitrineRepository::class)]
 #[ORM\Table(name: 'vitrine')]
@@ -45,6 +52,14 @@ class Vitrine
 
     #[ORM\Column(name: 'view_count', type: 'integer', options: ['default' => 0])]
     private int $viewCount = 0;
+
+    /**
+     * US 4.2 - CA-3 : URL du QR code PNG stocké sur le CDN, pointant vers
+     * l'URL publique de la Vitrine. Généré à la création
+     * (cf. VitrineService::createVitrine() -> VitrineQrCodeService).
+     */
+    #[ORM\Column(name: 'qr_code_url', length: 500, nullable: true)]
+    private ?string $qrCodeUrl = null;
 
     /**
      * Post généré automatiquement dans le feed principal lors de la
@@ -186,6 +201,18 @@ class Vitrine
     public function incrementViewCount(): self
     {
         ++$this->viewCount;
+
+        return $this;
+    }
+
+    public function getQrCodeUrl(): ?string
+    {
+        return $this->qrCodeUrl;
+    }
+
+    public function setQrCodeUrl(?string $qrCodeUrl): self
+    {
+        $this->qrCodeUrl = $qrCodeUrl;
 
         return $this;
     }
