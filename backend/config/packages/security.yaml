@@ -45,6 +45,11 @@ security:
         # US 1.5 : logout requiert un utilisateur authentifié
         - { path: ^/api/auth/logout$, roles: IS_AUTHENTICATED_FULLY }
         # US 2.2 : liste/détail des posts publics (visiteur non authentifié inclus)
+        # US 2.4 CA-3 : lecture des commentaires publique elle aussi ; doit
+        # être déclarée avant la règle générique ^/api/publications ci-dessous
+        # pour ne pas être masquée (elle matcherait de toute façon, mais on
+        # garde l'ordre explicite pour la lisibilité).
+        - { path: '^/api/publications/[^/]+/comments', roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/publications, roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 

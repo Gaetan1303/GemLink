@@ -9,10 +9,20 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
+/**
+ * Notification in-app générique (cible identifiée par targetType + targetId,
+ * même pattern polymorphe que Report/AuditLog dans ce projet).
+ *
+ * US 2.4 CA-4 : type NEW_COMMENT, target = la publication commentée.
+ */
 #[ORM\Entity(repositoryClass: NotificationRepository::class)]
 #[ORM\Table(name: 'notification')]
 class Notification
 {
+    public const TYPE_NEW_COMMENT = 'NEW_COMMENT';
+
+    public const TARGET_TYPE_PUBLICATION = 'PUBLICATION';
+
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
     private Uuid $id;
@@ -42,5 +52,55 @@ class Notification
         $this->user = $user;
         $this->type = $type;
         $this->createdAt = new DateTimeImmutable();
+    }
+
+    public function getId(): Uuid
+    {
+        return $this->id;
+    }
+
+    public function getUser(): User
+    {
+        return $this->user;
+    }
+
+    public function getType(): string
+    {
+        return $this->type;
+    }
+
+    public function getTargetId(): ?Uuid
+    {
+        return $this->targetId;
+    }
+
+    public function getTargetType(): string
+    {
+        return $this->targetType;
+    }
+
+    public function setTarget(Uuid $targetId, string $targetType): self
+    {
+        $this->targetId = $targetId;
+        $this->targetType = $targetType;
+
+        return $this;
+    }
+
+    public function isRead(): bool
+    {
+        return $this->isRead;
+    }
+
+    public function markAsRead(): self
+    {
+        $this->isRead = true;
+
+        return $this;
+    }
+
+    public function getCreatedAt(): DateTimeImmutable
+    {
+        return $this->createdAt;
     }
 }
