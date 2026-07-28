@@ -11,8 +11,7 @@ import { LatestDiscoveries } from './latest-discoveries/latest-discoveries';
 import { HeaderImage } from './header-image/header-image';
 import { CookieConsentBanner } from './cookie-consent-banner/cookie-consent-banner';
 import { AnalysisStatus } from './analysis-status/analysis-status';
-
-
+import { CommentSection } from './comment-section/comment-section';
 
 
 @NgModule({
@@ -28,7 +27,8 @@ import { AnalysisStatus } from './analysis-status/analysis-status';
     MatIconModule,
     HeaderImage,
     CookieConsentBanner,
-    AnalysisStatus
+    AnalysisStatus,
+    CommentSection
   ],
   exports: [
     CommonModule,
@@ -43,6 +43,7 @@ import { AnalysisStatus } from './analysis-status/analysis-status';
     HeaderImage,
     CookieConsentBanner,
     AnalysisStatus,
+    CommentSection,
   ]
 })
 export class SharedModule {}

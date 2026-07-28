@@ -50,7 +50,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideNoopAnimations(),
-        { provide: AuthService, useValue: { currentUser } },
+        { provide: AuthService, useValue: { currentUser, isAuthenticated: () => !!currentUser() } },
         { provide: PostService, useValue: postServiceMock },
         {
           provide: ActivatedRoute,
@@ -190,7 +190,7 @@ describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', ()
         provideHttpClientTesting(),
         provideRouter([]),
         provideNoopAnimations(),
-        { provide: AuthService, useValue: { currentUser: signal<User | null | undefined>(undefined) } },
+        { provide: AuthService, useValue: { currentUser: signal<User | null | undefined>(undefined), isAuthenticated: () => false } },
         { provide: PostService, useValue: postServiceMock },
         {
           provide: ActivatedRoute,

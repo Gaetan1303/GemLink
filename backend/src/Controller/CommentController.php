@@ -207,7 +207,7 @@ final class CommentController extends AbstractController
             ],
             'content' => $comment->getContent(),
             'createdAt' => $comment->getCreatedAt()->format(DATE_ATOM),
-            'updatedAt' => $comment->getUpdatedAt()?->format(DATE_ATOM),
+            'updatedAt' => $comment->getUpdatedAt()->format(DATE_ATOM),
         ];
     }
 }

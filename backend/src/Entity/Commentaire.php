@@ -34,8 +34,8 @@ class Commentaire
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $createdAt;
 
-    #[ORM\Column(name: 'updated_at', type: 'datetimetz_immutable', nullable: true)]
-    private ?DateTimeImmutable $updatedAt = null;
+    #[ORM\Column(name: 'updated_at', type: 'datetimetz_immutable')]
+    private DateTimeImmutable $updatedAt;
 
     #[ORM\Column(name: 'deleted_at', type: 'datetimetz_immutable', nullable: true)]
     private ?DateTimeImmutable $deletedAt = null;
@@ -47,6 +47,7 @@ class Commentaire
         $this->publication = $publication;
         $this->content = $content;
         $this->createdAt = new DateTimeImmutable();
+        $this->updatedAt = $this->createdAt;
     }
 
     public function getId(): Uuid
@@ -87,7 +88,7 @@ class Commentaire
         return $this->createdAt;
     }
 
-    public function getUpdatedAt(): ?DateTimeImmutable
+    public function getUpdatedAt(): DateTimeImmutable
     {
         return $this->updatedAt;
     }
