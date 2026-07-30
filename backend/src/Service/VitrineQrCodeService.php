@@ -31,12 +31,12 @@ use Symfony\Component\Uid\Uuid;
  */
 class VitrineQrCodeService
 {
-    private const string QR_CODE_DIRECTORY = 'vitrines/qr-codes';
+    private const QR_CODE_DIRECTORY = 'vitrines/qr-codes';
 
     // Palette GemLink : navy #040A20
-    private const int BRAND_COLOR_R = 4;
-    private const int BRAND_COLOR_G = 10;
-    private const int BRAND_COLOR_B = 32;
+    private const BRAND_COLOR_R = 4;
+    private const BRAND_COLOR_G = 10;
+    private const BRAND_COLOR_B = 32;
 
     public function __construct(
         private readonly MediaUploaderInterface $uploader,

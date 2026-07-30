@@ -14,6 +14,7 @@ use Exception;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 
@@ -30,7 +31,14 @@ final class AnalyzeMediaFailureListenerTest extends TestCase
     {
         $this->publications = $this->createMock(PublicationRepository::class);
         $this->em = $this->createMock(EntityManagerInterface::class);
-        $this->listener = new AnalyzeMediaFailureListener($this->publications, $this->em, new NullLogger());
+        $this->listener = new AnalyzeMediaFailureListener(
+            $this->publications,
+            $this->em,
+            new NullLogger(),
+            $this->createMock(MailerInterface::class),
+            'noreply@gem-link.org',
+            'GemLink',
+        );
     }
 
     public function testIgnoresEventsForOtherMessageTypes(): void
