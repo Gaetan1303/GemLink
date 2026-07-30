@@ -12,6 +12,8 @@ use App\Exception\PostValidationException;
 use App\Repository\PublicationPierreRepository;
 use App\Repository\PublicationRepository;
 use App\Service\PostService;
+use App\Service\FeedCacheService;
+use DateTimeImmutable;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -44,28 +46,45 @@ final class PublicationController extends AbstractController
         private readonly PostService $postService,
         private readonly PublicationRepository $publications,
         private readonly PublicationPierreRepository $publicationPierres,
+        private readonly FeedCacheService $feedCache,
     ) {
     }
 
     /**
-     * US 2.2 — Feed public paginé, du plus récent au plus ancien.
-     * Query params : page (défaut 1), limit (défaut 20, max 50).
+     * Feed cursor-based. `nextCursor` is an opaque position, never an offset.
      */
     #[Route('', name: 'publication_index', methods: ['GET'])]
     public function index(Request $request): JsonResponse
     {
-        $page = max(1, $request->query->getInt('page', 1));
         $limit = min(self::MAX_PAGE_SIZE, max(1, $request->query->getInt('limit', self::DEFAULT_PAGE_SIZE)));
+        $cursor = $this->decodeCursor($request->query->get('cursor'));
+        if ($cursor === false) return $this->json(['message' => 'Curseur de feed invalide.'], Response::HTTP_BAD_REQUEST);
 
-        $items = $this->publications->findActivePaginated($page, $limit);
-        $total = $this->publications->countActive();
+        $tag = $this->stringQuery($request, 'tag');
+        $mineral = $this->stringQuery($request, 'mineral');
+        $minConfidence = $request->query->has('minConfidence') ? $request->query->get('minConfidence') : null;
+        if ($minConfidence !== null && (!is_numeric($minConfidence) || (float) $minConfidence < 0 || (float) $minConfidence > 1)) {
+            return $this->json(['message' => 'minConfidence doit être compris entre 0 et 1.'], Response::HTTP_BAD_REQUEST);
+        }
+        $personalized = $request->query->getBoolean('personalized');
+        $user = $this->getUser();
+        if ($personalized && !$user instanceof User) return $this->json(['message' => 'Authentification requise pour le feed personnalisé.'], Response::HTTP_UNAUTHORIZED);
+
+        // The unfiltered first global page is served from the Redis List hot index.
+        if ($cursor === null && !$personalized && $tag === null && $mineral === null && $minConfidence === null) {
+            $items = array_slice($this->publications->findActiveByIds($this->feedCache->recentIds()), 0, $limit + 1);
+        } else {
+            $items = $this->publications->findFeed($cursor['date'] ?? null, $cursor['id'] ?? null, $limit, $tag, $mineral, $minConfidence === null ? null : (float) $minConfidence, $personalized ? $user : null);
+        }
+        $hasNextPage = count($items) > $limit;
+        $items = array_slice($items, 0, $limit);
+        $last = $items === [] ? null : $items[array_key_last($items)];
 
         return $this->json([
             'items' => array_map($this->serializePost(...), $items),
-            'page' => $page,
             'limit' => $limit,
-            'total' => $total,
-            'totalPages' => (int) ceil($total / $limit),
+            'nextCursor' => $hasNextPage && $last instanceof Publication ? $this->encodeCursor($last) : null,
+            'hasNextPage' => $hasNextPage,
         ]);
     }
 
@@ -186,6 +205,32 @@ final class PublicationController extends AbstractController
             static fn (string $tag): string => trim($tag),
             explode(',', $rawTags),
         ), static fn (string $tag): bool => $tag !== ''));
+    }
+
+    private function stringQuery(Request $request, string $name): ?string
+    {
+        $value = $request->query->get($name);
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    /** @return array{date: DateTimeImmutable, id: Uuid}|null|false */
+    private function decodeCursor(mixed $cursor): array|null|false
+    {
+        if ($cursor === null || $cursor === '') return null;
+        if (!is_string($cursor)) return false;
+        $encoded = strtr($cursor, '-_', '+/');
+        $decoded = base64_decode($encoded . str_repeat('=', (4 - strlen($encoded) % 4) % 4), true);
+        if ($decoded === false) return false;
+        try {
+            $data = json_decode($decoded, true, 3, JSON_THROW_ON_ERROR);
+            if (!is_array($data) || !isset($data['d'], $data['i'])) return false;
+            return ['date' => new DateTimeImmutable((string) $data['d']), 'id' => Uuid::fromString((string) $data['i'])];
+        } catch (\Throwable) { return false; }
+    }
+
+    private function encodeCursor(Publication $post): string
+    {
+        return rtrim(strtr(base64_encode(json_encode(['d' => $post->getCreatedAt()->format(DATE_ATOM), 'i' => $post->getId()->toRfc4122()], JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
     }
 
     /**

@@ -39,6 +39,7 @@ class PostService
         private readonly TagRepository $tags,
         private readonly MediaUploadService $mediaUploadService,
         private readonly AiOrchestrationService $aiOrchestration,
+        private readonly FeedCacheService $feedCache,
     ) {
     }
 
@@ -76,6 +77,7 @@ class PostService
 
         $this->em->persist($publication);
         $this->em->flush();
+        $this->feedCache->prepend($publication);
 
         // CA-3 : ne bloque jamais la réponse — le traitement se fait dans le worker Messenger.
         $this->aiOrchestration->requestAnalysis($publication);
