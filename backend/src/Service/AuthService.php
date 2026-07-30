@@ -149,6 +149,7 @@ public function __construct(
             'token' => $this->jwtManager->createFromPayload($user, [
                 'jti' => $jti,
                 'email' => $user->getEmail(),
+                'id' => $user->getId()->toRfc4122(),
             ]),
             'refreshToken' => $refreshToken,
             'refreshTokenExpiresAt' => $expiresAt,
@@ -199,6 +200,7 @@ public function __construct(
             'token' => $this->jwtManager->createFromPayload($user, [
                 'jti' => $jti,
                 'email' => $user->getEmail(),
+                'id' => $user->getId()->toRfc4122(),
             ]),
             'refreshToken' => $newRawToken,
             'refreshTokenExpiresAt' => $expiresAt,

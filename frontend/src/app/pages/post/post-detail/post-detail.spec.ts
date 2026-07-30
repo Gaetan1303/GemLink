@@ -114,7 +114,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
 
   it('CA-4 : l\'auteur du post peut le supprimer', () => {
     postServiceMock.getPost.mockReturnValue(of(makePublication({ author: { id: '42', username: 'gemuser', avatarUrl: null } })));
-    configure({ id: 42, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '42', username: 'gemuser', role: 'ROLE_USER' });
 
     fixture.detectChanges();
 
@@ -123,7 +123,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
 
   it('CA-4 : un utilisateur non lié au post ne peut pas le supprimer', () => {
     postServiceMock.getPost.mockReturnValue(of(makePublication({ author: { id: '42', username: 'gemuser', avatarUrl: null } })));
-    configure({ id: 99, username: 'autre', role: 'ROLE_USER' });
+    configure({ id: '99', username: 'autre', role: 'ROLE_USER' });
 
     fixture.detectChanges();
 
@@ -132,7 +132,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
 
   it('CA-4 : un administrateur peut supprimer le post d\'un tiers', () => {
     postServiceMock.getPost.mockReturnValue(of(makePublication({ author: { id: '42', username: 'gemuser', avatarUrl: null } })));
-    configure({ id: 1, username: 'admin', role: 'ROLE_ADMIN' });
+    configure({ id: '1', username: 'admin', role: 'ROLE_ADMIN' });
 
     fixture.detectChanges();
 
@@ -142,7 +142,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
   it('deletePost() redirige vers /posts après suppression réussie', () => {
     postServiceMock.getPost.mockReturnValue(of(makePublication({ author: { id: '1', username: 'gemuser', avatarUrl: null } })));
     postServiceMock.deletePost.mockReturnValue(of(undefined));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
 
     fixture.detectChanges();
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
@@ -158,7 +158,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     postServiceMock.deletePost.mockReturnValue(
       throwError(() => ({ error: { message: 'Non autorisé.' } }))
     );
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
 
     fixture.detectChanges();
     component.deletePost();

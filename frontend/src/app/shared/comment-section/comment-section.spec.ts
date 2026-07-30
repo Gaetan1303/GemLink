@@ -104,7 +104,7 @@ describe('CommentSection — US 2.4 Commentaires MVP', () => {
   // ── CA-1 : création ──────────────────────────────────────────
 
   it('CA-1 : submit ajoute le nouveau commentaire en fin de liste', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' }, { items: [], nextCursor: null, limit: 20 });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' }, { items: [], nextCursor: null, limit: 20 });
     fixture.detectChanges();
 
     const created = makeComment({ id: 'comment-new', content: 'Nouveau commentaire' });
@@ -119,7 +119,7 @@ describe('CommentSection — US 2.4 Commentaires MVP', () => {
   });
 
   it('CA-1 : une erreur serveur à la création affiche un message et ne vide pas le champ', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' }, { items: [], nextCursor: null, limit: 20 });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' }, { items: [], nextCursor: null, limit: 20 });
     fixture.detectChanges();
 
     commentServiceMock.createComment.mockReturnValue(throwError(() => ({ error: { message: 'Erreur serveur.' } })));
@@ -135,7 +135,7 @@ describe('CommentSection — US 2.4 Commentaires MVP', () => {
 
   it('CA-2 : canDeleteComment autorise l\'auteur du commentaire', () => {
     const comment = makeComment({ author: { id: '1', username: 'gemuser', avatarUrl: null } });
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' }, { items: [comment], nextCursor: null, limit: 20 });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' }, { items: [comment], nextCursor: null, limit: 20 });
     fixture.detectChanges();
 
     expect(component.canDeleteComment(comment)).toBe(true);
@@ -143,7 +143,7 @@ describe('CommentSection — US 2.4 Commentaires MVP', () => {
 
   it('CA-2 : canDeleteComment refuse un utilisateur tiers non privilégié', () => {
     const comment = makeComment({ author: { id: '1', username: 'gemuser', avatarUrl: null } });
-    configure({ id: 2, username: 'stranger', role: 'ROLE_USER' }, { items: [comment], nextCursor: null, limit: 20 });
+    configure({ id: '2', username: 'stranger', role: 'ROLE_USER' }, { items: [comment], nextCursor: null, limit: 20 });
     fixture.detectChanges();
 
     expect(component.canDeleteComment(comment)).toBe(false);
@@ -151,7 +151,7 @@ describe('CommentSection — US 2.4 Commentaires MVP', () => {
 
   it('CA-2 : canDeleteComment autorise un administrateur', () => {
     const comment = makeComment({ author: { id: '1', username: 'gemuser', avatarUrl: null } });
-    configure({ id: 99, username: 'admin', role: 'ROLE_ADMIN' }, { items: [comment], nextCursor: null, limit: 20 });
+    configure({ id: '99', username: 'admin', role: 'ROLE_ADMIN' }, { items: [comment], nextCursor: null, limit: 20 });
     fixture.detectChanges();
 
     expect(component.canDeleteComment(comment)).toBe(true);
@@ -159,7 +159,7 @@ describe('CommentSection — US 2.4 Commentaires MVP', () => {
 
   it('CA-2 : deleteComment retire le commentaire de la liste en cas de succès', () => {
     const comment = makeComment();
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' }, { items: [comment], nextCursor: null, limit: 20 });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' }, { items: [comment], nextCursor: null, limit: 20 });
     fixture.detectChanges();
 
     commentServiceMock.deleteComment.mockReturnValue(of(undefined));

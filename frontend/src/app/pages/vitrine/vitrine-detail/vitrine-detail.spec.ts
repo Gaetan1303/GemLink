@@ -150,7 +150,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('CA-4 : canPublish() est faux quand la Vitrine ne contient aucun élément', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine({ itemsCount: 0 })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
 
     fixture.detectChanges();
 
@@ -159,7 +159,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('CA-4 : canPublish() est vrai dès qu\'il y a au moins un élément (post ou média)', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine({ itemsCount: 1, items: [makeMediaItem()] })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
 
     fixture.detectChanges();
 
@@ -170,7 +170,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('CA-1 : saveEdits() met à jour la Vitrine et quitte le mode édition', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine()));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component.startEditing();
@@ -190,7 +190,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
     vitrineServiceMock.getVitrine
       .mockReturnValueOnce(of(makeVitrine({ itemsCount: 0 })))
       .mockReturnValueOnce(of(makeVitrine({ itemsCount: 1, items: [makePostItem()] })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['addItemForm'].patchValue({ publicationId: 'post-1' });
@@ -204,7 +204,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('CA-2 : addItem() affiche l\'erreur serveur si le post est déjà présent', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine()));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['addItemForm'].patchValue({ publicationId: 'post-1' });
@@ -224,7 +224,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
     vitrineServiceMock.getVitrine
       .mockReturnValueOnce(of(makeVitrine({ itemsCount: 0 })))
       .mockReturnValueOnce(of(makeVitrine({ itemsCount: 2, items: [makeMediaItem(), makeMediaItem({ id: 'media-2' })] })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     vitrineServiceMock.addMedia.mockReturnValue(of(makeMediaItem()));
@@ -243,7 +243,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
     vitrineServiceMock.getVitrine
       .mockReturnValueOnce(of(makeVitrine({ itemsCount: 0 })))
       .mockReturnValueOnce(of(makeVitrine({ itemsCount: 1, items: [makeMediaItem()] })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     postServiceMock.validateMediaFile.mockImplementation((file: File) =>
@@ -259,7 +259,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('onMediaFilesSelected() ne fait rien si aucun fichier n\'est sélectionné', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine()));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     selectFiles(component, []);
@@ -271,7 +271,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
     vitrineServiceMock.getVitrine
       .mockReturnValueOnce(of(makeVitrine({ itemsCount: 0 })))
       .mockReturnValueOnce(of(makeVitrine({ itemsCount: 0 })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     vitrineServiceMock.addMedia.mockReturnValue(throwError(() => ({ status: 422 })));
@@ -287,7 +287,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('removeItem() appelle removeItem du service pour un item de type "post"', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine({ items: [makePostItem()] })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     vitrineServiceMock.removeItem.mockReturnValue(of(undefined));
@@ -300,7 +300,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('removeItem() appelle removeMedia du service pour un item de type "media"', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine({ items: [makeMediaItem()] })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     vitrineServiceMock.removeMedia.mockReturnValue(of(undefined));
@@ -317,7 +317,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
     const postItem = makePostItem({ position: 0 });
     const mediaItem = makeMediaItem({ position: 1 });
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine({ items: [postItem, mediaItem], itemsCount: 2 })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     const reorderedVitrine = makeVitrine({
@@ -341,7 +341,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
     vitrineServiceMock.getVitrine
       .mockReturnValueOnce(of(makeVitrine({ items: [postItem, mediaItem], itemsCount: 2 })))
       .mockReturnValueOnce(of(makeVitrine({ items: [postItem, mediaItem], itemsCount: 2 })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     vitrineServiceMock.reorderItems.mockReturnValue(throwError(() => ({ status: 422 })));
@@ -355,7 +355,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('askPublishConfirmation() ouvre la modale de confirmation', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine({ itemsCount: 1 })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component.askPublishConfirmation();
@@ -366,7 +366,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('cancelPublishConfirmation() ferme la modale sans publier', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine({ itemsCount: 1 })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component.askPublishConfirmation();
@@ -378,7 +378,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('CA-4 : confirmPublish() affiche le message explicite renvoyé par le serveur si la Vitrine est vide', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine({ itemsCount: 0 })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component.askPublishConfirmation();
@@ -395,7 +395,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('confirmPublish() réussi met à jour le statut et ferme la modale', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine({ itemsCount: 1, items: [makeMediaItem()] })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component.askPublishConfirmation();
@@ -409,7 +409,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('unpublish() remet la Vitrine en brouillon sans passer par la modale', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine({ status: 'PUBLISHED' })));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     vitrineServiceMock.unpublish.mockReturnValue(of(makeVitrine({ status: 'DRAFT' })));
@@ -423,7 +423,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('deleteVitrine() redirige vers /vitrines après suppression réussie', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine()));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     vitrineServiceMock.deleteVitrine.mockReturnValue(of(undefined));
@@ -437,7 +437,7 @@ describe('VitrineDetail — US 4.1 Gestion d\'une Vitrine', () => {
 
   it('deleteVitrine() affiche une erreur si la suppression échoue', () => {
     vitrineServiceMock.getVitrine.mockReturnValue(of(makeVitrine()));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     vitrineServiceMock.deleteVitrine.mockReturnValue(
