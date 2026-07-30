@@ -28,14 +28,14 @@ export const NAVIGATION_MENUS: Record<MenuRole, MenuConfig> = {
     navItems: [
       { label: 'Accueil',    route: '/',            iconClass: 'home' },
       { label: 'Post',       route: '/posts',        iconClass: 'near_me' },
-      { label: 'Identifier', route: '/identifier',  iconClass: 'center_focus_strong' },
+      { label: 'Identifier', route: '/posts/new',  iconClass: 'center_focus_strong' },
       { label: 'Profil',     route: '/users/me',    iconClass: 'person' },
       { label: 'Galerie',    route: '/vitrine', iconClass: 'collections' },
     ],
     menuItems: [
       { label: 'Accueil',     route: '/',            iconClass: 'home' },
       { label: 'Post',        route: '/posts',        iconClass: 'near_me' },
-      { label: 'Identifier',  route: '/identifier',  iconClass: 'center_focus_strong' },
+      { label: 'Identifier',  route: '/posts/new',  iconClass: 'center_focus_strong' },
       { label: 'Profil',      route: '/users/me',    iconClass: 'person' },
       { label: 'Galerie',     route: '/vitrine', iconClass: 'collections' },
       { label: 'Faction',     route: '/factions',    iconClass: 'groups' },

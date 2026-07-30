@@ -1,20 +1,22 @@
 <section class="latest-discoveries">
   <h2>Dernières découvertes</h2>
   <div class="discoveries-grid" role="list">
-    <!-- Boucle FOR carte 6 fois avec des données différentes 
-     {{item}} pour générer dynamiquement des attributs pour chaque élément répété dans *ngFor, 
-     rendant chaque "carte de découverte" distincte en fonction de sa position dans la liste.
-    -->
-    <div class="discovery-card" *ngFor="let item of [1,2,3,4,5,6]" role="listitem">
-      <img src="assets/images/quartz.png"  alt="Quartz Rose">
+    @for (post of posts(); track post.id) {
+    <a class="discovery-card" [routerLink]="['/posts', post.id]" role="listitem">
+      @if (post.mediaType === 'IMAGE') {
+      <img [src]="post.mediaUrl" [alt]="post.title ?? 'Pierre publiée par ' + post.author.username">
+      } @else {
+      <div class="video-placeholder">Vidéo</div>
+      }
       <div class="card-content">
-        <!-- Titre : {{ Pierre.nom }} -->
-        <!-- Confiance de l'IA : {{ resultat_reconnaissance_ia }} -->
-        <!-- Par : {{ pierre_user.nom_utilisateur }} -->
-        <h3>Quartz Rose</h3>
-        <p>Confiance IA: 92%</p>
-        <p>par @utilisateur{{item}}</p>
+        <h3>{{ post.identification?.nom || post.title || 'Pierre à identifier' }}</h3>
+        @if (post.identification) { <p>Confiance IA : {{ post.identification.confidence | percent:'1.0-0' }}</p> }
+        <p>par @{{ post.author.username }}</p>
       </div>
-    </div>
+    </a>
+    }
+    @if (isLoading()) { @for (item of [1,2,3]; track item) { <div class="discovery-card skeleton" aria-hidden="true"></div> } }
   </div>
+  @if (loadError()) { <p class="feed-error" role="alert">{{ loadError() }}</p> }
+  <div #feedSentinel class="feed-sentinel" aria-hidden="true"></div>
 </section>

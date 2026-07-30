@@ -5,13 +5,14 @@ namespace App\Service;
 use App\Entity\User;
 use App\Exception\InvalidMediaException;
 use App\Repository\UserRepository;
+use App\Repository\TagRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class ProfileService
 {
-    public function __construct(private readonly EntityManagerInterface $em, private readonly UserRepository $users, private readonly AvatarUploadService $avatars) {}
+    public function __construct(private readonly EntityManagerInterface $em, private readonly UserRepository $users, private readonly TagRepository $tags, private readonly AvatarUploadService $avatars) {}
 
     /** @param array<string,mixed> $data */
     public function update(User $user, array $data, ?UploadedFile $avatar): User
@@ -30,6 +31,16 @@ class ProfileService
             $user->setBio($bio === '' ? null : $bio);
         }
         if ($avatar) $user->setAvatarUrl($this->avatars->upload($avatar));
+        if (array_key_exists('interestTags', $data)) {
+            if (!is_array($data['interestTags']) || count($data['interestTags']) > 20) throw new InvalidArgumentException('Les tags d’intérêt doivent être une liste de 20 éléments maximum.');
+            $interests = [];
+            foreach ($data['interestTags'] as $name) {
+                if (!is_string($name) || trim($name) === '') throw new InvalidArgumentException('Un tag d’intérêt est invalide.');
+                $tag = $this->tags->findOneByName(trim($name));
+                if ($tag !== null) $interests[] = $tag;
+            }
+            $user->setInterestTags($interests);
+        }
         $this->em->flush();
         return $user;
     }

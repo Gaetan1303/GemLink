@@ -88,6 +88,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\InverseJoinColumn(name: 'badge_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     private Collection $badges;
 
+    /** @var Collection<int, Tag> Tags utilisés pour personnaliser le feed. */
+    #[ORM\ManyToMany(targetEntity: Tag::class)]
+    #[ORM\JoinTable(name: 'user_interest_tag')]
+    private Collection $interestTags;
+
     public function __construct()
     {
         $this->id = Uuid::v7();
@@ -96,6 +101,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->passwordResetTokens = new ArrayCollection();
         $this->emailValidationTokens = new ArrayCollection();
         $this->badges = new ArrayCollection();
+        $this->interestTags = new ArrayCollection();
     }
 
     // --- Identifiants & Infos de Base ---
@@ -279,6 +285,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /** @return Collection<int, Badge> */
     public function getBadges(): Collection { return $this->badges; }
+
+    /** @return Collection<int, Tag> */
+    public function getInterestTags(): Collection { return $this->interestTags; }
+
+    public function setInterestTags(iterable $tags): self
+    {
+        $this->interestTags->clear();
+        foreach ($tags as $tag) {
+            if ($tag instanceof Tag) {
+                $this->interestTags->add($tag);
+            }
+        }
+
+        return $this;
+    }
 
     // --- Collections de Tokens (Relations) ---
 

@@ -32,35 +32,38 @@ export class PostList implements OnInit {
   protected readonly isLoading  = signal(false);
   protected readonly loadError  = signal<string | null>(null);
 
-  protected readonly hasNextPage = computed(() => this.page() < this.totalPages());
+  protected readonly hasNextPage = signal(false);
   protected readonly hasPrevPage = computed(() => this.page() > 1);
 
   ngOnInit(): void {
-    this.loadPage(1);
+    this.loadPage(null);
   }
 
   goToNextPage(): void {
     if (this.hasNextPage()) {
-      this.loadPage(this.page() + 1);
+      this.loadPage(this.nextCursor);
     }
   }
 
   goToPrevPage(): void {
     if (this.hasPrevPage()) {
-      this.loadPage(this.page() - 1);
+      this.loadPage(null);
     }
   }
 
-  private loadPage(page: number): void {
+  private nextCursor: string | null = null;
+
+  private loadPage(cursor: string | null): void {
     this.isLoading.set(true);
     this.loadError.set(null);
 
-    this.postService.listPosts(page, PAGE_SIZE).subscribe({
+    this.postService.listPosts(cursor, PAGE_SIZE).subscribe({
       next: (result) => {
         this.posts.set(result.items);
-        this.page.set(result.page);
-        this.totalPages.set(Math.max(1, result.totalPages));
-        this.total.set(result.total);
+        this.nextCursor = result.nextCursor;
+        this.hasNextPage.set(result.hasNextPage);
+        this.page.update(value => cursor === null ? 1 : value + 1);
+        this.total.set(this.posts().length);
         this.isLoading.set(false);
       },
       error: () => {

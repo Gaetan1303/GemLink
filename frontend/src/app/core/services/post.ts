@@ -46,11 +46,17 @@ export interface Publication {
 
 // US 2.2 — Consultation des posts (liste + détail)
 export interface PublicationPage {
-  items:      Publication[];
-  page:       number;
-  limit:      number;
-  total:      number;
-  totalPages: number;
+  items:       Publication[];
+  limit:       number;
+  nextCursor:  string | null;
+  hasNextPage: boolean;
+}
+
+export interface FeedFilters {
+  tag?: string;
+  mineral?: string;
+  minConfidence?: number;
+  personalized?: boolean;
 }
 
 // CA-2 : mêmes limites que le backend (validation client = confort UX,
@@ -104,8 +110,14 @@ export class PostService {
   /**
    * US 2.2 — Feed public paginé (accessible aux visiteurs non authentifiés).
    */
-  listPosts(page = 1, limit = 20): Observable<PublicationPage> {
-    return this.#http.get<PublicationPage>(this.#apiUrl, { params: { page, limit } });
+  listPosts(cursor: string | null = null, limit = 20, filters: FeedFilters = {}): Observable<PublicationPage> {
+    const params: Record<string, string | number | boolean> = { limit };
+    if (cursor) params['cursor'] = cursor;
+    if (filters.tag) params['tag'] = filters.tag;
+    if (filters.mineral) params['mineral'] = filters.mineral;
+    if (filters.minConfidence !== undefined) params['minConfidence'] = filters.minConfidence;
+    if (filters.personalized) params['personalized'] = true;
+    return this.#http.get<PublicationPage>(this.#apiUrl, { params });
   }
 
   /**

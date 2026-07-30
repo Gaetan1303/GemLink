@@ -95,7 +95,7 @@
 
       <div class="pagination">
         <button type="button" (click)="goToPrevPage()" [disabled]="!hasPrevPage()">Précédent</button>
-        <span class="pagination__meta">Page {{ page() }} / {{ totalPages() }}</span>
+        <span class="pagination__meta">Page {{ page() }}</span>
         <button type="button" (click)="goToNextPage()" [disabled]="!hasNextPage()">Suivant</button>
       </div>
     }
