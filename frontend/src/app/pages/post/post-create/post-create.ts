@@ -104,6 +104,9 @@ export class PostCreate {
     }
 
     this.isSubmitting.set(true);
+    // Les contrôles réactifs doivent être désactivés via leur FormGroup,
+    // jamais via [disabled] dans le template (warning Angular NG01352).
+    this.postForm.disable();
     this.submitError.set(null);
 
     const { title, description, tagsInput } = this.postForm.value;
@@ -119,6 +122,7 @@ export class PostCreate {
       },
       error: (err) => {
         this.isSubmitting.set(false);
+        this.postForm.enable();
         this.submitError.set(
           err?.error?.message ?? 'Une erreur est survenue lors de la publication. Merci de réessayer.'
         );
@@ -127,6 +131,7 @@ export class PostCreate {
   }
 
   reset(): void {
+    this.postForm.enable();
     this.submitError.set(null);
     this.removeFile();
     this.postForm.reset({ title: '', description: '', tagsInput: '' });
