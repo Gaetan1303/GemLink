@@ -7,7 +7,7 @@ import { environment } from '../../../environments/environment';
 // ── US 2.1 — Publication d'un post MVP ──────────────────────────
 
 export type MediaType = 'IMAGE' | 'VIDEO';
-export type PostStatus = 'PENDING_ANALYSIS' | 'ANALYZED' | 'ANALYSIS_FAILED';
+export type PostStatus = 'PENDING_ANALYSIS' | 'ANALYZED' | 'ANALYSIS_FAILED' | 'COMMUNITY_VALIDATED';
 
 export interface PostAuthor {
   id:        string;

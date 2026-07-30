@@ -29,4 +29,16 @@ class PierreRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /** @return Pierre[] */
+    public function searchByName(string $query, int $limit = 10): array
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('LOWER(p.name) LIKE LOWER(:query)')
+            ->setParameter('query', '%' . trim($query) . '%')
+            ->orderBy('p.name', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
 }
