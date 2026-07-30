@@ -8,12 +8,14 @@ import { NavBarMobile } from '../../../components/nav-bar-mobile/nav-bar-mobile'
 import { AuthService } from '../../../core/services/auth';
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
 import { PostService, Publication } from '../../../core/services/post';
+import { CommentSection } from '../../../shared/comment-section/comment-section';
+import { ValidationWidget } from '../../../shared/validation-widget/validation-widget';
 
 // US 2.2 — Consultation des posts : détail public d'un post.
 // US 3.1 — Suivi en direct de l'analyse IA (polling) + transitions animées.
 @Component({
   selector: 'app-post-detail',
-  imports: [CommonModule, SharedModule, NavBarMobile],
+  imports: [CommonModule, SharedModule, NavBarMobile, CommentSection, ValidationWidget],
   templateUrl: './post-detail.html',
   styleUrls: ['./post-detail.scss'],
   animations: [
@@ -67,6 +69,21 @@ export class PostDetail implements OnInit, OnDestroy {
     }
 
     return user.role === 'ROLE_ADMIN' || String(user.id) === currentPost.author.id;
+  });
+
+  // US 2.7 CA-1 : un utilisateur authentifié peut valider l'identification
+  // IA de n'importe quel post sauf le sien (pas de sens à s'auto-valider).
+  // Même logique de "masquage UX seulement" que canDelete — le serveur
+  // revérifie IS_AUTHENTICATED_FULLY de toute façon.
+  protected readonly canValidate = computed(() => {
+    const user = this.authService.currentUser();
+    const currentPost = this.post();
+
+    if (!user || !currentPost) {
+      return false;
+    }
+
+    return String(user.id) !== currentPost.author.id;
   });
 
   // US 3.1 : bouton dans la fiche d'identification qui fait défiler le

@@ -5,6 +5,7 @@ use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\EventListener\JwtBlocklistListener;
 use App\Repository\EmailValidationTokenRepository;
+use App\Repository\PasswordResetTokenRepository;
 use App\Repository\RefreshTokenRepository;
 use App\Repository\UserRepository;
 use App\Service\AuthService;
@@ -77,6 +78,7 @@ final class DeconnexionTest extends TestCase
             cache:                       $this->createMock(CacheInterface::class),
             cachePool:                   $cachePool,
             frontendUrl:                 'https://gemlink.com',
+            passwordResetTokenRepository: $this->createMock(PasswordResetTokenRepository::class),
         );
     }
 

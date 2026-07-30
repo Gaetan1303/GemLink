@@ -13,11 +13,16 @@ use App\Exception\VitrineEmptyException;
 use App\Exception\VitrineValidationException;
 use App\Repository\VitrinePublicationRepository;
 use App\Repository\VitrineRepository;
+use App\Repository\VitrineMediaRepository;
+use App\Service\AiOrchestrationService;
+use App\Service\Media\MediaUploadService;
+use App\Service\VitrineQrCodeService;
 use App\Service\VitrineService;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -42,6 +47,11 @@ final class VitrineServiceTest extends TestCase
             $this->em,
             $this->vitrines,
             $this->vitrinePublications,
+            $this->createMock(VitrineMediaRepository::class),
+            $this->createMock(MediaUploadService::class),
+            $this->createMock(AiOrchestrationService::class),
+            $this->createMock(VitrineQrCodeService::class),
+            $this->createMock(LoggerInterface::class),
         );
     }
 
@@ -273,9 +283,9 @@ final class VitrineServiceTest extends TestCase
         $this->em->expects($this->once())->method('flush');
 
         $this->vitrineService->reorderItems($vitrine, $owner, [
-            $publicationC->getId()->toRfc4122(),
-            $publicationA->getId()->toRfc4122(),
-            $publicationB->getId()->toRfc4122(),
+            ['type' => 'post', 'id' => $publicationC->getId()->toRfc4122()],
+            ['type' => 'post', 'id' => $publicationA->getId()->toRfc4122()],
+            ['type' => 'post', 'id' => $publicationB->getId()->toRfc4122()],
         ]);
 
         $itemsByPublication = [];
@@ -302,7 +312,7 @@ final class VitrineServiceTest extends TestCase
 
         $this->expectException(VitrineValidationException::class);
 
-        $this->vitrineService->reorderItems($vitrine, $owner, [$publicationA->getId()->toRfc4122()]);
+        $this->vitrineService->reorderItems($vitrine, $owner, [['type' => 'post', 'id' => $publicationA->getId()->toRfc4122()]]);
     }
 
     public function testReorderItemsRejectsUnknownPublicationId(): void
@@ -314,7 +324,7 @@ final class VitrineServiceTest extends TestCase
 
         $this->expectException(VitrineValidationException::class);
 
-        $this->vitrineService->reorderItems($vitrine, $owner, [Uuid::v7()->toRfc4122()]);
+        $this->vitrineService->reorderItems($vitrine, $owner, [['type' => 'post', 'id' => Uuid::v7()->toRfc4122()]]);
     }
 
     public function testReorderItemsByNonOwnerThrowsAccessDenied(): void

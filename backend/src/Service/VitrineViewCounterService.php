@@ -21,8 +21,8 @@ use Redis;
  */
 class VitrineViewCounterService
 {
-    private const string PENDING_KEY_PREFIX = 'vitrine:views:pending:';
-    private const string DIRTY_SET_KEY = 'vitrine:views:dirty';
+    private const PENDING_KEY_PREFIX = 'vitrine:views:pending:';
+    private const  DIRTY_SET_KEY = 'vitrine:views:dirty';
 
     public function __construct(
         private readonly Redis $redis,

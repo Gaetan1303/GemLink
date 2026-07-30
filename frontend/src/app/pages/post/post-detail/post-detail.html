@@ -85,6 +85,10 @@
             </div>
           }
 
+          @if ((p.status === 'ANALYZED' || p.status === 'COMMUNITY_VALIDATED') && p.identification && canValidate()) {
+            <app-validation-widget [postId]="p.id" />
+          }
+
           @if (p.tags.length > 0) {
             <div class="post-tags">
               @for (tag of p.tags; track tag) {

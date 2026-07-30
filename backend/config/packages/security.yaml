@@ -51,6 +51,7 @@ security:
         # garde l'ordre explicite pour la lisibilité).
         - { path: '^/api/publications/[^/]+/comments', roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/publications, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: '^/api/vitrines/[^/]+$', roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

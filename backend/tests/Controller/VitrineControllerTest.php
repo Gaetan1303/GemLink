@@ -343,7 +343,7 @@ final class VitrineControllerTest extends WebTestCase
 
         $this->assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $data = json_decode($client->getResponse()->getContent(), true);
-        $this->assertStringContainsString('vide', $data['message']);
+        $this->assertStringContainsString('sans aucun item', $data['message']);
     }
 
     public function testPublishSuccessReturns200(): void

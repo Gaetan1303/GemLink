@@ -17,3 +17,4 @@ framework:
         routing:
             'App\Message\SendEmailMessage': async
             'App\Message\AnalyzeMediaMessage': async
+            'App\Message\RecalculateConsensusMessage': async
