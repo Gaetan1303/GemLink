@@ -1,11 +1,122 @@
-import { Component } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Header } from '../../../shared/header/header';
+import { Button } from '../../../shared/button/button';
+import { AuthService } from '../../../core/services/auth';
+import { ProfileService, PublicProfile } from '../../../core/services/profile';
+import { HeaderImage } from '../../../shared/header-image/header-image';
+
+
+const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 
 @Component({
   selector: 'app-profile',
-  imports: [CommonModule, Header],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, Header, HeaderImage, Button, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule, MatTooltipModule],
   templateUrl: './profile.html',
   styleUrls: ['./profile.scss'],
 })
-export class Profile {}
+export class Profile implements OnInit {
+  readonly #route = inject(ActivatedRoute);
+  readonly #auth = inject(AuthService);
+  readonly #profiles = inject(ProfileService);
+  readonly #destroyRef = inject(DestroyRef);
+  readonly #formBuilder = inject(FormBuilder);
+
+  protected readonly profile = signal<PublicProfile | null>(null);
+  protected readonly isLoading = signal(true);
+  protected readonly isSaving = signal(false);
+  protected readonly errorMessage = signal<string | null>(null);
+  protected readonly selectedAvatar = signal<File | null>(null);
+  protected readonly avatarPreview = signal<string | null>(null);
+  protected readonly isOwnProfile = computed(() => this.profile()?.id === this.#auth.currentUser()?.id);
+  protected readonly form = this.#formBuilder.nonNullable.group({
+    username: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9]{3,30}$/)]],
+    bio: ['', [Validators.maxLength(500)]],
+  });
+
+  ngOnInit(): void {
+    this.#route.paramMap.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((params) => {
+      const requestedId = params.get('id');
+      if (requestedId) {
+        this.loadProfile(requestedId);
+        return;
+      }
+
+      const userId = this.#auth.currentUser()?.id;
+      if (userId) {
+        this.loadProfile(userId);
+        return;
+      }
+
+      // Les JWT émis avant US 1.7 ne portaient pas l'UUID : le refresh
+      // transparent les remplace par un jeton compatible sans forcer un logout.
+      this.#auth.refresh().pipe(takeUntilDestroyed(this.#destroyRef)).subscribe({
+        next: () => {
+          const refreshedId = this.#auth.currentUser()?.id;
+          if (refreshedId) this.loadProfile(refreshedId);
+          else this.showAuthenticationError();
+        },
+        error: () => this.showAuthenticationError(),
+      });
+    });
+  }
+
+  protected selectAvatar(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) return;
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      this.errorMessage.set('Formats acceptés : JPEG, PNG ou WebP.'); input.value = ''; return;
+    }
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
+      this.errorMessage.set('L’avatar ne peut pas dépasser 2 Mo.'); input.value = ''; return;
+    }
+    const oldPreview = this.avatarPreview();
+    if (oldPreview) URL.revokeObjectURL(oldPreview);
+    this.selectedAvatar.set(file);
+    this.avatarPreview.set(URL.createObjectURL(file));
+    this.errorMessage.set(null);
+  }
+
+  protected save(): void {
+    const current = this.profile();
+    this.form.markAllAsTouched();
+    if (!current || !this.isOwnProfile() || this.form.invalid) return;
+    this.isSaving.set(true); this.errorMessage.set(null);
+    const value = this.form.getRawValue();
+    this.#profiles.updateProfile(current.id, value.username, value.bio, this.selectedAvatar())
+      .pipe(takeUntilDestroyed(this.#destroyRef)).subscribe({
+        next: (profile) => { this.applyProfile(profile); this.selectedAvatar.set(null); this.isSaving.set(false); },
+        error: (error) => { this.errorMessage.set(error.error?.message ?? 'Impossible d’enregistrer le profil.'); this.isSaving.set(false); },
+      });
+  }
+
+  private loadProfile(userId: string): void {
+    this.isLoading.set(true); this.errorMessage.set(null);
+    this.#profiles.getProfile(userId).pipe(takeUntilDestroyed(this.#destroyRef)).subscribe({
+      next: (profile) => { this.applyProfile(profile); this.isLoading.set(false); },
+      error: () => { this.profile.set(null); this.errorMessage.set('Profil introuvable ou indisponible.'); this.isLoading.set(false); },
+    });
+  }
+
+  private applyProfile(profile: PublicProfile): void {
+    this.profile.set(profile);
+    this.form.setValue({ username: profile.username, bio: profile.bio ?? '' });
+  }
+
+  private showAuthenticationError(): void {
+    this.isLoading.set(false);
+    this.errorMessage.set('Votre session a expiré. Connectez-vous pour consulter votre profil.');
+  }
+}

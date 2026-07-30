@@ -2,13 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from './core/services/auth';
 import { NavBarMobile } from './components/nav-bar-mobile/nav-bar-mobile';
-import { MenuBurger } from './components/menu-burger/menu-burger';
 import { MenuRole } from './components/menu-burger/menu-navigation.model';
 import { Title, Meta } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet,],
+  imports: [RouterOutlet, NavBarMobile],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,8 +1,5 @@
 import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
-import { Profile } from './pages/user/profile/profile';
-
-
 export const routes: Routes = [
   { path: '', component: Home },
   {
@@ -61,6 +58,10 @@ export const routes: Routes = [
   },
   {
     path: 'users/me',
+    loadComponent: () => import('./pages/user/profile/profile').then(m => m.Profile)
+  },
+  {
+    path: 'users/:id',
     loadComponent: () => import('./pages/user/profile/profile').then(m => m.Profile)
   },
 

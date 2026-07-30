@@ -1,0 +1,7 @@
+@use '../../../pages/post/post-theme' as theme;
+
+.logout-page { display: grid; min-height: calc(100vh - 88px); place-items: center; padding: 2rem 1rem; background: radial-gradient(circle at 72% 12%, theme.$violet-dim, transparent 32%), theme.$ink; }
+.logout-card { width: min(100%, 460px); overflow: hidden; text-align: center; border: 1px solid theme.$line; background: theme.$surface; color: theme.$text; @include theme.facet-corner; }
+.logout-card mat-card-content { display: grid; justify-items: center; gap: 1rem; padding: 3rem 2.5rem; }
+.logout-card__icon { display: grid; width: 72px; height: 72px; place-items: center; color: theme.$gold; border: 1px solid theme.$gold; background: theme.$gold-dim; clip-path: polygon(18% 0,82% 0,100% 18%,100% 82%,82% 100%,18% 100%,0 82%,0 18%); }.logout-card__icon mat-icon { transform: scale(1.5); }
+.logout-card h1 { margin: 0; color: theme.$gold; font-family: theme.$font-display; }.logout-card p { margin: 0; color: theme.$text-dim; line-height: 1.6; }.logout-card mat-spinner { --mdc-circular-progress-active-indicator-color: #{theme.$gold}; }

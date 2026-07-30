@@ -81,6 +81,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: EmailValidationToken::class, cascade: ['persist', 'remove'])]
     private Collection $emailValidationTokens;
 
+    /** @var Collection<int, Badge> */
+    #[ORM\ManyToMany(targetEntity: Badge::class)]
+    #[ORM\JoinTable(name: 'user_badge')]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'badge_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $badges;
+
     public function __construct()
     {
         $this->id = Uuid::v7();
@@ -88,6 +95,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->refreshTokens = new ArrayCollection();
         $this->passwordResetTokens = new ArrayCollection();
         $this->emailValidationTokens = new ArrayCollection();
+        $this->badges = new ArrayCollection();
     }
 
     // --- Identifiants & Infos de Base ---
@@ -268,6 +276,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->createdAt;
     }
+
+    /** @return Collection<int, Badge> */
+    public function getBadges(): Collection { return $this->badges; }
 
     // --- Collections de Tokens (Relations) ---
 

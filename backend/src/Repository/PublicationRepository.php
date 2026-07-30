@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Publication;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Uid\Uuid;
@@ -57,6 +58,13 @@ class PublicationRepository extends ServiceEntityRepository
             ->andWhere('p.deletedAt IS NULL')
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    /** @return Publication[] */
+    public function findActiveByUser(User $user): array
+    {
+        return $this->createQueryBuilder('p')->andWhere('p.user = :user')->andWhere('p.deletedAt IS NULL')
+            ->setParameter('user', $user)->orderBy('p.createdAt', 'DESC')->getQuery()->getResult();
     }
 
     //    /**

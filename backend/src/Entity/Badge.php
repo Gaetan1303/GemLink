@@ -38,4 +38,8 @@ class Badge
         $this->name = $name;
         $this->createdAt = new DateTimeImmutable();
     }
+
+    public function getId(): Uuid { return $this->id; }
+    public function getName(): string { return $this->name; }
+    public function getDescription(): ?string { return $this->description; }
 }

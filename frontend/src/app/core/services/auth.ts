@@ -28,7 +28,7 @@ export interface LoginResponse {
 }
 
 export interface User {
-  id:       number;
+  id:       string;
   username: string;
   role:     MenuRole;
 }
@@ -162,7 +162,7 @@ export class AuthService {
         username: string;
         iat: number;
         exp: number;
-        id: number;
+        id: string;
       } = jwtDecode(token);
 
       this.currentUser.set({
