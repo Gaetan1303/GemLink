@@ -14,7 +14,13 @@ framework:
             failed:
                 dsn: '%env(MESSENGER_FAILED_TRANSPORT_DSN)%'
 
+            low_priority:
+                dsn: '%env(REDIS_URL)%/identification_low_priority'
+                retry_strategy:
+                    service: App\Messenger\AnalyzeMediaRetryStrategy
+
         routing:
             'App\Message\SendEmailMessage': async
             'App\Message\AnalyzeMediaMessage': async
+            'App\Message\AnalyzePublicIdentificationMessage': low_priority
             'App\Message\RecalculateConsensusMessage': async
