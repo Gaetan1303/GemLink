@@ -126,6 +126,9 @@ public function __construct(
         }
 
         $user = $email !== '' ? $this->userRepository->findOneBy(['email' => $email]) : null;
+        if ($user instanceof User && $user->isTemporaryBanExpired()) {
+            $user->unban();
+        }
         if (
             !$user instanceof User
             || $user->getStatus() !== 'ACTIVE'
@@ -136,6 +139,7 @@ public function __construct(
         }
 
         $this->resetLoginAttempts($email);
+        $user->markLoggedIn();
 
         ['refreshToken' => $refreshToken, 'refreshTokenExpiresAt' => $expiresAt, 'refreshTokenEntity' => $entity]
             = $this->issueRefreshToken($user);
@@ -181,6 +185,15 @@ public function __construct(
         }
 
         $user = $refreshToken->getUser();
+
+        if ($user->isTemporaryBanExpired()) {
+            $user->unban();
+        }
+        if ($user->getStatus() !== 'ACTIVE') {
+            $refreshToken->revoke();
+            $this->em->flush();
+            throw new InvalidArgumentException('Compte indisponible.');
+        }
 
         // CA-2 : révoquer l'ancien refresh token avant d'en émettre un nouveau
         $refreshToken->revoke();

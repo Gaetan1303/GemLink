@@ -24,3 +24,4 @@ framework:
             'App\Message\AnalyzeMediaMessage': async
             'App\Message\AnalyzePublicIdentificationMessage': low_priority
             'App\Message\RecalculateConsensusMessage': async
+            'App\Message\RunFineTuningMessage': async
