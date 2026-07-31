@@ -1,10 +1,9 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { SharedModule } from '../../../shared/shared-module';
-import { NavBarMobile } from '../../../components/nav-bar-mobile/nav-bar-mobile';
 import { AuthService } from '../../../core/services/auth';
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
 import { PostService, Publication } from '../../../core/services/post';
@@ -15,7 +14,7 @@ import { ValidationWidget } from '../../../shared/validation-widget/validation-w
 // US 3.1 — Suivi en direct de l'analyse IA (polling) + transitions animées.
 @Component({
   selector: 'app-post-detail',
-  imports: [CommonModule, SharedModule, NavBarMobile, CommentSection, ValidationWidget],
+  imports: [CommonModule, SharedModule, CommentSection, ValidationWidget],
   templateUrl: './post-detail.html',
   styleUrls: ['./post-detail.scss'],
   animations: [
@@ -42,7 +41,7 @@ export class PostDetail implements OnInit, OnDestroy {
 
   private readonly route       = inject(ActivatedRoute);
   private readonly router      = inject(Router);
-  private readonly authService = inject(AuthService);
+  protected readonly authService = inject(AuthService);
   private readonly postService = inject(PostService);
 
   protected readonly currentRole = computed<MenuRole>(
@@ -56,6 +55,8 @@ export class PostDetail implements OnInit, OnDestroy {
   protected readonly isDeleting = signal(false);
   protected readonly deleteError = signal<string | null>(null);
   protected readonly showDeleteConfirm = signal(false);
+  protected readonly isLiking = signal(false);
+  protected readonly likeError = signal<string | null>(null);
 
   // CA-4 : l'autorisation finale est toujours vérifiée côté serveur ; ceci
   // ne fait que masquer/afficher le bouton pour l'UX (modérateur non
@@ -141,6 +142,40 @@ export class PostDetail implements OnInit, OnDestroy {
 
   cancelDelete(): void {
     this.showDeleteConfirm.set(false);
+  }
+
+  protected toggleLike(): void {
+    const currentPost = this.post();
+    if (!currentPost || !this.authService.isAuthenticated() || this.isLiking()) {
+      return;
+    }
+
+    const previousLiked = currentPost.likedByCurrentUser;
+    const previousCount = currentPost.likeCount;
+    const optimisticLiked = !previousLiked;
+    const optimisticCount = Math.max(0, previousCount + (optimisticLiked ? 1 : -1));
+
+    this.likeError.set(null);
+    this.post.set({ ...currentPost, likedByCurrentUser: optimisticLiked, likeCount: optimisticCount });
+    this.isLiking.set(true);
+
+    this.postService.toggleLike(currentPost.id).pipe(
+      finalize(() => this.isLiking.set(false)),
+    ).subscribe({
+      next: (result) => this.post.update(post => post && ({
+        ...post,
+        likedByCurrentUser: result.liked,
+        likeCount: result.likeCount,
+      })),
+      error: () => {
+        this.post.update(post => post && ({
+          ...post,
+          likedByCurrentUser: previousLiked,
+          likeCount: previousCount,
+        }));
+        this.likeError.set('Le like n’a pas pu être enregistré. La modification a été annulée.');
+      },
+    });
   }
 
   deletePost(): void {

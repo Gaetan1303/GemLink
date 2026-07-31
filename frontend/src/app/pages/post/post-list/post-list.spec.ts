@@ -21,6 +21,8 @@ function makePublication(id: string, title: string): Publication {
     mediaType: 'IMAGE',
     status: 'PENDING_ANALYSIS',
     viewCount: 0,
+    likeCount: 0,
+    likedByCurrentUser: false,
     tags: [],
     identification: null,
     createdAt: new Date().toISOString(),
@@ -30,15 +32,17 @@ function makePublication(id: string, title: string): Publication {
 describe('PostList — US 2.2 Consultation des posts (liste)', () => {
   let component: PostList;
   let fixture:   ComponentFixture<PostList>;
-  let postServiceMock: { listPosts: ReturnType<typeof vi.fn> };
+  let postServiceMock: { listPosts: ReturnType<typeof vi.fn>; toggleLike: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     const authServiceMock = {
       currentUser: signal<User | null | undefined>(undefined),
+      isAuthenticated: () => false,
     };
 
     postServiceMock = {
       listPosts: vi.fn(),
+      toggleLike: vi.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -60,13 +64,13 @@ describe('PostList — US 2.2 Consultation des posts (liste)', () => {
   it('charge la première page au démarrage, y compris pour un visiteur anonyme', () => {
     const page: PublicationPage = {
       items: [makePublication('post-1', 'Améthyste')],
-      page: 1, limit: 20, total: 1, totalPages: 1,
+      limit: 20, nextCursor: null, hasNextPage: false,
     };
     postServiceMock.listPosts.mockReturnValue(of(page));
 
     fixture.detectChanges();
 
-    expect(postServiceMock.listPosts).toHaveBeenCalledWith(1, 20);
+    expect(postServiceMock.listPosts).toHaveBeenCalledWith(null, 20);
     expect(component['posts']()).toHaveLength(1);
     expect(component['posts']()[0].title).toBe('Améthyste');
   });
@@ -82,22 +86,22 @@ describe('PostList — US 2.2 Consultation des posts (liste)', () => {
 
   it('goToNextPage() charge la page suivante si elle existe', () => {
     postServiceMock.listPosts.mockReturnValue(of({
-      items: [makePublication('post-1', 'A')], page: 1, limit: 20, total: 40, totalPages: 2,
+      items: [makePublication('post-1', 'A')], limit: 20, nextCursor: 'cursor-2', hasNextPage: true,
     }));
     fixture.detectChanges();
 
     postServiceMock.listPosts.mockReturnValue(of({
-      items: [makePublication('post-2', 'B')], page: 2, limit: 20, total: 40, totalPages: 2,
+      items: [makePublication('post-2', 'B')], limit: 20, nextCursor: null, hasNextPage: false,
     }));
     component.goToNextPage();
 
-    expect(postServiceMock.listPosts).toHaveBeenCalledWith(2, 20);
+    expect(postServiceMock.listPosts).toHaveBeenCalledWith('cursor-2', 20);
     expect(component['page']()).toBe(2);
   });
 
   it('goToNextPage() ne fait rien sur la dernière page', () => {
     postServiceMock.listPosts.mockReturnValue(of({
-      items: [], page: 1, limit: 20, total: 0, totalPages: 1,
+      items: [], limit: 20, nextCursor: null, hasNextPage: false,
     }));
     fixture.detectChanges();
 

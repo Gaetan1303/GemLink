@@ -6,7 +6,7 @@ import { MenuRole } from '../../../components/menu-burger/menu-navigation.model'
 
 @Component({
   selector: 'app-mentions-legales',
-  imports: [SharedModule, NavBarMobile],
+  imports: [SharedModule,],
   templateUrl: './mentions-legales.html',
   styleUrls: ['./mentions-legales.scss'],
 })

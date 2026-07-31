@@ -20,6 +20,7 @@ use Symfony\Component\Uid\Uuid;
 class Notification
 {
     public const TYPE_NEW_COMMENT = 'NEW_COMMENT';
+    public const TYPE_NEW_LIKE = 'NEW_LIKE';
 
     public const TARGET_TYPE_PUBLICATION = 'PUBLICATION';
 
@@ -30,6 +31,11 @@ class Notification
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private User $user;
+
+    /** Utilisateur à l'origine de l'évènement, nécessaire à la déduplication des likes. */
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'actor_user_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
+    private ?User $actor = null;
 
     #[ORM\Column(length: 50)]
     private string $type = '';
@@ -68,6 +74,10 @@ class Notification
     {
         return $this->type;
     }
+
+    public function getActor(): ?User { return $this->actor; }
+
+    public function setActor(?User $actor): self { $this->actor = $actor; return $this; }
 
     public function getTargetId(): ?Uuid
     {

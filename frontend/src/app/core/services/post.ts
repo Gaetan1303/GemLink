@@ -39,9 +39,17 @@ export interface Publication {
   mediaType:      MediaType;
   status:         PostStatus;
   viewCount:      number;
+  likeCount:      number;
+  likedByCurrentUser: boolean;
   tags:           string[];
   identification: PublicationIdentification | null;
   createdAt:      string;
+}
+
+/** Réponse du toggle `POST /api/publications/{id}/like`. */
+export interface LikeToggleResponse {
+  liked: boolean;
+  likeCount: number;
 }
 
 // US 2.2 — Consultation des posts (liste + détail)
@@ -125,6 +133,11 @@ export class PostService {
    */
   getPost(postId: string): Observable<Publication> {
     return this.#http.get<Publication>(`${this.#apiUrl}/${postId}`);
+  }
+
+  /** US 2.3 CA-1 : le serveur ajoute ou retire le like selon son état actuel. */
+  toggleLike(postId: string): Observable<LikeToggleResponse> {
+    return this.#http.post<LikeToggleResponse>(`${this.#apiUrl}/${postId}/like`, {});
   }
 
   /**
