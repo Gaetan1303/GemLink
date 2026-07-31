@@ -22,7 +22,11 @@ class VitrinePublicControllerTest extends WebTestCase
             ->with('slug-inexistant')
             ->willReturn(null);
 
+        $viewCounter = $this->createMock(VitrineViewCounterService::class);
+        $viewCounter->expects($this->never())->method('incrementView');
+
         $container->set(VitrineRepository::class, $vitrineRepository);
+        $container->set(VitrineViewCounterService::class, $viewCounter);
 
         $client->request('GET', '/api/public/vitrines/slug-inexistant');
 

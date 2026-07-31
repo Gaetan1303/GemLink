@@ -3,6 +3,8 @@
 namespace App\Repository;
 
 use App\Entity\Notification;
+use App\Entity\Publication;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -14,6 +16,17 @@ class NotificationRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Notification::class);
+    }
+
+    public function hasLikeNotification(User $recipient, User $actor, Publication $publication): bool
+    {
+        return $this->findOneBy([
+            'user' => $recipient,
+            'actor' => $actor,
+            'type' => Notification::TYPE_NEW_LIKE,
+            'targetId' => $publication->getId(),
+            'targetType' => Notification::TARGET_TYPE_PUBLICATION,
+        ]) !== null;
     }
 
     //    /**

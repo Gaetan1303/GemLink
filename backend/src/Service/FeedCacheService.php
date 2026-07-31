@@ -7,7 +7,7 @@ use App\Repository\PublicationRepository;
 use Redis;
 
 /** Redis-backed hot global-feed index; DB remains the source of truth. */
-final class FeedCacheService
+class FeedCacheService
 {
     private const LIST = 'feed:global:recent';
     private const STALE_LIST = 'feed:global:recent:stale';

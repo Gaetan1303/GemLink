@@ -10,7 +10,9 @@ use App\Exception\InvalidMediaException;
 use App\Exception\PostAccessDeniedException;
 use App\Exception\PostValidationException;
 use App\Repository\PublicationPierreRepository;
+use App\Repository\PublicationLikeRepository;
 use App\Repository\PublicationRepository;
+use App\Service\LikeService;
 use App\Service\PostService;
 use App\Service\FeedCacheService;
 use DateTimeImmutable;
@@ -47,6 +49,8 @@ final class PublicationController extends AbstractController
         private readonly PublicationRepository $publications,
         private readonly PublicationPierreRepository $publicationPierres,
         private readonly FeedCacheService $feedCache,
+        private readonly PublicationLikeRepository $likes,
+        private readonly LikeService $likeService,
     ) {
     }
 
@@ -162,6 +166,22 @@ final class PublicationController extends AbstractController
         return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 
+    /** US 2.3 CA-1 : un même endpoint alterne ajout et retrait du like. */
+    #[Route('/{id}/like', name: 'publication_like_toggle', methods: ['POST'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function toggleLike(string $id): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $publication = $this->findActiveOrFail($id);
+
+        if ($publication instanceof JsonResponse) {
+            return $publication;
+        }
+
+        return $this->json($this->likeService->toggle($user, $publication));
+    }
+
     /**
      * @return Publication|JsonResponse une réponse d'erreur (400/404) toute prête,
      *         ou le post actif trouvé
@@ -253,6 +273,10 @@ final class PublicationController extends AbstractController
             'mediaType' => $publication->getMediaType(),
             'status' => $publication->getStatus(),
             'viewCount' => $publication->getViewCount(),
+            'likeCount' => $this->likes->countForPublication($publication),
+            'likedByCurrentUser' => $this->getUser() instanceof User
+                ? $this->likes->findOneFor($publication, $this->getUser()) !== null
+                : false,
             'tags' => array_map(
                 static fn ($tag) => $tag->getName(),
                 $publication->getTags()->toArray()

@@ -15,6 +15,7 @@ use App\Service\AiOrchestrationService;
 use App\Service\Media\MediaUploadService;
 use App\Service\Media\UploadedMedia;
 use App\Service\PostService;
+use App\Service\FeedCacheService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -31,6 +32,7 @@ final class PostServiceTest extends TestCase
     private TagRepository&MockObject $tags;
     private MediaUploadService&MockObject $mediaUploadService;
     private AiOrchestrationService&MockObject $aiOrchestration;
+    private FeedCacheService&MockObject $feedCache;
     private PostService $postService;
 
     protected function setUp(): void
@@ -39,12 +41,14 @@ final class PostServiceTest extends TestCase
         $this->tags = $this->createMock(TagRepository::class);
         $this->mediaUploadService = $this->createMock(MediaUploadService::class);
         $this->aiOrchestration = $this->createMock(AiOrchestrationService::class);
+        $this->feedCache = $this->createMock(FeedCacheService::class);
 
         $this->postService = new PostService(
             $this->em,
             $this->tags,
             $this->mediaUploadService,
             $this->aiOrchestration,
+            $this->feedCache,
         );
     }
 
@@ -88,6 +92,7 @@ final class PostServiceTest extends TestCase
         $this->aiOrchestration->expects($this->once())
             ->method('requestAnalysis')
             ->with($this->isInstanceOf(Publication::class));
+        $this->feedCache->expects($this->once())->method('prepend')->with($this->isInstanceOf(Publication::class));
 
         $publication = $this->postService->createPost($author, $file, 'Améthyste', 'Trouvée en Bretagne', ['violet', 'quartz']);
 
