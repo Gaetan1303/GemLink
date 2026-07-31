@@ -54,6 +54,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(options: ['default' => 0])]
     private int $points = 0;
 
+    #[ORM\Column(name: 'banned_reason', type: 'text', nullable: true)]
+    private ?string $bannedReason = null;
+
+    #[ORM\Column(name: 'banned_until', type: 'datetimetz_immutable', nullable: true)]
+    private ?DateTimeImmutable $bannedUntil = null;
+
+    #[ORM\Column(name: 'last_login_at', type: 'datetimetz_immutable', nullable: true)]
+    private ?DateTimeImmutable $lastLoginAt = null;
+
     #[ORM\Column(type: 'smallint', options: ['default' => 1])]
     private int $level = 1;
 
@@ -168,6 +177,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         $this->role = $role;
+        if ($role === 'ADMIN') {
+            $this->trustScore = 100;
+        }
 
         return $this;
     }
@@ -233,7 +245,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setTrustScore(int $trustScore): self
     {
-        $this->trustScore = max(0, min(100, $trustScore));
+        $this->trustScore = $this->role === 'ADMIN' ? 100 : max(0, min(100, $trustScore));
 
         return $this;
     }
@@ -277,6 +289,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
+
+    public function ban(string $reason, ?DateTimeImmutable $until): self
+    {
+        $this->status = 'BANNED';
+        $this->bannedReason = trim($reason);
+        $this->bannedUntil = $until;
+
+        return $this;
+    }
+
+    public function unban(): self
+    {
+        $this->status = 'ACTIVE';
+        $this->bannedReason = null;
+        $this->bannedUntil = null;
+
+        return $this;
+    }
+
+    public function getBannedReason(): ?string { return $this->bannedReason; }
+    public function getBannedUntil(): ?DateTimeImmutable { return $this->bannedUntil; }
+    public function getLastLoginAt(): ?DateTimeImmutable { return $this->lastLoginAt; }
+    public function markLoggedIn(): self { $this->lastLoginAt = new DateTimeImmutable(); return $this; }
+    public function isTemporaryBanExpired(): bool { return $this->status === 'BANNED' && $this->bannedUntil !== null && $this->bannedUntil <= new DateTimeImmutable(); }
 
     public function getCreatedAt(): DateTimeImmutable
     {

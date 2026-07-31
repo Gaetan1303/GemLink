@@ -45,15 +45,16 @@ export const NAVIGATION_MENUS: Record<MenuRole, MenuConfig> = {
   },
   ROLE_ADMIN: {
     navItems: [
-      { label: 'Accueil',    route: '/',                iconClass: 'home' },
-      { label: 'Dashboard',  route: '/admin/stats',     iconClass: 'dashboard' },
-      { label: 'Modération', route: '/admin/reports',   iconClass: 'shield' },
+      { label: 'Dashboard',  route: '/admin',           iconClass: 'dashboard' },
+      { label: 'Modération', route: '/admin/moderation', iconClass: 'shield' },
+      { label: 'Retour',     route: '/',                iconClass: 'arrow_back' },
       { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
     ],
     menuItems: [
-      { label: 'Accueil',    route: '/',                iconClass: 'home' },
-      { label: 'Dashboard',  route: '/admin/stats',     iconClass: 'dashboard' },
-      { label: 'Modération', route: '/admin/reports',   iconClass: 'shield' },
+      { label: 'Dashboard',  route: '/admin',           iconClass: 'dashboard' },
+      { label: 'Modération', route: '/admin/moderation', iconClass: 'shield' },
+      { label: 'Retour',     route: '/',                iconClass: 'arrow_back' },
+      { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
     ],
   },
 };

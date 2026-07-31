@@ -1,0 +1,55 @@
+<app-header />
+<app-header-image></app-header-image>
+
+
+<main class="admin-page" id="main-content">
+  <section class="admin-hero">
+    <p class="eyebrow">Console opérationnelle</p>
+    <h1>Administration GemLink</h1>
+    <p>Surveillez la communauté, pilotez les modèles et intervenez sans quitter le fil de l’activité.</p>
+  </section>
+
+  @if (error()) { <div class="admin-error" role="alert"><mat-icon>error_outline</mat-icon>{{ error() }}</div> }
+  @if (loading()) { <div class="loading"><mat-spinner diameter="42" />Chargement des indicateurs…</div> }
+  @if (dashboard(); as data) {
+    <section class="kpi-grid" aria-label="Indicateurs opérationnels">
+      <article class="kpi"><mat-icon>dynamic_feed</mat-icon><span>Posts · 24 h</span><strong>{{ data.posts24h }}</strong></article>
+      <article class="kpi"><mat-icon>psychology</mat-icon><span>Analyses IA · 24 h</span><strong>{{ data.aiAnalyses24h }}</strong></article>
+      <article class="kpi"><mat-icon>groups</mat-icon><span>Membres actifs · 7 j</span><strong>{{ data.activeUsers7d }}</strong></article>
+      <article class="kpi"><mat-icon>verified</mat-icon><span>Validation communautaire</span><strong>{{ data.communityValidationRate | percent:'1.0-1' }}</strong></article>
+    </section>
+
+    <section class="dashboard-grid">
+      <mat-card class="panel minerals"><mat-card-header><mat-card-title>Minéraux identifiés</mat-card-title><mat-card-subtitle>Top 10 de la communauté</mat-card-subtitle></mat-card-header><mat-card-content>
+        @for (mineral of data.topMinerals; track mineral.name) { <div class="mineral-row"><span>{{ mineral.name }}</span><div><i [style.width.%]="data.topMinerals[0] ? mineral.count / data.topMinerals[0].count * 100 : 0"></i></div><b>{{ mineral.count }}</b></div> } @empty { <p class="empty">Les premières identifications apparaîtront ici.</p> }
+      </mat-card-content></mat-card>
+      <mat-card class="panel training"><mat-card-header><mat-card-title>Fine-tuning en cours</mat-card-title><mat-card-subtitle>Mise à jour toutes les 10 secondes</mat-card-subtitle></mat-card-header><mat-card-content>
+        @for (job of data.fineTuningJobs; track job.id) { <div class="job"><div><strong>{{ job.model.name }}</strong><span>{{ job.minTrustScore }}+ Trust Score · {{ job.status }}</span></div><b>{{ job.progress }}%</b><mat-progress-bar mode="determinate" [value]="job.progress" /></div> } @empty { <p class="empty">Aucun entraînement actif.</p> }
+      </mat-card-content></mat-card>
+    </section>
+  }
+
+  <section class="admin-section">
+    <div class="section-heading"><div><p class="eyebrow">Modèle de reconnaissance</p><h2>Fine-tuning ViT</h2></div></div>
+    <div class="model-layout">
+      <mat-card class="panel"><mat-card-content><form [formGroup]="fineTuningForm" (ngSubmit)="startFineTuning()" class="training-form">
+        <mat-form-field appearance="outline"><mat-label>Nom de version</mat-label><input matInput class="version-name-input" formControlName="versionName" /></mat-form-field>
+        <mat-form-field appearance="outline" class="trust-score-field"><mat-label>Trust Score minimum</mat-label><input matInput type="number" formControlName="minTrustScore" min="0" max="100" /><mat-hint class="training-form__hint">Seules les validations fiables alimentent le dataset.</mat-hint></mat-form-field>
+        <button mat-flat-button type="submit" [disabled]="working()">Lancer le fine-tuning</button>
+      </form></mat-card-content></mat-card>
+      <mat-card class="panel"><mat-card-content class="versions">
+        @for (model of versions(); track model.id) { <div class="version"><div><strong>{{ model.name }}</strong><span>Accuracy {{ model.accuracy ?? '—' }} · F1 {{ model.f1Score ?? '—' }}</span></div><span class="status" [class.status--active]="model.status === 'active'">{{ model.status }}</span>@if (model.status !== 'active' && model.status !== 'training') { <button mat-stroked-button (click)="activate(model)" [disabled]="working()">Activer</button> }</div> } @empty { <p class="empty">Aucune version ViT disponible.</p> }
+      </mat-card-content></mat-card>
+    </div>
+  </section>
+
+  <section class="admin-section"><div class="section-heading"><div><p class="eyebrow">Communauté</p><h2>Gestion des utilisateurs</h2></div><span>{{ users().length }} membres chargés</span></div>
+    <div class="user-table" role="region" aria-label="Utilisateurs administrables" tabindex="0">
+      <table><thead><tr><th>Membre</th><th>Rôle</th><th>Trust</th><th>Statut</th><th>Actions</th></tr></thead><tbody>
+        @for (user of users(); track user.id) { <tr><td data-label="Membre"><strong>{{ user.username }}</strong><small>{{ user.email }}</small></td><td data-label="Rôle"><mat-form-field appearance="outline"><mat-select [value]="user.role" (selectionChange)="updateRole(user, $event.value)" [disabled]="user.role === 'admin' || working()">@for (role of roleOptions; track role) { <mat-option [value]="role">{{ role }}</mat-option>}</mat-select></mat-form-field></td><td data-label="Trust Score">{{ user.role === 'admin' ? 100 : user.trustScore }}/100</td><td data-label="Statut"><span class="status" [class.status--banned]="user.status === 'banned'">{{ user.status }}</span></td><td data-label="Actions">@if (user.role === 'admin') { <span class="admin-protected">Protégé</span> } @else if (user.status === 'banned') { <button mat-stroked-button (click)="unban(user)" [disabled]="working()">Débannir</button> } @else { <button mat-stroked-button (click)="openBan(user)" [disabled]="working()">Bannir</button> }</td></tr> }
+      </tbody></table>
+    </div>
+  </section>
+
+  @if (selectedUser(); as user) { <div class="ban-backdrop"><mat-card class="ban-dialog"><mat-card-header><mat-card-title>Bannir {{ user.username }}</mat-card-title><mat-card-subtitle>Les refresh tokens actifs seront révoqués immédiatement.</mat-card-subtitle></mat-card-header><mat-card-content><form [formGroup]="banForm" (ngSubmit)="ban()"><mat-form-field appearance="outline"><mat-label>Motif</mat-label><textarea matInput formControlName="reason" rows="3"></textarea></mat-form-field><mat-form-field appearance="outline"><mat-label>Fin du bannissement (optionnelle)</mat-label><input matInput type="datetime-local" formControlName="until" /></mat-form-field><div class="dialog-actions"><button mat-button type="button" (click)="closeBan()">Annuler</button><button mat-flat-button type="submit" [disabled]="banForm.invalid || working()">Confirmer le bannissement</button></div></form></mat-card-content></mat-card></div> }
+</main>

@@ -1,7 +1,18 @@
 import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
+import { adminGuard } from './core/guards/admin-guard';
 export const routes: Routes = [
   { path: '', component: Home },
+  {
+    path: 'admin',
+    canActivate: [adminGuard],
+    loadComponent: () => import('./pages/admin/admin-dashboard/admin-dashboard').then(m => m.AdminDashboardComponent),
+  },
+  {
+    path: 'admin/moderation',
+    canActivate: [adminGuard],
+    loadComponent: () => import('./pages/admin/admin-dashboard/admin-dashboard').then(m => m.AdminDashboardComponent),
+  },
   
   { path: 'identifier',
      loadComponent: () => import('./pages/identify/identify').then(m => m.Identify) },
