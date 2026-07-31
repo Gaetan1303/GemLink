@@ -18,7 +18,7 @@ interface SelectedFile {
 
 @Component({
   selector: 'app-vitrine-create',
-  imports: [CommonModule, ReactiveFormsModule, SharedModule, NavBarMobile],
+  imports: [CommonModule, ReactiveFormsModule, SharedModule,],
   templateUrl: './vitrine-create.html',
   styleUrls: ['./vitrine-create.scss'],
 })

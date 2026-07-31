@@ -20,6 +20,8 @@ function makePublication(overrides: Partial<Publication> = {}): Publication {
     mediaType: 'IMAGE',
     status: 'PENDING_ANALYSIS',
     viewCount: 0,
+    likeCount: 0,
+    likedByCurrentUser: false,
     tags: [],
     identification: null,
     createdAt: new Date().toISOString(),

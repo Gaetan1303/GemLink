@@ -105,6 +105,18 @@ describe('PostService — US 2.1 Publication d\'un post MVP', () => {
     });
   });
 
+  describe('toggleLike', () => {
+    it('US 2.3 CA-1 : envoie une requête POST vers le endpoint de toggle', () => {
+      service.toggleLike('post-uuid-123').subscribe();
+
+      const req = httpTesting.expectOne(`${PUBLICATIONS_URL}/post-uuid-123/like`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+
+      req.flush({ liked: true, likeCount: 1 });
+    });
+  });
+
   describe('validateMediaFile', () => {
     it('CA-2 : accepte une image jpeg valide', () => {
       const file = makeFile('pierre.jpg', 'image/jpeg', 1024);

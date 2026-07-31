@@ -8,7 +8,7 @@ import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-contact',
-  imports: [SharedModule, NavBarMobile],
+  imports: [SharedModule, ],
   templateUrl: './contact.html',
   styleUrls: ['./contact.scss'],
 })

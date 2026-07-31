@@ -144,6 +144,28 @@
   }
 }
 
+.post-like {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid theme.$line;
+  border-radius: 999px;
+  background: transparent;
+  color: theme.$text-dim;
+  cursor: pointer;
+
+  mat-icon { width: 1.1rem; height: 1.1rem; font-size: 1.1rem; }
+  &:hover:not(:disabled), &--active { color: theme.$coral; border-color: rgba(224, 122, 95, 0.55); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+}
+
 // ── Fiche d'identification ──────────────────────────────────────────
 .identification-card {
   display: flex;

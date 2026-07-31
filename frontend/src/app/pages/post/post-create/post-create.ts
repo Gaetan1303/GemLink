@@ -13,7 +13,7 @@ const TAGS_MAX_COUNT = 10;
 
 @Component({
   selector: 'app-post-create',
-  imports: [CommonModule, ReactiveFormsModule, SharedModule, NavBarMobile],
+  imports: [CommonModule, ReactiveFormsModule, SharedModule,],
   templateUrl: './post-create.html',
   styleUrls: ['./post-create.scss'],
 })

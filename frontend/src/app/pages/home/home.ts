@@ -13,7 +13,7 @@ import { CookieConsentBanner } from '../../shared/cookie-consent-banner/cookie-c
 
 @Component({
   selector: 'app-home',
-  imports: [SharedModule, CommonModule, NavBarMobile, CookieConsentBanner],
+  imports: [SharedModule, CommonModule, CookieConsentBanner],
   templateUrl: './home.html',
   styleUrls: ['./home.scss'],
 })

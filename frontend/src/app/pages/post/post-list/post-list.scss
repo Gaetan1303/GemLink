@@ -138,7 +138,6 @@
   flex-direction: column;
   background: theme.$surface;
   border: 1px solid theme.$line;
-  text-decoration: none;
   color: inherit;
   transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
   @include theme.facet-corner-sm;
@@ -164,6 +163,12 @@
       inset: 0;
       box-shadow: inset 0 -1px 0 rgba(197, 160, 89, 0.25);
     }
+  }
+
+  &__link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
   }
 
   img {
@@ -209,6 +214,24 @@
     align-self: flex-start;
     margin-top: 0.3rem;
   }
+}
+
+.btn-like {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-end;
+  gap: 0.3rem;
+  margin: 0 1rem 1rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid theme.$line;
+  border-radius: 999px;
+  background: transparent;
+  color: theme.$text-dim;
+  cursor: pointer;
+
+  mat-icon { width: 1rem; height: 1rem; font-size: 1rem; }
+  &:hover:not(:disabled), &--active { color: theme.$coral; border-color: rgba(224, 122, 95, 0.55); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
 }
 
 @keyframes cardEnter {

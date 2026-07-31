@@ -39,6 +39,24 @@
             <div><dt>Vues</dt><dd>{{ p.viewCount }}</dd></div>
           </dl>
 
+          <div class="post-like">
+            <button
+              type="button"
+              class="btn-like"
+              [class.btn-like--active]="p.likedByCurrentUser"
+              [disabled]="!authService.isAuthenticated() || isLiking()"
+              [attr.aria-pressed]="p.likedByCurrentUser"
+              [attr.aria-label]="p.likedByCurrentUser ? 'Retirer mon like' : 'Liker ce post'"
+              (click)="toggleLike()"
+            >
+              <mat-icon>{{ p.likedByCurrentUser ? 'favorite' : 'favorite_border' }}</mat-icon>
+              {{ p.likeCount }}
+            </button>
+            @if (likeError()) {
+              <p class="field-error" role="alert">{{ likeError() }}</p>
+            }
+          </div>
+
           @if (p.description) {
             <p class="post-description">{{ p.description }}</p>
           }

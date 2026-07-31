@@ -13,7 +13,7 @@ import { VitrineService, Vitrine, VitrineItem, OrderedItemRef } from '../../../c
 
 @Component({
   selector: 'app-vitrine-detail',
-  imports: [CommonModule, ReactiveFormsModule, DragDropModule, SharedModule, NavBarMobile],
+  imports: [CommonModule, ReactiveFormsModule, DragDropModule, SharedModule, ],
   templateUrl: './vitrine-detail.html',
   styleUrls: ['./vitrine-detail.scss'],
 })

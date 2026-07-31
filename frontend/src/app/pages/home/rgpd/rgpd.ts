@@ -10,7 +10,7 @@ import { signal } from '@angular/core';
 
 @Component({
   selector: 'app-rgpd',
-  imports: [SharedModule, NavBarMobile, Header],
+  imports: [SharedModule,  Header],
   templateUrl: './rgpd.html',
   styleUrls: ['./rgpd.scss'],
 })
