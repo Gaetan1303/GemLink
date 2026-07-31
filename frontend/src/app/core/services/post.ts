@@ -52,6 +52,13 @@ export interface LikeToggleResponse {
   likeCount: number;
 }
 
+export interface PublicIdentification {
+  id: string;
+  status: PostStatus;
+  result: PublicationIdentification | null;
+  expiresAt: string;
+}
+
 // US 2.2 — Consultation des posts (liste + détail)
 export interface PublicationPage {
   items:       Publication[];
@@ -138,6 +145,16 @@ export class PostService {
   /** US 2.3 CA-1 : le serveur ajoute ou retire le like selon son état actuel. */
   toggleLike(postId: string): Observable<LikeToggleResponse> {
     return this.#http.post<LikeToggleResponse>(`${this.#apiUrl}/${postId}/like`, {});
+  }
+
+  identifyPublic(file: File): Observable<PublicIdentification> {
+    const formData = new FormData();
+    formData.append('image', file);
+    return this.#http.post<PublicIdentification>(`${environment.apiUrl}/api/public/identifications`, formData);
+  }
+
+  getPublicIdentification(id: string): Observable<PublicIdentification> {
+    return this.#http.get<PublicIdentification>(`${environment.apiUrl}/api/public/identifications/${id}`);
   }
 
   /**

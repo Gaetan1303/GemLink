@@ -42,4 +42,12 @@ class MediaUploadService
             $validation->durationSeconds,
         );
     }
+
+    /** Upload temporaire du parcours public, volontairement limité à 1 Mo/image. */
+    public function uploadPublicImage(?UploadedFile $file, string $directory): UploadedMedia
+    {
+        if ($file === null) throw new InvalidMediaException('Une image est obligatoire.');
+        $validation = $this->validator->validatePublicIdentificationImage($file);
+        return new UploadedMedia($this->uploader->upload($file, $directory), $validation->mediaType, $validation->mimeType, $validation->sizeBytes);
+    }
 }

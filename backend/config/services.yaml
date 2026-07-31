@@ -85,3 +85,13 @@ services:
             $mediaStorageMode: '%media.storage_mode%'
             $uploadDir: '%media.upload_dir%'
             $localPublicBaseUrl: '%media.public_base_url%'
+
+    App\MessageHandler\AnalyzePublicIdentificationMessageHandler:
+        arguments:
+            $mediaStorageMode: '%media.storage_mode%'
+            $uploadDir: '%media.upload_dir%'
+            $localPublicBaseUrl: '%media.public_base_url%'
+
+    App\Controller\PublicIdentificationController:
+        arguments:
+            $publicIdentificationLimiter: '@limiter.public_identification'

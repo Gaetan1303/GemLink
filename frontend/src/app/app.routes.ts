@@ -2,6 +2,9 @@ import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
 export const routes: Routes = [
   { path: '', component: Home },
+  
+  { path: 'identifier',
+     loadComponent: () => import('./pages/identify/identify').then(m => m.Identify) },
   {
     path: 'mentions-legales',
     loadComponent: () => import('./pages/home/mentions-legales/mentions-legales').then(m => m.MentionsLegales)

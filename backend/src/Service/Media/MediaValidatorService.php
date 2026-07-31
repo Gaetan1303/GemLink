@@ -78,6 +78,19 @@ class MediaValidatorService
         return new MediaValidationResult($mediaType, $mimeType, $sizeBytes, $duration);
     }
 
+    /** Parcours anonyme : images uniquement, 1 Mo maximum (anti-abus MVP). */
+    public function validatePublicIdentificationImage(UploadedFile $file): MediaValidationResult
+    {
+        $validation = $this->validate($file);
+        if ($validation->mediaType !== Publication::MEDIA_TYPE_IMAGE) {
+            throw new InvalidMediaException('L’identification publique accepte uniquement les images JPEG, PNG ou WebP.');
+        }
+        if ($validation->sizeBytes > 1024 * 1024) {
+            throw new InvalidMediaException('L’image dépasse la taille maximale autorisée de 1 Mo.');
+        }
+        return $validation;
+    }
+
     /**
      * Lit les "magic bytes" du fichier via l'extension fileinfo, indépendamment
      * de l'extension ou du Content-Type déclaré par le client (CA-2).

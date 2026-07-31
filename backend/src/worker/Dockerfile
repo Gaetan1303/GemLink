@@ -48,4 +48,4 @@ COPY ../.env        ./.env
 RUN php bin/console cache:clear --env=prod || true
 
 # Consomme la queue Symfony Messenger en continu
-CMD ["php", "bin/console", "messenger:consume", "async", "--time-limit=55", "--env=prod"]
+CMD ["php", "bin/console", "messenger:consume", "async", "low_priority", "--time-limit=55", "--env=prod"]
