@@ -177,6 +177,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         $this->role = $role;
+        if ($role === 'ADMIN') {
+            $this->trustScore = 100;
+        }
 
         return $this;
     }
@@ -242,7 +245,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setTrustScore(int $trustScore): self
     {
-        $this->trustScore = max(0, min(100, $trustScore));
+        $this->trustScore = $this->role === 'ADMIN' ? 100 : max(0, min(100, $trustScore));
 
         return $this;
     }

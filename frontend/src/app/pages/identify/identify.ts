@@ -1,6 +1,6 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Subscription, timer } from 'rxjs';
 import { switchMap, takeWhile } from 'rxjs/operators';
 import { SharedModule } from '../../shared/shared-module';
@@ -8,7 +8,7 @@ import { AuthService } from '../../core/services/auth';
 import { PostService, PublicIdentification } from '../../core/services/post';
 
 @Component({ selector: 'app-identify', 
-  imports: [CommonModule, RouterLink, SharedModule], 
+  imports: [CommonModule, SharedModule], 
   templateUrl: './identify.html', 
   styleUrls: ['./identify.scss'] })
   

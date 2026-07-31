@@ -70,6 +70,9 @@ final class AdminController extends AbstractController
     public function ban(string $id, Request $request): JsonResponse
     {
         $target = $this->userOr404($id); if ($target instanceof JsonResponse) return $target;
+        if ($target->getRole() === 'ADMIN') {
+            return $this->json(['message' => 'Un administrateur ne peut pas être banni.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
         $payload = $this->payload($request); if ($payload instanceof JsonResponse) return $payload;
         $reason = trim((string) ($payload['reason'] ?? ''));
         if ($reason === '') return $this->json(['message' => 'Un motif de bannissement est requis.'], 422);
