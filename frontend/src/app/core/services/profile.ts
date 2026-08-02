@@ -8,9 +8,18 @@ export interface ProfilePost {
   id: string; title: string | null; description: string | null; mediaUrl: string;
   mediaType: 'IMAGE' | 'VIDEO'; createdAt: string;
 }
+export interface LevelProgression {
+  level: number;
+  name: string;
+  minPoints: number;
+  nextLevel: number | null;
+  nextLevelName: string | null;
+  nextLevelMinPoints: number | null;
+  progressPercent: number;
+}
 export interface PublicProfile {
   id: string; username: string; avatarUrl: string | null; bio: string | null;
-  level: number; badges: ProfileBadge[]; posts: ProfilePost[];
+  level: number; progression: LevelProgression; badges: ProfileBadge[]; posts: ProfilePost[];
 }
 
 export type PointsAction =
