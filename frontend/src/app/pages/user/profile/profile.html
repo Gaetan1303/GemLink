@@ -23,10 +23,65 @@
       </div>
       <div class="profile-scores" aria-label="Progression communautaire">
         <span><strong>Niveau {{ user.level }}</strong>Expertise</span>
+        @if (isOwnProfile()) {
+          <span><strong>{{ points()?.total ?? 0 }} pts</strong>Contribution</span>
+        }
       </div>
     </section>
 
     @if (isOwnProfile()) {
+      <section class="profile-section points-section" aria-labelledby="points-title">
+        <div class="section-heading">
+          <div>
+            <p class="profile-hero__eyebrow">Ma progression</p>
+            <h2 id="points-title">Historique des points</h2>
+          </div>
+          <div class="points-total" aria-label="Total de points"><mat-icon>diamond</mat-icon><strong>{{ points()?.total ?? 0 }}</strong><span>pts</span></div>
+        </div>
+
+        @if (isPointsLoading()) {
+          <p class="empty-copy">Mise à jour de votre progression…</p>
+        } @else if (points()?.transactions?.length) {
+          <div class="points-history">
+            @for (transaction of points()!.transactions; track transaction.date + transaction.action) {
+              <article class="points-transaction">
+                <div class="points-transaction__icon"><mat-icon>auto_awesome</mat-icon></div>
+                <div><strong>{{ pointsActionLabel(transaction.action) }}</strong><time [attr.datetime]="transaction.date">{{ transaction.date | date:'d MMMM y, HH:mm' }}</time></div>
+                <span>+{{ transaction.amount }} pts</span>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="empty-copy">Vos prochaines contributions apparaîtront ici.</p>
+        }
+      </section>
+
+      <section class="profile-section progression-guide" aria-labelledby="progression-guide-title">
+        <div class="section-heading">
+          <div>
+            <p class="profile-hero__eyebrow">Guide de contribution</p>
+            <h2 id="progression-guide-title">Comment progresser ?</h2>
+          </div>
+        </div>
+        <div class="progression-guide__grid">
+          <article class="progression-guide__card">
+            <div class="progression-guide__title"><span class="achievement-emblem"><mat-icon>diamond</mat-icon></span><div><p>Récompenses</p><h3>Gagner des points</h3></div></div>
+            <ul>
+              <li><span>Publier une découverte</span><strong>+10 pts</strong></li>
+              <li><span>Recevoir un like</span><strong>+2 pts</strong></li>
+              <li><span>Soumettre une validation</span><strong>+5 pts</strong></li>
+              <li><span>Validation confirmée par consensus</span><strong>+15 pts</strong></li>
+            </ul>
+            <p>Les points sont ajoutés après le traitement de votre action : actualisez votre profil quelques instants plus tard si nécessaire.</p>
+          </article>
+          <article class="progression-guide__card">
+            <div class="progression-guide__title"><span class="achievement-emblem achievement-emblem--violet"><mat-icon>workspace_premium</mat-icon></span><div><p>Succès GemLink</p><h3>Obtenir des badges</h3></div></div>
+            <p>Les badges reconnaissent les jalons de votre parcours communautaire : publications, validations et progression de niveau.</p>
+            <p>Ils sont attribués automatiquement lorsque les conditions définies par GemLink sont atteintes. Survolez un badge obtenu pour consulter sa description.</p>
+          </article>
+        </div>
+      </section>
+
       <mat-card class="profile-edit">
         <mat-card-header><mat-card-title>Modifier mon profil</mat-card-title></mat-card-header>
         <mat-card-content>

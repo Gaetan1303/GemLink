@@ -7,6 +7,7 @@ namespace App\Tests\Service;
 use App\Entity\ParametreSysteme;
 use App\Repository\ParametreSystemeRepository;
 use App\Service\AdminSettingsProvider;
+use App\Service\PointsService;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -53,9 +54,21 @@ final class AdminSettingsProviderTest extends TestCase
         $this->assertSame(85, $this->provider->getDatasetCandidateTrustThreshold());
     }
 
-    public function testRepositoryIsQueriedOnlyOncePerKeyWithinTheSameRequest(): void
+    public function testPointsScaleDefaultsAndUsesAdminValue(): void
     {
-        $this->parametres->expects($this->once())
+        $this->parametres->method('findOneByCle')
+            ->willReturnMap([
+                ['points.post_created', new ParametreSysteme('points.post_created', '12')],
+                ['points.like_received', null],
+            ]);
+
+        $this->assertSame(12, $this->provider->getPointsForAction(PointsService::ACTION_POST_CREATED));
+        $this->assertSame(2, $this->provider->getPointsForAction(PointsService::ACTION_LIKE_RECEIVED));
+    }
+
+    public function testRepositoryIsQueriedForEachLookupSoWorkersSeeAdminChanges(): void
+    {
+        $this->parametres->expects($this->exactly(3))
             ->method('findOneByCle')
             ->with('validation.consensus_threshold')
             ->willReturn(null);

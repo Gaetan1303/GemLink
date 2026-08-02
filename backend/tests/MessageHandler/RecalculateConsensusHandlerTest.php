@@ -12,6 +12,7 @@ use App\MessageHandler\RecalculateConsensusHandler;
 use App\Repository\PierreRepository;
 use App\Repository\PublicationPierreRepository;
 use App\Repository\PublicationRepository;
+use App\Repository\ValidationRepository;
 use App\Service\ConsensusCalculatorService;
 use App\Service\ConsensusResult;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,6 +20,8 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 final class RecalculateConsensusHandlerTest extends TestCase
 {
@@ -28,6 +31,8 @@ final class RecalculateConsensusHandlerTest extends TestCase
     private ConsensusCalculatorService&MockObject $consensusCalculator;
     private EntityManagerInterface&MockObject $em;
     private LoggerInterface&MockObject $logger;
+    private ValidationRepository&MockObject $validations;
+    private MessageBusInterface&MockObject $messageBus;
     private RecalculateConsensusHandler $handler;
 
     protected function setUp(): void
@@ -38,6 +43,10 @@ final class RecalculateConsensusHandlerTest extends TestCase
         $this->consensusCalculator = $this->createMock(ConsensusCalculatorService::class);
         $this->em = $this->createMock(EntityManagerInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
+        $this->validations = $this->createMock(ValidationRepository::class);
+        $this->validations->method('findByPublication')->willReturn([]);
+        $this->messageBus = $this->createMock(MessageBusInterface::class);
+        $this->messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
         $this->handler = new RecalculateConsensusHandler(
             $this->publications,
@@ -46,6 +55,8 @@ final class RecalculateConsensusHandlerTest extends TestCase
             $this->consensusCalculator,
             $this->em,
             $this->logger,
+            $this->validations,
+            $this->messageBus,
         );
     }
 

@@ -3,15 +3,20 @@
 namespace App\MessageHandler;
 
 use App\Entity\Publication;
+use App\Entity\Validation;
 use App\Message\RecalculateConsensusMessage;
+use App\Message\AwardPointsMessage;
 use App\Repository\PierreRepository;
 use App\Repository\PublicationPierreRepository;
 use App\Repository\PublicationRepository;
 use App\Service\ConsensusCalculatorService;
+use App\Service\PointsService;
+use App\Repository\ValidationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * US 2.7 CA-4 : applique le consensus pondéré à la publication lorsqu'il
@@ -31,6 +36,8 @@ final class RecalculateConsensusHandler
         private readonly ConsensusCalculatorService $consensusCalculator,
         private readonly EntityManagerInterface $em,
         private readonly LoggerInterface $logger,
+        private readonly ValidationRepository $validations,
+        private readonly MessageBusInterface $messageBus,
     ) {
     }
 
@@ -63,5 +70,30 @@ final class RecalculateConsensusHandler
 
         $publication->setStatus(Publication::STATUS_COMMUNITY_VALIDATED);
         $this->em->flush();
+
+        // Each supporting validation has its own source id, so a later
+        // consensus recalculation or a Messenger retry cannot award twice.
+        foreach ($this->validations->findByPublication($publication) as $validation) {
+            if (!$this->supportsConsensus($validation, $winningPierre)) {
+                continue;
+            }
+
+            $this->messageBus->dispatch(new AwardPointsMessage(
+                $validation->getUser()->getId()->toRfc4122(),
+                PointsService::ACTION_VALIDATION_CONSENSUS_CONFIRMED,
+                $validation->getId()->toRfc4122(),
+            ));
+        }
+    }
+
+    private function supportsConsensus(Validation $validation, \App\Entity\Pierre $winningPierre): bool
+    {
+        if ($validation->getAction() === Validation::ACTION_CONFIRM) {
+            return $validation->getPierre()->getId()->equals($winningPierre->getId());
+        }
+
+        return $validation->getAction() === Validation::ACTION_CORRECT
+            && $validation->getProposedLabel() !== null
+            && mb_strtolower(trim($validation->getProposedLabel())) === mb_strtolower($winningPierre->getName());
     }
 }

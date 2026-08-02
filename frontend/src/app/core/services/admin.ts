@@ -8,6 +8,8 @@ export interface AdminUser { id: string; username: string; email: string; role: 
 export interface AdminUserPage { items: AdminUser[]; page: number; limit: number; total: number; }
 export interface ModelVersion { id: string; name: string; status: 'training' | 'active' | 'deprecated'; accuracy: number | null; f1Score: number | null; }
 export interface FineTuningJob { id: string; status: 'pending' | 'running' | 'completed' | 'failed'; progress: number; minTrustScore: number; model: ModelVersion; error: string | null; }
+export interface AdminPointsScale { postCreated: number; likeReceived: number; validationSubmitted: number; validationConsensusConfirmed: number; }
+export interface AdminValidationSettings { consensusThreshold: number; datasetCandidateTrustThreshold: number; points: AdminPointsScale; }
 
 @Injectable({ providedIn: 'root' })
 export class Admin {
@@ -21,4 +23,6 @@ export class Admin {
   startFineTuning(minTrustScore: number, versionName: string): Observable<FineTuningJob> { return this.#http.post<FineTuningJob>(`${this.#url}/models/fine-tuning`, { minTrustScore, versionName }); }
   getVitVersions(): Observable<ModelVersion[]> { return this.#http.get<ModelVersion[]>(`${this.#url}/models/vit`); }
   activateVit(id: string): Observable<ModelVersion> { return this.#http.post<ModelVersion>(`${this.#url}/models/vit/${id}/activate`, {}); }
+  getValidationSettings(): Observable<AdminValidationSettings> { return this.#http.get<AdminValidationSettings>(`${this.#url}/validation-settings`); }
+  updateValidationSettings(settings: Pick<AdminValidationSettings, 'points'>): Observable<AdminValidationSettings> { return this.#http.patch<AdminValidationSettings>(`${this.#url}/validation-settings`, settings); }
 }

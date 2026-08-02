@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Entity\Validation;
 use App\Exception\ValidationPayloadException;
 use App\Message\RecalculateConsensusMessage;
+use App\Message\AwardPointsMessage;
 use App\Repository\PublicationPierreRepository;
 use App\Repository\ValidationRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -76,6 +77,13 @@ class ValidationService
         // Recalcul en tâche de fond, cohérent avec le pipeline IA existant
         // (AnalyzeMediaMessage) : ne bloque jamais la réponse HTTP.
         $this->messageBus->dispatch(new RecalculateConsensusMessage((string) $publication->getId()));
+        if ($isNew) {
+            $this->messageBus->dispatch(new AwardPointsMessage(
+                $validator->getId()->toRfc4122(),
+                PointsService::ACTION_VALIDATION_SUBMITTED,
+                $validation->getId()->toRfc4122(),
+            ));
+        }
 
         return $validation;
     }

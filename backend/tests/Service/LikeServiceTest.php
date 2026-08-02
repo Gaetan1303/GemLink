@@ -11,6 +11,8 @@ use App\Repository\PublicationLikeRepository;
 use App\Service\LikeService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 final class LikeServiceTest extends TestCase
 {
@@ -28,7 +30,7 @@ final class LikeServiceTest extends TestCase
         $em->expects($this->exactly(2))->method('persist')->willReturnCallback(static function (object $entity) use (&$persisted): void { $persisted[] = $entity; });
         $em->expects($this->once())->method('flush');
 
-        $result = (new LikeService($em, $likes, $notifications))->toggle($liker, $post);
+        $result = (new LikeService($em, $likes, $notifications, $this->bus()))->toggle($liker, $post);
 
         self::assertSame(['liked' => true, 'likeCount' => 1], $result);
         self::assertInstanceOf(PublicationLike::class, $persisted[0]);
@@ -50,7 +52,7 @@ final class LikeServiceTest extends TestCase
         $em->expects($this->never())->method('persist');
         $em->expects($this->once())->method('flush');
 
-        self::assertSame(['liked' => false, 'likeCount' => 0], (new LikeService($em, $likes, $notifications))->toggle($liker, $post));
+        self::assertSame(['liked' => false, 'likeCount' => 0], (new LikeService($em, $likes, $notifications, $this->bus()))->toggle($liker, $post));
     }
 
     public function testRelikeDoesNotCreateAnotherNotification(): void
@@ -64,7 +66,7 @@ final class LikeServiceTest extends TestCase
         $notifications->method('hasLikeNotification')->with($author, $liker, $post)->willReturn(true);
         $em->expects($this->once())->method('persist')->with($this->isInstanceOf(PublicationLike::class));
 
-        (new LikeService($em, $likes, $notifications))->toggle($liker, $post);
+        (new LikeService($em, $likes, $notifications, $this->bus()))->toggle($liker, $post);
     }
 
     /** @return array{User, User, Publication} */
@@ -80,5 +82,13 @@ final class LikeServiceTest extends TestCase
         $user = new User();
         $user->setUsername('u' . uniqid())->setEmail(uniqid() . '@example.com')->setPasswordHash('hash')->setRole('USER');
         return $user;
+    }
+
+    private function bus(): MessageBusInterface
+    {
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+
+        return $bus;
     }
 }

@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Exception\InvalidMediaException;
 use App\Repository\PublicationRepository;
 use App\Repository\UserRepository;
+use App\Repository\PointTransactionRepository;
 use App\Service\ProfileService;
 use InvalidArgumentException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,7 +21,28 @@ use Symfony\Component\Uid\Uuid;
 #[Route('/api/profiles')]
 final class ProfileController extends AbstractController
 {
-    public function __construct(private readonly UserRepository $users, private readonly PublicationRepository $publications, private readonly ProfileService $profiles) {}
+    public function __construct(private readonly UserRepository $users, private readonly PublicationRepository $publications, private readonly ProfileService $profiles, private readonly PointTransactionRepository $pointTransactions) {}
+
+    #[Route('/{id}/points', name: 'profile_points', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function points(string $id): JsonResponse
+    {
+        $user = $this->findOrFail($id);
+        if ($user instanceof JsonResponse) return $user;
+        $actor = $this->getUser();
+        if (!$actor instanceof User || !$actor->getId()->equals($user->getId())) {
+            return $this->json(['message' => 'Vous ne pouvez consulter que votre propre historique de points.'], Response::HTTP_FORBIDDEN);
+        }
+
+        return $this->json([
+            'total' => $user->getPoints(),
+            'transactions' => array_map(static fn ($transaction) => [
+                'action' => $transaction->getAction(),
+                'amount' => $transaction->getAmount(),
+                'date' => $transaction->getCreatedAt()->format(DATE_ATOM),
+            ], $this->pointTransactions->findHistoryForUser($user)),
+        ]);
+    }
 
     #[Route('/{id}', name: 'profile_show', methods: ['GET'])]
     public function show(string $id): JsonResponse
