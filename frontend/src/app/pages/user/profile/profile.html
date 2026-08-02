@@ -22,10 +22,30 @@
         <p>{{ user.bio || 'Ce membre n’a pas encore renseigné de bio.' }}</p>
       </div>
       <div class="profile-scores" aria-label="Progression communautaire">
-        <span><strong>Niveau {{ user.level }}</strong>Expertise</span>
+        <span><strong>Niveau {{ user.progression.level }}</strong>{{ user.progression.name }}</span>
         @if (isOwnProfile()) {
           <span><strong>{{ points()?.total ?? 0 }} pts</strong>Contribution</span>
         }
+      </div>
+    </section>
+
+    <section class="level-progression" aria-labelledby="level-progression-title">
+      <div class="level-progression__heading">
+        <div>
+          <p class="profile-hero__eyebrow">Expertise minéralogique</p>
+          <h2 id="level-progression-title">{{ user.progression.name }}</h2>
+        </div>
+        <strong>{{ user.progression.progressPercent }}%</strong>
+      </div>
+      @if (user.progression.nextLevel !== null) {
+        <p>Progression vers le niveau {{ user.progression.nextLevel }} · {{ user.progression.nextLevelName }}</p>
+      } @else {
+        <p>Niveau maximum atteint. Votre expertise rayonne sur GemLink.</p>
+      }
+      <mat-progress-bar mode="determinate" [value]="user.progression.progressPercent" [attr.aria-label]="user.progression.progressPercent + '% de progression vers le niveau suivant'" />
+      <div class="level-progression__thresholds">
+        <span>{{ user.progression.minPoints }} pts</span>
+        @if (user.progression.nextLevelMinPoints !== null) { <span>{{ user.progression.nextLevelMinPoints }} pts</span> }
       </div>
     </section>
 

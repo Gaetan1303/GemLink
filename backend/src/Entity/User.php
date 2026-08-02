@@ -327,6 +327,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /** @return Collection<int, Badge> */
     public function getBadges(): Collection { return $this->badges; }
 
+    public function addBadge(Badge $badge): self
+    {
+        if (!$this->badges->contains($badge)) {
+            $this->badges->add($badge);
+        }
+
+        return $this;
+    }
+
     /** @return Collection<int, Tag> */
     public function getInterestTags(): Collection { return $this->interestTags; }
 

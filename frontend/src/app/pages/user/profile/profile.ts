@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Header } from '../../../shared/header/header';
 import { Button } from '../../../shared/button/button';
@@ -22,7 +23,7 @@ const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 
 @Component({
   selector: 'app-profile',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, Header, HeaderImage, Button, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule, MatTooltipModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, Header, HeaderImage, Button, MatCardModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule],
   templateUrl: './profile.html',
   styleUrls: ['./profile.scss'],
 })

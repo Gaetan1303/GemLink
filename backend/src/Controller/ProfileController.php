@@ -9,6 +9,7 @@ use App\Repository\PublicationRepository;
 use App\Repository\UserRepository;
 use App\Repository\PointTransactionRepository;
 use App\Service\ProfileService;
+use App\Service\LevelProgressionService;
 use InvalidArgumentException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,7 +22,7 @@ use Symfony\Component\Uid\Uuid;
 #[Route('/api/profiles')]
 final class ProfileController extends AbstractController
 {
-    public function __construct(private readonly UserRepository $users, private readonly PublicationRepository $publications, private readonly ProfileService $profiles, private readonly PointTransactionRepository $pointTransactions) {}
+    public function __construct(private readonly UserRepository $users, private readonly PublicationRepository $publications, private readonly ProfileService $profiles, private readonly PointTransactionRepository $pointTransactions, private readonly LevelProgressionService $progression) {}
 
     #[Route('/{id}/points', name: 'profile_points', methods: ['GET'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
@@ -74,7 +75,9 @@ final class ProfileController extends AbstractController
     /** @return array<string,mixed> */
     private function serialize(User $user): array
     {
-        return ['id' => $user->getId()->toRfc4122(), 'username' => $user->getUsername(), 'avatarUrl' => $user->getAvatarUrl(), 'bio' => $user->getBio(), 'level' => $user->getLevel(),
+        $progression = $this->progression->calculate($user->getPoints());
+
+        return ['id' => $user->getId()->toRfc4122(), 'username' => $user->getUsername(), 'avatarUrl' => $user->getAvatarUrl(), 'bio' => $user->getBio(), 'level' => $progression['level'], 'progression' => $progression,
             'badges' => array_map(static fn ($badge) => ['id' => $badge->getId()->toRfc4122(), 'name' => $badge->getName(), 'description' => $badge->getDescription()], $user->getBadges()->toArray()),
             'interestTags' => array_map(static fn ($tag) => $tag->getName(), $user->getInterestTags()->toArray()),
             'posts' => array_map(fn (Publication $p) => ['id' => $p->getId()->toRfc4122(), 'title' => $p->getTitle(), 'description' => $p->getDescription(), 'mediaUrl' => $p->getMediaUrl(), 'mediaType' => $p->getMediaType(), 'createdAt' => $p->getCreatedAt()->format(DATE_ATOM)], $this->publications->findActiveByUser($user))];
