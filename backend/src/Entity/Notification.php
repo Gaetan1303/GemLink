@@ -21,8 +21,10 @@ class Notification
 {
     public const TYPE_NEW_COMMENT = 'NEW_COMMENT';
     public const TYPE_NEW_LIKE = 'NEW_LIKE';
+    public const TYPE_LEVEL_UP = 'LEVEL_UP';
 
     public const TARGET_TYPE_PUBLICATION = 'PUBLICATION';
+    public const TARGET_TYPE_LEVEL = 'LEVEL';
 
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

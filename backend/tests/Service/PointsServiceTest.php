@@ -6,6 +6,7 @@ use App\Entity\PointTransaction;
 use App\Entity\User;
 use App\Repository\PointTransactionRepository;
 use App\Service\AdminSettingsProvider;
+use App\Service\LevelProgressionService;
 use App\Service\PointsService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -51,6 +52,27 @@ final class PointsServiceTest extends TestCase
         );
 
         self::assertSame(0, $user->getPoints());
+    }
+
+    public function testAwardSynchronizesLevelFromThePreviousBalance(): void
+    {
+        $user = $this->user()->setPoints(95);
+        $em = $this->createMock(EntityManagerInterface::class);
+        $transactions = $this->createMock(PointTransactionRepository::class);
+        $settings = $this->createMock(AdminSettingsProvider::class);
+        $progression = $this->createMock(LevelProgressionService::class);
+        $transactions->method('hasSource')->willReturn(false);
+        $settings->method('getPointsForAction')->willReturn(10);
+        $progression->expects($this->once())->method('synchronize')->with($user, 95);
+        $em->expects($this->once())->method('flush');
+
+        (new PointsService($em, $transactions, $settings, $progression))->award(
+            $user,
+            PointsService::ACTION_POST_CREATED,
+            Uuid::v7()->toRfc4122(),
+        );
+
+        self::assertSame(105, $user->getPoints());
     }
 
     private function user(): User

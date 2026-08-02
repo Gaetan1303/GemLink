@@ -26,6 +26,7 @@ class PointsService
         private readonly EntityManagerInterface $em,
         private readonly PointTransactionRepository $transactions,
         private readonly AdminSettingsProvider $settings,
+        private readonly ?LevelProgressionService $progression = null,
     ) {
     }
 
@@ -45,8 +46,10 @@ class PointsService
             return;
         }
 
+        $previousPoints = $user->getPoints();
         $this->em->persist(new PointTransaction($user, $action, $amount, $source));
         $user->addPoints($amount);
+        $this->progression?->synchronize($user, $previousPoints);
         $this->em->flush();
     }
 }
