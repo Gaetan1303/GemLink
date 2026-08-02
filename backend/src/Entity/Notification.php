@@ -22,9 +22,11 @@ class Notification
     public const TYPE_NEW_COMMENT = 'NEW_COMMENT';
     public const TYPE_NEW_LIKE = 'NEW_LIKE';
     public const TYPE_LEVEL_UP = 'LEVEL_UP';
+    public const TYPE_BADGE_AWARDED = 'BADGE_AWARDED';
 
     public const TARGET_TYPE_PUBLICATION = 'PUBLICATION';
     public const TARGET_TYPE_LEVEL = 'LEVEL';
+    public const TARGET_TYPE_BADGE = 'BADGE';
 
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
@@ -47,6 +49,9 @@ class Notification
 
     #[ORM\Column(name: 'target_type', length: 50)]
     private string $targetType = '';
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $content = null;
 
     #[ORM\Column(name: 'is_read')]
     private bool $isRead = false;
@@ -98,6 +103,9 @@ class Notification
 
         return $this;
     }
+
+    public function getContent(): ?string { return $this->content; }
+    public function setContent(?string $content): self { $this->content = $content; return $this; }
 
     public function isRead(): bool
     {
