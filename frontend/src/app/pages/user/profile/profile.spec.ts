@@ -16,7 +16,7 @@ describe('Profile', () => {
       providers: [
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'user-1' })) } },
         { provide: AuthService, useValue: { currentUser: () => null } },
-        { provide: ProfileService, useValue: { getProfile: () => of({ id: 'user-1', username: 'gemme', avatarUrl: null, bio: null, level: 1, badges: [], posts: [] }) } },
+        { provide: ProfileService, useValue: { getProfile: () => of({ id: 'user-1', username: 'gemme', avatarUrl: null, bio: null, level: 1, badges: [], posts: [] }), getPoints: () => of({ total: 0, transactions: [] }) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(Profile);

@@ -13,7 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Header } from '../../../shared/header/header';
 import { Button } from '../../../shared/button/button';
 import { AuthService } from '../../../core/services/auth';
-import { ProfileService, PublicProfile } from '../../../core/services/profile';
+import { ProfilePoints, ProfileService, PublicProfile, PointsAction } from '../../../core/services/profile';
 import { HeaderImage } from '../../../shared/header-image/header-image';
 
 
@@ -34,6 +34,8 @@ export class Profile implements OnInit {
   readonly #formBuilder = inject(FormBuilder);
 
   protected readonly profile = signal<PublicProfile | null>(null);
+  protected readonly points = signal<ProfilePoints | null>(null);
+  protected readonly isPointsLoading = signal(false);
   protected readonly isLoading = signal(true);
   protected readonly isSaving = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -113,6 +115,39 @@ export class Profile implements OnInit {
   private applyProfile(profile: PublicProfile): void {
     this.profile.set(profile);
     this.form.setValue({ username: profile.username, bio: profile.bio ?? '' });
+
+    if (profile.id === this.#auth.currentUser()?.id) {
+      this.loadPoints(profile.id);
+    } else {
+      this.points.set(null);
+    }
+  }
+
+  protected pointsActionLabel(action: PointsAction): string {
+    const labels: Record<PointsAction, string> = {
+      POST_CREATED: 'Publication créée',
+      LIKE_RECEIVED: 'Like reçu',
+      VALIDATION_SUBMITTED: 'Validation soumise',
+      VALIDATION_CONSENSUS_CONFIRMED: 'Validation confirmée par consensus',
+    };
+
+    return labels[action];
+  }
+
+  private loadPoints(userId: string): void {
+    this.isPointsLoading.set(true);
+    this.#profiles.getPoints(userId).pipe(takeUntilDestroyed(this.#destroyRef)).subscribe({
+      next: (points) => {
+        if (this.profile()?.id === userId) this.points.set(points);
+        this.isPointsLoading.set(false);
+      },
+      // The profile remains usable when the asynchronous points endpoint is
+      // temporarily unavailable; a later profile visit retries automatically.
+      error: () => {
+        if (this.profile()?.id === userId) this.points.set(null);
+        this.isPointsLoading.set(false);
+      },
+    });
   }
 
   private showAuthenticationError(): void {

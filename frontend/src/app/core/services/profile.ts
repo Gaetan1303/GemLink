@@ -13,6 +13,23 @@ export interface PublicProfile {
   level: number; badges: ProfileBadge[]; posts: ProfilePost[];
 }
 
+export type PointsAction =
+  | 'POST_CREATED'
+  | 'LIKE_RECEIVED'
+  | 'VALIDATION_SUBMITTED'
+  | 'VALIDATION_CONSENSUS_CONFIRMED';
+
+export interface PointsTransaction {
+  action: PointsAction;
+  amount: number;
+  date: string;
+}
+
+export interface ProfilePoints {
+  total: number;
+  transactions: PointsTransaction[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -22,6 +39,10 @@ export class ProfileService {
 
   getProfile(userId: string): Observable<PublicProfile> {
     return this.#http.get<PublicProfile>(`${this.#apiUrl}/${userId}`);
+  }
+
+  getPoints(userId: string): Observable<ProfilePoints> {
+    return this.#http.get<ProfilePoints>(`${this.#apiUrl}/${userId}/points`);
   }
 
   updateProfile(userId: string, username: string, bio: string, avatar: File | null): Observable<PublicProfile> {

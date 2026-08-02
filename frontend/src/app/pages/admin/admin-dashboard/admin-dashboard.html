@@ -29,6 +29,20 @@
     </section>
   }
 
+  <section class="admin-section" aria-labelledby="points-scale-title">
+    <div class="section-heading"><div><p class="eyebrow">Récompenses communautaires</p><h2 id="points-scale-title">Barème de points</h2></div></div>
+    <mat-card class="panel points-settings"><mat-card-content>
+      <p>Les nouveaux montants sont appliqués aux prochaines actions, sans déploiement ni redémarrage du worker.</p>
+      <form [formGroup]="pointsForm" (ngSubmit)="savePointsScale()">
+        <mat-form-field appearance="outline"><mat-label>Publication créée</mat-label><input matInput type="number" formControlName="postCreated" min="0" max="10000" /><span matTextSuffix>pts</span></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Like reçu</mat-label><input matInput type="number" formControlName="likeReceived" min="0" max="10000" /><span matTextSuffix>pts</span></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Validation soumise</mat-label><input matInput type="number" formControlName="validationSubmitted" min="0" max="10000" /><span matTextSuffix>pts</span></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Validation confirmée</mat-label><input matInput type="number" formControlName="validationConsensusConfirmed" min="0" max="10000" /><span matTextSuffix>pts</span></mat-form-field>
+        <button mat-flat-button type="submit" [disabled]="pointsForm.invalid || working()">Enregistrer le barème</button>
+      </form>
+    </mat-card-content></mat-card>
+  </section>
+
   <section class="admin-section">
     <div class="section-heading"><div><p class="eyebrow">Modèle de reconnaissance</p><h2>Fine-tuning ViT</h2></div></div>
     <div class="model-layout">
