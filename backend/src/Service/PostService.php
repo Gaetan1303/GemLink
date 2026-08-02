@@ -171,7 +171,9 @@ class PostService
                 continue;
             }
 
-            $trimmed = trim($tagName);
+            // Le préfixe # est une convention de saisie/UI, pas une partie
+            // de l'identifiant stocké : évite de rendre ##quartz au profil.
+            $trimmed = ltrim(trim($tagName), '#');
 
             if ($trimmed === '') {
                 continue;

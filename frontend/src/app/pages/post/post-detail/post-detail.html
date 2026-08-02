@@ -110,7 +110,7 @@
           @if (p.tags.length > 0) {
             <div class="post-tags">
               @for (tag of p.tags; track tag) {
-                <span class="tag">#{{ tag }}</span>
+                <a class="tag" [routerLink]="'/posts'" [queryParams]="{ tag: tag }" [attr.aria-label]="'Filtrer les publications par le tag ' + tag">#{{ tag }}</a>
               }
             </div>
           }

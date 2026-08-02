@@ -8,6 +8,7 @@ use App\Dto\AiAnalysisResult;
 use App\Entity\Embedding;
 use App\Entity\Pierre;
 use App\Entity\Publication;
+use App\Entity\Tag;
 use App\Entity\VersionModeleIa;
 use App\Exception\AiAnalysisException;
 use App\Message\AnalyzeMediaMessage;
@@ -15,6 +16,7 @@ use App\Repository\EmbeddingRepository;
 use App\Repository\PierreRepository;
 use App\Repository\PublicationPierreRepository;
 use App\Repository\PublicationRepository;
+use App\Repository\TagRepository;
 use App\Repository\VersionModeleIaRepository;
 use App\Service\BadgeAwardService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -63,6 +65,7 @@ final class AnalyzeMediaMessageHandler
         private readonly string $uploadDir,           // '%kernel.project_dir%/public/uploads'
         private readonly string $localPublicBaseUrl,  // 'http://localhost:8000/uploads'
         private readonly ?BadgeAwardService $badgeAwards = null,
+        private readonly ?TagRepository $tags = null,
     ) {
     }
 
@@ -85,11 +88,25 @@ final class AnalyzeMediaMessageHandler
         $this->em->flush();
 
         $this->publicationPierres->upsertMatch($publication, $pierre, $result->getConfidence());
+        $this->addDefaultIdentifiedTag($publication);
         $this->badgeAwards?->onStoneIdentified($publication->getUser(), $pierre, $isNewMineral);
         $this->persistEmbedding($publication, $result);
 
         $publication->setStatus(Publication::STATUS_ANALYZED);
         $this->em->flush();
+    }
+
+    /** Adds the canonical tag once the AI successfully identifies the specimen. */
+    private function addDefaultIdentifiedTag(Publication $publication): void
+    {
+        if ($this->tags === null) return;
+
+        $tag = $this->tags->findOneByName('Identifiée');
+        if ($tag === null) {
+            $tag = new Tag('Identifiée');
+            $this->em->persist($tag);
+        }
+        $publication->addTag($tag);
     }
 
     /**

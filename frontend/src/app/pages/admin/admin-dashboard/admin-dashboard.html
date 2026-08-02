@@ -43,6 +43,32 @@
     </mat-card-content></mat-card>
   </section>
 
+  <section class="admin-section" aria-labelledby="badges-title">
+    <div class="section-heading"><div><p class="eyebrow">Récompenses communautaires</p><h2 id="badges-title">Badges automatiques</h2></div><span>{{ badges().length }} badge(s) configuré(s)</span></div>
+    <div class="badge-admin-layout">
+      <mat-card class="panel badge-form-panel"><mat-card-content>
+        <p>Les conditions sont évaluées automatiquement après les publications et les identifications de pierres.</p>
+        <form [formGroup]="badgeForm" (ngSubmit)="saveBadge()" class="badge-form">
+          <mat-form-field appearance="outline"><mat-label>Nom du badge</mat-label><input matInput formControlName="name" maxlength="100" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Description</mat-label><textarea matInput formControlName="description" rows="3" maxlength="1000"></textarea></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Condition</mat-label><mat-select formControlName="conditionType">@for (condition of badgeConditions; track condition.value) { <mat-option [value]="condition.value">{{ condition.label }}</mat-option> }</mat-select></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Seuil</mat-label><input matInput type="number" formControlName="conditionValue" min="1" /><span matTextSuffix>fois</span></mat-form-field>
+          @if (badgeForm.controls.conditionType.value === 'MINERAL_IDENTIFICATION_COUNT') {
+            <mat-form-field appearance="outline" class="badge-form__mineral"><mat-label>Pierre concernée</mat-label><input matInput formControlName="mineralQuery" [matAutocomplete]="mineralAutocomplete" placeholder="Rechercher une pierre" (input)="clearMineralSelection()" />@if (badgeForm.controls.pierreId.value) { <mat-hint>Pierre sélectionnée</mat-hint> }<mat-autocomplete #mineralAutocomplete="matAutocomplete">@for (mineral of mineralOptions(); track mineral.id) { <mat-option [value]="mineral.nom" (onSelectionChange)="selectMineral(mineral)">{{ mineral.nom }}</mat-option> }</mat-autocomplete></mat-form-field>
+          }
+          <button mat-flat-button type="submit" [disabled]="badgeForm.invalid || working()"><mat-icon>workspace_premium</mat-icon>Créer le badge</button>
+        </form>
+      </mat-card-content></mat-card>
+      <mat-card class="panel badge-list-panel"><mat-card-content>
+        <div class="badge-list">
+          @for (badge of badges(); track badge.id) {
+            <article class="badge-row"><span class="badge-row__emblem"><mat-icon>workspace_premium</mat-icon></span><div><strong>{{ badge.name }}</strong><p>{{ badge.description || 'Aucune description.' }}</p><small>{{ badge.conditionValue }} · {{ badge.conditionType }}</small></div><button mat-icon-button type="button" [attr.aria-label]="'Supprimer le badge ' + badge.name" (click)="deleteBadge(badge)" [disabled]="working()"><mat-icon>delete_outline</mat-icon></button></article>
+          } @empty { <p class="empty">Aucun badge administrable pour le moment.</p> }
+        </div>
+      </mat-card-content></mat-card>
+    </div>
+  </section>
+
   <section class="admin-section">
     <div class="section-heading"><div><p class="eyebrow">Modèle de reconnaissance</p><h2>Fine-tuning ViT</h2></div></div>
     <div class="model-layout">

@@ -97,7 +97,7 @@
           <article class="progression-guide__card">
             <div class="progression-guide__title"><span class="achievement-emblem achievement-emblem--violet"><mat-icon>workspace_premium</mat-icon></span><div><p>Succès GemLink</p><h3>Obtenir des badges</h3></div></div>
             <p>Les badges reconnaissent les jalons de votre parcours communautaire : publications, validations et progression de niveau.</p>
-            <p>Ils sont attribués automatiquement lorsque les conditions définies par GemLink sont atteintes. Survolez un badge obtenu pour consulter sa description.</p>
+            <p>Ils sont attribués automatiquement lorsque les conditions définies par GemLink sont atteintes. Cliquez sur un badge obtenu pour découvrir son histoire.</p>
           </article>
         </div>
       </section>
@@ -132,8 +132,8 @@
     <section class="profile-section">
       <h2>Badges obtenus</h2>
       @if (user.badges.length) {
-        <mat-chip-set aria-label="Badges obtenus">
-          @for (badge of user.badges; track badge.id) { <mat-chip [matTooltip]="badge.description || badge.name"><mat-icon matChipAvatar>workspace_premium</mat-icon>{{ badge.name }}</mat-chip> }
+        <mat-chip-set class="profile-badge-list" aria-label="Badges obtenus">
+          @for (badge of user.badges; track badge.id) { <mat-chip class="profile-badge" tabindex="0" [matTooltip]="badge.description || badge.name" (click)="openBadge(badge)" (keydown.enter)="openBadge(badge)" (keydown.space)="openBadge(badge)"><mat-icon matChipAvatar>workspace_premium</mat-icon>{{ badge.name }}</mat-chip> }
         </mat-chip-set>
       } @else { <p class="empty-copy">Les premiers badges sont à portée de main.</p> }
     </section>
@@ -152,5 +152,19 @@
         </div>
       } @else { <p class="empty-copy">Aucune publication pour le moment.</p> }
     </section>
+  }
+
+  @if (selectedBadge(); as badge) {
+    <div class="badge-showcase-overlay" role="dialog" aria-modal="true" [attr.aria-labelledby]="'badge-title-' + badge.id" (click)="closeBadge()">
+      <mat-card class="badge-showcase" (click)="$event.stopPropagation()">
+        <button type="button" class="badge-showcase__close" [attr.aria-label]="'Fermer le détail du badge ' + badge.name" (click)="closeBadge()"><mat-icon>close</mat-icon></button>
+        <div class="badge-showcase__emblem"><mat-icon>workspace_premium</mat-icon></div>
+        <p class="profile-hero__eyebrow">Accomplissement GemLink</p>
+        <h2 [id]="'badge-title-' + badge.id">{{ badge.name }}</h2>
+        <div class="badge-showcase__rule"><span></span></div>
+        <p>{{ badge.description || 'Cet accomplissement reconnaît votre contribution à la communauté GemLink.' }}</p>
+        <button mat-flat-button type="button" (click)="closeBadge()">Fermer l’écrin</button>
+      </mat-card>
+    </div>
   }
 </main>

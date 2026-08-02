@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SharedModule } from '../../../shared/shared-module';
 import { AuthService } from '../../../core/services/auth';
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
@@ -20,6 +20,8 @@ export class PostList implements OnInit {
 
   protected readonly authService = inject(AuthService);
   private readonly postService = inject(PostService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly currentRole = computed<MenuRole>(
     () => this.authService.currentUser()?.role ?? 'VISITEUR'
@@ -32,12 +34,21 @@ export class PostList implements OnInit {
   protected readonly isLoading  = signal(false);
   protected readonly loadError  = signal<string | null>(null);
   protected readonly likeError  = signal<string | null>(null);
+  protected readonly activeTag = signal<string | null>(null);
   protected readonly likingPostIds = signal<ReadonlySet<string>>(new Set());
 
   protected readonly hasNextPage = signal(false);
   protected readonly hasPrevPage = computed(() => this.page() > 1);
 
   ngOnInit(): void {
+    const tag = this.route.snapshot.queryParamMap.get('tag')?.trim().replace(/^#+/, '') || null;
+    this.activeTag.set(tag);
+    this.loadPage(null);
+  }
+
+  protected clearTag(): void {
+    this.activeTag.set(null);
+    this.router.navigate(['/posts']);
     this.loadPage(null);
   }
 
@@ -99,7 +110,9 @@ export class PostList implements OnInit {
     this.isLoading.set(true);
     this.loadError.set(null);
 
-    this.postService.listPosts(cursor, PAGE_SIZE).subscribe({
+    const tag = this.activeTag();
+    const request = tag ? this.postService.listPosts(cursor, PAGE_SIZE, { tag }) : this.postService.listPosts(cursor, PAGE_SIZE);
+    request.subscribe({
       next: (result) => {
         this.posts.set(result.items);
         this.nextCursor = result.nextCursor;

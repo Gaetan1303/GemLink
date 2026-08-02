@@ -144,7 +144,7 @@ export class PostCreate {
 
     return raw
       .split(',')
-      .map(tag => tag.trim())
+      .map(tag => tag.trim().replace(/^#+/, ''))
       .filter(tag => tag.length > 0)
       .slice(0, TAGS_MAX_COUNT);
   }

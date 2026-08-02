@@ -1,6 +1,6 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { SharedModule } from '../../../shared/shared-module';
@@ -14,7 +14,7 @@ import { ValidationWidget } from '../../../shared/validation-widget/validation-w
 // US 3.1 — Suivi en direct de l'analyse IA (polling) + transitions animées.
 @Component({
   selector: 'app-post-detail',
-  imports: [CommonModule, SharedModule, CommentSection, ValidationWidget],
+  imports: [CommonModule, RouterLink, SharedModule, CommentSection, ValidationWidget],
   templateUrl: './post-detail.html',
   styleUrls: ['./post-detail.scss'],
   animations: [
