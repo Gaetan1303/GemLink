@@ -25,3 +25,4 @@ framework:
             'App\Message\AnalyzePublicIdentificationMessage': low_priority
             'App\Message\RecalculateConsensusMessage': async
             'App\Message\RunFineTuningMessage': async
+            'App\Message\AwardPointsMessage': async

@@ -6,9 +6,12 @@ use App\Entity\Notification;
 use App\Entity\Publication;
 use App\Entity\PublicationLike;
 use App\Entity\User;
+use App\Message\AwardPointsMessage;
 use App\Repository\NotificationRepository;
 use App\Repository\PublicationLikeRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Uid\Uuid;
 
 /** US 2.3 — toggle atomique au niveau transactionnel et notification dédupliquée. */
 class LikeService
@@ -17,6 +20,7 @@ class LikeService
         private readonly EntityManagerInterface $em,
         private readonly PublicationLikeRepository $likes,
         private readonly NotificationRepository $notifications,
+        private readonly MessageBusInterface $messageBus,
     ) {}
 
     /** @return array{liked: bool, likeCount: int} */
@@ -31,9 +35,18 @@ class LikeService
             return ['liked' => false, 'likeCount' => $this->likes->countForPublication($publication)];
         }
 
-        $this->em->persist(new PublicationLike($publication, $user));
+        $like = new PublicationLike($publication, $user);
+        $this->em->persist($like);
         $this->notifyPostAuthorOnce($user, $publication);
         $this->em->flush();
+
+        if (!$publication->getUser()->getId()->equals($user->getId())) {
+            $this->messageBus->dispatch(new AwardPointsMessage(
+                $publication->getUser()->getId()->toRfc4122(),
+                PointsService::ACTION_LIKE_RECEIVED,
+                Uuid::v5(Uuid::fromString(Uuid::NAMESPACE_URL), sprintf('like:%s:%s', $user->getId(), $publication->getId()))->toRfc4122(),
+            ));
+        }
 
         return ['liked' => true, 'likeCount' => $this->likes->countForPublication($publication)];
     }

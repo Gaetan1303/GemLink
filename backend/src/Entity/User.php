@@ -257,9 +257,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setPoints(int $points): self
     {
-        $this->points = $points;
+        $this->points = max(0, $points);
 
         return $this;
+    }
+
+    public function addPoints(int $points): self
+    {
+        return $this->setPoints($this->points + $points);
     }
 
     public function getLevel(): int

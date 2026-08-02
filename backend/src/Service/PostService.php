@@ -9,11 +9,13 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\PostAccessDeniedException;
 use App\Exception\PostValidationException;
+use App\Message\AwardPointsMessage;
 use App\Repository\TagRepository;
 use App\Service\Media\MediaUploadService;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * US 2.1 : logique métier de publication d'un post (CA-1 à CA-4).
@@ -40,6 +42,7 @@ class PostService
         private readonly MediaUploadService $mediaUploadService,
         private readonly AiOrchestrationService $aiOrchestration,
         private readonly FeedCacheService $feedCache,
+        private readonly MessageBusInterface $messageBus,
     ) {
     }
 
@@ -78,6 +81,11 @@ class PostService
         $this->em->persist($publication);
         $this->em->flush();
         $this->feedCache->prepend($publication);
+        $this->messageBus->dispatch(new AwardPointsMessage(
+            $author->getId()->toRfc4122(),
+            PointsService::ACTION_POST_CREATED,
+            $publication->getId()->toRfc4122(),
+        ));
 
         // CA-3 : ne bloque jamais la réponse — le traitement se fait dans le worker Messenger.
         $this->aiOrchestration->requestAnalysis($publication);

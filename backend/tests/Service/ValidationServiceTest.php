@@ -88,7 +88,7 @@ final class ValidationServiceTest extends TestCase
 
         $this->em->expects($this->once())->method('persist')->with($this->isInstanceOf(Validation::class));
         $this->em->expects($this->once())->method('flush');
-        $this->messageBus->expects($this->once())->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+        $this->messageBus->expects($this->exactly(2))->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
         $validation = $this->service->submitValidation($this->publication, $validator, Validation::ACTION_CONFIRM);
 

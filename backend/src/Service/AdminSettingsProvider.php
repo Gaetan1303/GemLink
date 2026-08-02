@@ -17,8 +17,13 @@ class AdminSettingsProvider
     private const CLE_DATASET_CANDIDATE_TRUST_THRESHOLD = 'validation.dataset_candidate_trust_threshold';
     private const DEFAULT_DATASET_CANDIDATE_TRUST_THRESHOLD = 70;
 
-    /** @var array<string, string|null> */
-    private array $cache = [];
+    /** @var array<string, int> */
+    private const POINT_DEFAULTS = [
+        PointsService::ACTION_POST_CREATED => 10,
+        PointsService::ACTION_LIKE_RECEIVED => 2,
+        PointsService::ACTION_VALIDATION_SUBMITTED => 5,
+        PointsService::ACTION_VALIDATION_CONSENSUS_CONFIRMED => 15,
+    ];
 
     public function __construct(
         private readonly ParametreSystemeRepository $parametreSystemeRepository,
@@ -39,14 +44,22 @@ class AdminSettingsProvider
         return $value !== null ? (int) $value : self::DEFAULT_DATASET_CANDIDATE_TRUST_THRESHOLD;
     }
 
-    private function resolve(string $cle): ?string
+    public function getPointsForAction(string $action): int
     {
-        if (array_key_exists($cle, $this->cache)) {
-            return $this->cache[$cle];
+        if (!isset(self::POINT_DEFAULTS[$action])) {
+            throw new \InvalidArgumentException('Action de points inconnue.');
         }
 
-        $parametre = $this->parametreSystemeRepository->findOneByCle($cle);
+        $value = $this->resolve('points.' . strtolower($action));
 
-        return $this->cache[$cle] = $parametre?->getValeur();
+        return $value !== null ? (int) $value : self::POINT_DEFAULTS[$action];
+    }
+
+    private function resolve(string $cle): ?string
+    {
+        // The service lives for the duration of a Messenger worker. Do not
+        // cache values here: an Admin change must affect subsequent jobs
+        // without restarting that worker or deploying the application.
+        return $this->parametreSystemeRepository->findOneByCle($cle)?->getValeur();
     }
 }

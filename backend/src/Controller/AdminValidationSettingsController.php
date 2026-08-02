@@ -24,6 +24,12 @@ final class AdminValidationSettingsController extends AbstractController
 {
     private const CLE_CONSENSUS_THRESHOLD = 'validation.consensus_threshold';
     private const CLE_DATASET_CANDIDATE_TRUST_THRESHOLD = 'validation.dataset_candidate_trust_threshold';
+    private const POINT_ACTIONS = [
+        'postCreated' => 'POST_CREATED',
+        'likeReceived' => 'LIKE_RECEIVED',
+        'validationSubmitted' => 'VALIDATION_SUBMITTED',
+        'validationConsensusConfirmed' => 'VALIDATION_CONSENSUS_CONFIRMED',
+    ];
 
     public function __construct(
         private readonly AdminSettingsProvider $adminSettings,
@@ -67,6 +73,20 @@ final class AdminValidationSettingsController extends AbstractController
             $this->upsert(self::CLE_DATASET_CANDIDATE_TRUST_THRESHOLD, (string) (int) $value);
         }
 
+        if (array_key_exists('points', $payload)) {
+            if (!is_array($payload['points'])) {
+                return $this->json(['message' => 'points doit être un objet.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            foreach ($payload['points'] as $name => $value) {
+                if (!isset(self::POINT_ACTIONS[$name]) || !is_int($value) || $value < 0 || $value > 10000) {
+                    return $this->json(['message' => 'Le barème de points est invalide.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+                }
+
+                $this->upsert('points.' . strtolower(self::POINT_ACTIONS[$name]), (string) $value);
+            }
+        }
+
         $this->em->flush();
 
         return $this->json($this->currentSettings());
@@ -77,6 +97,7 @@ final class AdminValidationSettingsController extends AbstractController
         return [
             'consensusThreshold' => $this->adminSettings->getConsensusThreshold(),
             'datasetCandidateTrustThreshold' => $this->adminSettings->getDatasetCandidateTrustThreshold(),
+            'points' => array_map(fn (string $action) => $this->adminSettings->getPointsForAction($action), self::POINT_ACTIONS),
         ];
     }
 
