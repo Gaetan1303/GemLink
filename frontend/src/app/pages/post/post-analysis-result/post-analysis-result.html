@@ -1,0 +1,40 @@
+@if (status() === 'PENDING_ANALYSIS') {
+  <section class="analysis-skeleton" aria-live="polite" aria-busy="true">
+    <div class="analysis-skeleton__status"><span class="analysis-skeleton__pulse" aria-hidden="true"></span><strong>Analyse en cours</strong></div>
+    <div class="analysis-skeleton__line analysis-skeleton__line--title"></div>
+    <div class="analysis-skeleton__line"></div>
+    <div class="analysis-skeleton__line analysis-skeleton__line--short"></div>
+  </section>
+} @else if (isCompleted() && identification(); as result) {
+  <section class="identification-card" aria-labelledby="mineral-identification-title">
+    <header class="identification-card__header">
+      <div><span class="identification-card__eyebrow">Identification par l’IA</span><h2 id="mineral-identification-title">{{ result.nom }}</h2></div>
+      <div class="identification-card__confidence" aria-label="Score de confiance"><strong>{{ result.confidence | percent: '1.0-0' }}</strong><span>de confiance</span></div>
+    </header>
+    @if (isCommunityValidated()) {
+      <p class="community-badge"><mat-icon aria-hidden="true">verified</mat-icon>Validé par la communauté</p>
+    }
+    @if (isUncertain()) {
+      <p class="identification-warning" role="status"><mat-icon aria-hidden="true">warning_amber</mat-icon><span><strong>Identification incertaine</strong> — confiance modérée, le résultat doit être interprété avec prudence.</span></p>
+    }
+    @if (result.catalogueUrl) {
+      <a class="catalogue-link" [href]="result.catalogueUrl">Voir la fiche du catalogue Stone <mat-icon aria-hidden="true">arrow_forward</mat-icon></a>
+    }
+    <dl class="identification-properties">
+      @if (result.categorie) { <div><dt>Catégorie</dt><dd>{{ result.categorie }}</dd></div> }
+      @if (result.durete !== null) { <div><dt>Dureté (Mohs)</dt><dd>{{ result.durete }}</dd></div> }
+      @if (result.systemeCristallin) { <div><dt>Système cristallin</dt><dd>{{ result.systemeCristallin }}</dd></div> }
+      @if (result.composition) { <div><dt>Composition</dt><dd>{{ result.composition }}</dd></div> }
+    </dl>
+    @if (result.description) {
+      <div class="identification-description-wrapper">
+        <p class="identification-description" #description>{{ result.description }}</p>
+        <button type="button" class="btn-scroll-description" (click)="scrollDescription()" [attr.aria-label]="isDescriptionScrolledToEnd() ? 'Remonter au début de la description' : 'Faire défiler la description'">
+          <mat-icon>{{ isDescriptionScrolledToEnd() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+      </div>
+    }
+  </section>
+} @else if (status() === 'ANALYSIS_FAILED') {
+  <p class="analysis-failed" role="status">L’analyse IA n’a pas pu aboutir.</p>
+}

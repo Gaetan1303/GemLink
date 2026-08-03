@@ -61,47 +61,7 @@
             <p class="post-description">{{ p.description }}</p>
           }
 
-          @if (p.status === 'ANALYZED' && p.identification; as id) {
-            <div class="identification-card" @identificationReveal>
-              <span class="identification-card__eyebrow">Fiche d'identification</span>
-              <h2>{{ id.nom }}</h2>
-
-              @if (!id.isHighConfidence) {
-                <p class="identification-warning">
-                  Identification à confiance modérée ({{ id.confidence | percent }}) — à vérifier.
-                </p>
-              }
-
-              <dl class="identification-properties">
-                @if (id.categorie) {
-                  <div><dt>Catégorie</dt><dd>{{ id.categorie }}</dd></div>
-                }
-                @if (id.durete) {
-                  <div><dt>Dureté (Mohs)</dt><dd>{{ id.durete }}</dd></div>
-                }
-                @if (id.systemeCristallin) {
-                  <div><dt>Système cristallin</dt><dd>{{ id.systemeCristallin }}</dd></div>
-                }
-                @if (id.composition) {
-                  <div><dt>Composition</dt><dd>{{ id.composition }}</dd></div>
-                }
-              </dl>
-
-              @if (id.description) {
-                <div class="identification-description-wrapper">
-                  <p class="identification-description" #identificationDescriptionEl>{{ id.description }}</p>
-                  <button
-                    type="button"
-                    class="btn-scroll-description"
-                    (click)="scrollIdentificationText()"
-                    [attr.aria-label]="isDescriptionScrolledToEnd() ? 'Remonter au début de la description' : 'Faire défiler la description'"
-                  >
-                    <mat-icon>{{ isDescriptionScrolledToEnd() ? 'expand_less' : 'expand_more' }}</mat-icon>
-                  </button>
-                </div>
-              }
-            </div>
-          }
+          <app-post-analysis-result [status]="p.status" [identification]="p.identification" />
 
           @if ((p.status === 'ANALYZED' || p.status === 'COMMUNITY_VALIDATED') && p.identification && canValidate()) {
             <app-validation-widget [postId]="p.id" />

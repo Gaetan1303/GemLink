@@ -20,6 +20,7 @@ export interface PostAuthor {
 // n'est pas ANALYZED, ou si aucun match n'a été persisté (cas rare mais
 // possible si l'analyse a échoué en base sans mettre à jour le statut).
 export interface PublicationIdentification {
+  id?:                string;
   nom:               string;
   categorie:         string | null;
   durete:            number | null;
@@ -28,6 +29,11 @@ export interface PublicationIdentification {
   description:       string | null;
   confidence:        number;
   isHighConfidence:  boolean;
+  confidencePercent?: number;
+  confidenceThreshold?: number;
+  isUncertain?:       boolean;
+  catalogueUrl?:      string;
+  communityValidated?: boolean;
   detectorConfidence?: number;
   detections?: PipelineDetection[];
   modelVersion?: PipelineModelVersion;
