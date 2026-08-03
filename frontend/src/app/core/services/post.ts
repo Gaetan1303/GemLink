@@ -32,7 +32,6 @@ export interface PublicationIdentification {
   confidencePercent?: number;
   confidenceThreshold?: number;
   isUncertain?:       boolean;
-  catalogueUrl?:      string;
   communityValidated?: boolean;
   detectorConfidence?: number;
   detections?: PipelineDetection[];

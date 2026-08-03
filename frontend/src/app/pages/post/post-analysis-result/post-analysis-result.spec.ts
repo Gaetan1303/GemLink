@@ -17,7 +17,6 @@ describe('PostAnalysisResult', () => {
     confidenceThreshold: 0.4,
     isHighConfidence: true,
     isUncertain: false,
-    catalogueUrl: '/api/pierres/stone-1',
   };
 
   beforeEach(async () => {
@@ -40,13 +39,12 @@ describe('PostAnalysisResult', () => {
     expect(element.querySelector('.identification-card')).toBeNull();
   });
 
-  it('affiche le label, le score et le lien catalogue après analyse (CA-2)', () => {
+  it('affiche le label et le score après analyse (CA-2)', () => {
     const element = render('ANALYZED', identification);
-    const link = element.querySelector<HTMLAnchorElement>('.catalogue-link');
 
     expect(element.textContent).toContain('Améthyste');
     expect(element.textContent).toContain('92%');
-    expect(link?.getAttribute('href')).toBe('/api/pierres/stone-1');
+    expect(element.textContent).not.toContain('catalogue Stone');
   });
 
   it('affiche le badge lorsque le résultat est validé par la communauté (CA-2)', () => {

@@ -1,3 +1,4 @@
+import asyncio
 import io
 import os
 import json
@@ -19,7 +20,14 @@ from vit import get_model
 from ultralytics import YOLO
 from utils import crop_with_padding
 from schema import StoneAnalysisResponse
-from fine_tuning import FineTuneRequest, jobs as fine_tuning_jobs, start_job
+from fine_tuning import (
+    FineTuneRequest,
+    jobs as fine_tuning_jobs,
+    model_versions as fine_tuned_versions,
+    register_active_version,
+    start_job,
+    versions as list_vit_versions,
+)
 import open_clip
 
 # Configuration des logs
@@ -123,8 +131,18 @@ async def lifespan(app: FastAPI):
 
     try:
         # 1. Chargement du checkpoint ViT (format {"model": state_dict, "classes": [...]})
-        logger.info(f" Chargement des checkpoints depuis {VIT_MODEL_PATH}...")
-        checkpoint = torch.load(VIT_MODEL_PATH, map_location=device)
+        # Une activation/rollback survit au redemarrage si son checkpoint est
+        # encore disponible ; sinon la version configuree reste le fallback.
+        startup_vit_version = VIT_MODEL_VERSION
+        startup_vit_path = VIT_MODEL_PATH
+        for version, metadata in fine_tuned_versions.items():
+            registered_path = str(metadata.get('checkpoint', ''))
+            if metadata.get('status') == 'ACTIVE' and os.path.isfile(registered_path):
+                startup_vit_version = version
+                startup_vit_path = registered_path
+                break
+        logger.info(f" Chargement des checkpoints depuis {startup_vit_path}...")
+        checkpoint = torch.load(startup_vit_path, map_location=device)
         app.state.classes = checkpoint["classes"]
         logger.info(f" Classes détectées : {len(app.state.classes)} classes")
 
@@ -134,6 +152,9 @@ async def lifespan(app: FastAPI):
         app.state.classifier_model.load_state_dict(checkpoint["model"])
         app.state.classifier_model.to(device)
         app.state.classifier_model.eval()
+        app.state.model_versions = {**MODEL_VERSIONS, 'vit': startup_vit_version}
+        app.state.model_activation_lock = asyncio.Lock()
+        register_active_version(startup_vit_version, startup_vit_path)
 
         # 3. Chargement du détecteur YOLOv8
         logger.info(f" Chargement du détecteur YOLOv8 depuis {YOLO_MODEL_PATH}...")
@@ -180,7 +201,10 @@ app = FastAPI(title="GemLink AI Orchestrator API", version="1.1.0", lifespan=lif
 
 @app.post('/fine-tune', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)], status_code=202)
 async def fine_tune(request: FineTuneRequest):
-    return start_job(request, app.state.http_session)
+    try:
+        return start_job(request, app.state.http_session)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 @app.get('/fine-tune/{job_id}', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)])
@@ -189,6 +213,58 @@ async def fine_tune_status(job_id: str):
     if state is None:
         raise HTTPException(status_code=404, detail='Job de fine-tuning introuvable.')
     return state
+
+
+@app.get('/models/vit', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)])
+async def vit_versions():
+    """Liste les checkpoints ViT disponibles, dont la version active."""
+    return list_vit_versions()
+
+
+def _load_vit_checkpoint(checkpoint_path: str):
+    checkpoint = torch.load(checkpoint_path, map_location=app.state.device)
+    if not isinstance(checkpoint, dict) or 'model' not in checkpoint or 'classes' not in checkpoint:
+        raise ValueError('Le checkpoint ViT est invalide.')
+    classes = checkpoint['classes']
+    if not isinstance(classes, list) or not classes:
+        raise ValueError('Le checkpoint ViT ne contient aucune classe.')
+    model = get_model(num_classes=len(classes))
+    model.load_state_dict(checkpoint['model'])
+    model.to(app.state.device)
+    model.eval()
+    return model, classes
+
+
+@app.post('/models/vit/{version}/activate', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)])
+async def activate_vit_version(version: str):
+    """
+    Active atomiquement un checkpoint versionné. Le même endpoint permet le
+    rollback : il suffit de lui passer le nom d'une version antérieure.
+    """
+    metadata = fine_tuned_versions.get(version)
+    if metadata is None:
+        raise HTTPException(status_code=404, detail='Version ViT introuvable.')
+    checkpoint_path = str(metadata.get('checkpoint', ''))
+    if not checkpoint_path or not os.path.isfile(checkpoint_path):
+        raise HTTPException(status_code=409, detail='Le checkpoint de cette version est indisponible.')
+
+    async with app.state.model_activation_lock:
+        try:
+            model, classes = await asyncio.to_thread(_load_vit_checkpoint, checkpoint_path)
+        except Exception as error:
+            logger.error('Impossible de charger la version ViT %s : %s', version, error, exc_info=True)
+            raise HTTPException(status_code=422, detail='Le checkpoint ViT est invalide ou incompatible.') from error
+
+        # Le nouveau modèle est entièrement chargé avant l'échange des
+        # références : aucune requête d'inférence ne voit un état partiel.
+        previous_model = app.state.classifier_model
+        app.state.classifier_model = model
+        app.state.classes = classes
+        app.state.model_versions['vit'] = version
+        register_active_version(version, checkpoint_path)
+        del previous_model
+
+    return fine_tuned_versions[version]
 
 
 # ==============================================================================
@@ -289,7 +365,7 @@ def run_vision_pipeline(image: Image.Image) -> dict:
         "embedding": primary["embedding"],
         "all_probabilities": primary["all_probabilities"],
         "detections": detections,
-        "model_version": MODEL_VERSIONS.copy(),
+        "model_version": getattr(app.state, "model_versions", MODEL_VERSIONS).copy(),
     }
 
 
@@ -366,6 +442,9 @@ async def ask_knowledge_agent(class_name: str) -> dict:
         "messages": [{"role": "user", "content": ANALYSIS_PROMPT_TEMPLATE.format(class_name=class_name)}],
         "stream": False,
         "format": "json",  # force Ollama à produire du JSON valide (modèles compatibles)
+        # Un petit modèle respecte mieux une structure fixe en mode
+        # déterministe. La diversité n'apporte rien pour ces fiches factuelles.
+        "options": {"temperature": 0},
     }
 
     try:

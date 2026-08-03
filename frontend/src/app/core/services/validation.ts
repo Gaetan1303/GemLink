@@ -49,7 +49,7 @@ export class ValidationService {
   }
 
   /**
-   * CA-1 : autocomplétion sur le catalogue Stone pour le champ de
+   * CA-1 : autocomplétion sur les minéraux connus pour le champ de
    * correction. Moins de 2 caractères : pas d'appel réseau, l'API renvoie
    * de toute façon un tableau vide en dessous de ce seuil.
    */
