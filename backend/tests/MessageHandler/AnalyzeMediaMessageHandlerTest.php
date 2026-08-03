@@ -12,6 +12,7 @@ use App\Repository\PierreRepository;
 use App\Repository\PublicationPierreRepository;
 use App\MessageHandler\AnalyzeMediaMessageHandler;
 use App\Repository\PublicationRepository;
+use App\Repository\TagRepository;
 use App\Repository\VersionModeleIaRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -109,6 +110,26 @@ final class AnalyzeMediaMessageHandlerTest extends TestCase
         $this->assertSame(Publication::STATUS_PENDING_ANALYSIS, $publication->getStatus());
     }
 
+    public function testSuccessfulIdentificationAddsTheDefaultIdentifiedTag(): void
+    {
+        $author = $this->makeUser();
+        $publication = new Publication($author, 'https://media.gem-link.org/x.jpg');
+        $this->publications->method('find')->willReturn($publication);
+        $this->pierres->method('findOneByNameIgnoreCase')->willReturn(new \App\Entity\Pierre('Quartz'));
+        $this->modelVersions->method('findActiveByType')->willReturn(new \App\Entity\VersionModeleIa('clip', 'CLIP', 'ACTIVE'));
+        $this->embeddings->method('findOneBy')->willReturn(null);
+        $tags = $this->createMock(TagRepository::class);
+        $tags->method('findOneByName')->with('Identifiée')->willReturn(null);
+
+        $handler = $this->makeHandler(new MockHttpClient([
+            new MockResponse('image-content', ['http_code' => 200, 'response_headers' => ['content-type: image/jpeg']]),
+            new MockResponse(json_encode(['nom' => 'Quartz', 'confidence' => 0.9, 'detector_confidence' => 0.9, 'embedding' => array_fill(0, 512, 0.1)], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+        ]), $tags);
+        $handler(new AnalyzeMediaMessage($publication->getId()->toRfc4122()));
+
+        self::assertSame(['Identifiée'], array_map(static fn ($tag) => $tag->getName(), $publication->getTags()->toArray()));
+    }
+
     private function makeUser(): User
     {
         $user = new User();
@@ -120,7 +141,7 @@ final class AnalyzeMediaMessageHandlerTest extends TestCase
         return $user;
     }
 
-    private function makeHandler(MockHttpClient $httpClient): AnalyzeMediaMessageHandler
+    private function makeHandler(MockHttpClient $httpClient, ?TagRepository $tags = null): AnalyzeMediaMessageHandler
     {
         return new AnalyzeMediaMessageHandler(
             $this->publications,
@@ -135,6 +156,8 @@ final class AnalyzeMediaMessageHandlerTest extends TestCase
             'r2',
             sys_get_temp_dir(),
             'http://localhost/uploads',
+            null,
+            $tags,
         );
     }
 }

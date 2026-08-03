@@ -10,6 +10,9 @@ export interface ModelVersion { id: string; name: string; status: 'training' | '
 export interface FineTuningJob { id: string; status: 'pending' | 'running' | 'completed' | 'failed'; progress: number; minTrustScore: number; model: ModelVersion; error: string | null; }
 export interface AdminPointsScale { postCreated: number; likeReceived: number; validationSubmitted: number; validationConsensusConfirmed: number; }
 export interface AdminValidationSettings { consensusThreshold: number; datasetCandidateTrustThreshold: number; points: AdminPointsScale; }
+export type AdminBadgeCondition = 'POST_COUNT' | 'VALIDATION_COUNT' | 'STONE_IDENTIFICATION_COUNT' | 'MINERAL_IDENTIFICATION_COUNT';
+export interface AdminBadge { id: string; name: string; description: string | null; conditionType: AdminBadgeCondition; conditionValue: number; pierreId: string | null; }
+export interface AdminBadgePayload { name: string; description: string | null; conditionType: AdminBadgeCondition; conditionValue: number; pierreId?: string | null; }
 
 @Injectable({ providedIn: 'root' })
 export class Admin {
@@ -25,4 +28,7 @@ export class Admin {
   activateVit(id: string): Observable<ModelVersion> { return this.#http.post<ModelVersion>(`${this.#url}/models/vit/${id}/activate`, {}); }
   getValidationSettings(): Observable<AdminValidationSettings> { return this.#http.get<AdminValidationSettings>(`${this.#url}/validation-settings`); }
   updateValidationSettings(settings: Pick<AdminValidationSettings, 'points'>): Observable<AdminValidationSettings> { return this.#http.patch<AdminValidationSettings>(`${this.#url}/validation-settings`, settings); }
+  getBadges(): Observable<AdminBadge[]> { return this.#http.get<AdminBadge[]>(`${this.#url}/badges`); }
+  createBadge(payload: AdminBadgePayload): Observable<AdminBadge> { return this.#http.post<AdminBadge>(`${this.#url}/badges`, payload); }
+  deleteBadge(id: string): Observable<void> { return this.#http.delete<void>(`${this.#url}/badges/${id}`); }
 }

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Pierre;
 use App\Entity\Publication;
 use App\Entity\PublicationPierre;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -60,5 +61,22 @@ class PublicationPierreRepository extends ServiceEntityRepository
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    public function countForUser(User $user): int
+    {
+        return (int) $this->createQueryBuilder('pp')
+            ->join('pp.publication', 'p')
+            ->select('COUNT(pp)')->andWhere('p.user = :user')->setParameter('user', $user)
+            ->getQuery()->getSingleScalarResult();
+    }
+
+    public function countForUserAndPierre(User $user, Pierre $pierre): int
+    {
+        return (int) $this->createQueryBuilder('pp')
+            ->join('pp.publication', 'p')
+            ->select('COUNT(pp)')->andWhere('p.user = :user')->andWhere('pp.pierre = :pierre')
+            ->setParameter('user', $user)->setParameter('pierre', $pierre)
+            ->getQuery()->getSingleScalarResult();
     }
 }

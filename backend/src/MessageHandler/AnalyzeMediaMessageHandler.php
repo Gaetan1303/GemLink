@@ -8,6 +8,7 @@ use App\Dto\AiAnalysisResult;
 use App\Entity\Embedding;
 use App\Entity\Pierre;
 use App\Entity\Publication;
+use App\Entity\Tag;
 use App\Entity\VersionModeleIa;
 use App\Exception\AiAnalysisException;
 use App\Message\AnalyzeMediaMessage;
@@ -15,7 +16,9 @@ use App\Repository\EmbeddingRepository;
 use App\Repository\PierreRepository;
 use App\Repository\PublicationPierreRepository;
 use App\Repository\PublicationRepository;
+use App\Repository\TagRepository;
 use App\Repository\VersionModeleIaRepository;
+use App\Service\BadgeAwardService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Mime\Part\DataPart;
@@ -61,6 +64,8 @@ final class AnalyzeMediaMessageHandler
         private readonly string $mediaStorageMode,    // 'local' | 'r2'
         private readonly string $uploadDir,           // '%kernel.project_dir%/public/uploads'
         private readonly string $localPublicBaseUrl,  // 'http://localhost:8000/uploads'
+        private readonly ?BadgeAwardService $badgeAwards = null,
+        private readonly ?TagRepository $tags = null,
     ) {
     }
 
@@ -75,7 +80,7 @@ final class AnalyzeMediaMessageHandler
 
         $result = $this->requestAnalysis($publication);
 
-        $pierre = $this->findOrCreatePierre($result);
+        [$pierre, $isNewMineral] = $this->findOrCreatePierre($result);
         // Flush immédiat : upsertMatch() ci-dessous écrit en SQL brut, hors de
         // l'Unit of Work Doctrine — si $pierre vient d'être créée, sa ligne
         // doit déjà exister en base avant l'INSERT sur publication_pierre,
@@ -83,10 +88,25 @@ final class AnalyzeMediaMessageHandler
         $this->em->flush();
 
         $this->publicationPierres->upsertMatch($publication, $pierre, $result->getConfidence());
+        $this->addDefaultIdentifiedTag($publication);
+        $this->badgeAwards?->onStoneIdentified($publication->getUser(), $pierre, $isNewMineral);
         $this->persistEmbedding($publication, $result);
 
         $publication->setStatus(Publication::STATUS_ANALYZED);
         $this->em->flush();
+    }
+
+    /** Adds the canonical tag once the AI successfully identifies the specimen. */
+    private function addDefaultIdentifiedTag(Publication $publication): void
+    {
+        if ($this->tags === null) return;
+
+        $tag = $this->tags->findOneByName('Identifiée');
+        if ($tag === null) {
+            $tag = new Tag('Identifiée');
+            $this->em->persist($tag);
+        }
+        $publication->addTag($tag);
     }
 
     /**
@@ -187,11 +207,12 @@ final class AnalyzeMediaMessageHandler
      * casse, le classifieur ViT renvoie des labels en minuscules) ou en crée
      * une nouvelle, enrichie par l'agent connaissance FastAPI.
      */
-    private function findOrCreatePierre(AiAnalysisResult $result): Pierre
+    /** @return array{0:Pierre,1:bool} */
+    private function findOrCreatePierre(AiAnalysisResult $result): array
     {
         $existing = $this->pierres->findOneByNameIgnoreCase($result->getLabel());
         if ($existing !== null) {
-            return $existing;
+            return [$existing, false];
         }
 
         $pierre = new Pierre($result->getLabel());
@@ -203,7 +224,7 @@ final class AnalyzeMediaMessageHandler
 
         $this->em->persist($pierre);
 
-        return $pierre;
+        return [$pierre, true];
     }
 
     /**

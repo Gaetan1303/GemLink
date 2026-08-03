@@ -82,6 +82,22 @@
   padding: 2.5rem 1.5rem 4rem;
 }
 
+.active-tag-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: .75rem 1rem;
+  color: theme.$gold;
+  background: linear-gradient(90deg, theme.$gold-dim, rgba(141,127,224,.08));
+  border: 1px solid rgba(197,160,89,.32);
+  @include theme.facet-corner-sm;
+
+  button { display: inline-flex; align-items: center; gap: .3rem; color: theme.$text; background: transparent; border: 0; cursor: pointer; }
+  button:hover { color: theme.$gold; }
+}
+
 .alert--error {
   padding: 0.85rem 1rem;
   border-radius: 6px;

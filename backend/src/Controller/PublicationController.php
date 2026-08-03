@@ -15,6 +15,7 @@ use App\Repository\PublicationRepository;
 use App\Service\LikeService;
 use App\Service\PostService;
 use App\Service\FeedCacheService;
+use App\Service\AdminSettingsProvider;
 use DateTimeImmutable;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -51,6 +52,7 @@ final class PublicationController extends AbstractController
         private readonly FeedCacheService $feedCache,
         private readonly PublicationLikeRepository $likes,
         private readonly LikeService $likeService,
+        private readonly AdminSettingsProvider $settings,
     ) {
     }
 
@@ -300,16 +302,24 @@ final class PublicationController extends AbstractController
         }
 
         $pierre = $match->getPierre();
+        $confidence = $match->getConfidence();
+        $confidenceThreshold = $this->settings->getIdentificationConfidenceThreshold();
 
         return [
+            'id' => $pierre->getId()->toRfc4122(),
             'nom' => $pierre->getName(),
             'categorie' => $pierre->getCategory(),
             'durete' => $pierre->getHardness(),
             'systemeCristallin' => $pierre->getCrystalSystem(),
             'composition' => $pierre->getComposition(),
             'description' => $pierre->getDescription(),
-            'confidence' => $match->getConfidence(),
-            'isHighConfidence' => $match->isHighConfidence(),
+            'confidence' => $confidence,
+            'confidencePercent' => (int) round($confidence * 100),
+            'confidenceThreshold' => $confidenceThreshold,
+            'isHighConfidence' => $confidence >= $confidenceThreshold,
+            'isUncertain' => $confidence < $confidenceThreshold,
+            'catalogueUrl' => '/api/pierres/' . $pierre->getId()->toRfc4122(),
+            'communityValidated' => $publication->getStatus() === Publication::STATUS_COMMUNITY_VALIDATED,
         ];
     }
 }

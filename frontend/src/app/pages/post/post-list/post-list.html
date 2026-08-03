@@ -43,6 +43,10 @@
 
   <div class="post-list-container">
 
+    @if (activeTag(); as tag) {
+      <div class="active-tag-filter"><span>Filtre actif : #{{ tag }}</span><button type="button" (click)="clearTag()"><mat-icon>close</mat-icon>Tout afficher</button></div>
+    }
+
     @if (loadError()) {
       <div class="alert alert--error" role="alert">{{ loadError() }}</div>
     }

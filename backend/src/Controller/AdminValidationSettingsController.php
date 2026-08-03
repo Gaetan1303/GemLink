@@ -24,6 +24,7 @@ final class AdminValidationSettingsController extends AbstractController
 {
     private const CLE_CONSENSUS_THRESHOLD = 'validation.consensus_threshold';
     private const CLE_DATASET_CANDIDATE_TRUST_THRESHOLD = 'validation.dataset_candidate_trust_threshold';
+    private const CLE_IDENTIFICATION_CONFIDENCE_THRESHOLD = 'identification.confidence_threshold';
     private const POINT_ACTIONS = [
         'postCreated' => 'POST_CREATED',
         'likeReceived' => 'LIKE_RECEIVED',
@@ -73,6 +74,14 @@ final class AdminValidationSettingsController extends AbstractController
             $this->upsert(self::CLE_DATASET_CANDIDATE_TRUST_THRESHOLD, (string) (int) $value);
         }
 
+        if (array_key_exists('identificationConfidenceThreshold', $payload)) {
+            $value = $payload['identificationConfidenceThreshold'];
+            if (!is_numeric($value) || $value < 0 || $value > 1) {
+                return $this->json(['message' => 'identificationConfidenceThreshold doit être un nombre entre 0 et 1.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            $this->upsert(self::CLE_IDENTIFICATION_CONFIDENCE_THRESHOLD, (string) (float) $value);
+        }
+
         if (array_key_exists('points', $payload)) {
             if (!is_array($payload['points'])) {
                 return $this->json(['message' => 'points doit être un objet.'], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -97,6 +106,7 @@ final class AdminValidationSettingsController extends AbstractController
         return [
             'consensusThreshold' => $this->adminSettings->getConsensusThreshold(),
             'datasetCandidateTrustThreshold' => $this->adminSettings->getDatasetCandidateTrustThreshold(),
+            'identificationConfidenceThreshold' => $this->adminSettings->getIdentificationConfidenceThreshold(),
             'points' => array_map(fn (string $action) => $this->adminSettings->getPointsForAction($action), self::POINT_ACTIONS),
         ];
     }

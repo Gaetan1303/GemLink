@@ -90,7 +90,7 @@
             id="tags"
             type="text"
             formControlName="tagsInput"
-            placeholder="violet, quartz, améthyste (séparés par des virgules)"
+            placeholder="#violet, #quartz, #améthyste (séparés par des virgules)"
           />
           @if (postForm.get('tagsInput')?.hasError('tooManyTags')) {
             <p class="field-error">10 tags maximum.</p>

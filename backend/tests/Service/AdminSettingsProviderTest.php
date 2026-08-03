@@ -54,6 +54,16 @@ final class AdminSettingsProviderTest extends TestCase
         $this->assertSame(85, $this->provider->getDatasetCandidateTrustThreshold());
     }
 
+    public function testIdentificationConfidenceThresholdUsesAdminConfiguredValue(): void
+    {
+        $this->parametres->method('findOneByCle')
+            ->willReturnCallback(static fn (string $cle) => $cle === 'identification.confidence_threshold'
+                ? new ParametreSysteme($cle, '0.4')
+                : null);
+
+        $this->assertSame(0.4, $this->provider->getIdentificationConfidenceThreshold());
+    }
+
     public function testPointsScaleDefaultsAndUsesAdminValue(): void
     {
         $this->parametres->method('findOneByCle')

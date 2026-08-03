@@ -17,6 +17,9 @@ class AdminSettingsProvider
     private const CLE_DATASET_CANDIDATE_TRUST_THRESHOLD = 'validation.dataset_candidate_trust_threshold';
     private const DEFAULT_DATASET_CANDIDATE_TRUST_THRESHOLD = 70;
 
+    private const CLE_IDENTIFICATION_CONFIDENCE_THRESHOLD = 'identification.confidence_threshold';
+    private const DEFAULT_IDENTIFICATION_CONFIDENCE_THRESHOLD = 0.40;
+
     /** @var array<string, int> */
     private const POINT_DEFAULTS = [
         PointsService::ACTION_POST_CREATED => 10,
@@ -42,6 +45,13 @@ class AdminSettingsProvider
         $value = $this->resolve(self::CLE_DATASET_CANDIDATE_TRUST_THRESHOLD);
 
         return $value !== null ? (int) $value : self::DEFAULT_DATASET_CANDIDATE_TRUST_THRESHOLD;
+    }
+
+    public function getIdentificationConfidenceThreshold(): float
+    {
+        $value = $this->resolve(self::CLE_IDENTIFICATION_CONFIDENCE_THRESHOLD);
+
+        return $value !== null ? (float) $value : self::DEFAULT_IDENTIFICATION_CONFIDENCE_THRESHOLD;
     }
 
     public function getPointsForAction(string $action): int

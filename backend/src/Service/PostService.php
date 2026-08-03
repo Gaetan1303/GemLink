@@ -43,6 +43,7 @@ class PostService
         private readonly AiOrchestrationService $aiOrchestration,
         private readonly FeedCacheService $feedCache,
         private readonly MessageBusInterface $messageBus,
+        private readonly ?BadgeAwardService $badgeAwards = null,
     ) {
     }
 
@@ -80,6 +81,10 @@ class PostService
 
         $this->em->persist($publication);
         $this->em->flush();
+        if ($this->badgeAwards !== null) {
+            $this->badgeAwards->onPostCreated($author);
+            $this->em->flush();
+        }
         $this->feedCache->prepend($publication);
         $this->messageBus->dispatch(new AwardPointsMessage(
             $author->getId()->toRfc4122(),
@@ -166,7 +171,9 @@ class PostService
                 continue;
             }
 
-            $trimmed = trim($tagName);
+            // Le préfixe # est une convention de saisie/UI, pas une partie
+            // de l'identifiant stocké : évite de rendre ##quartz au profil.
+            $trimmed = ltrim(trim($tagName), '#');
 
             if ($trimmed === '') {
                 continue;

@@ -14,7 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Header } from '../../../shared/header/header';
 import { Button } from '../../../shared/button/button';
 import { AuthService } from '../../../core/services/auth';
-import { ProfilePoints, ProfileService, PublicProfile, PointsAction } from '../../../core/services/profile';
+import { ProfileBadge, ProfilePoints, ProfileService, PublicProfile, PointsAction } from '../../../core/services/profile';
 import { HeaderImage } from '../../../shared/header-image/header-image';
 
 
@@ -42,6 +42,7 @@ export class Profile implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly selectedAvatar = signal<File | null>(null);
   protected readonly avatarPreview = signal<string | null>(null);
+  protected readonly selectedBadge = signal<ProfileBadge | null>(null);
   protected readonly isOwnProfile = computed(() => this.profile()?.id === this.#auth.currentUser()?.id);
   protected readonly form = this.#formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9]{3,30}$/)]],
@@ -91,6 +92,9 @@ export class Profile implements OnInit {
     this.avatarPreview.set(URL.createObjectURL(file));
     this.errorMessage.set(null);
   }
+
+  protected openBadge(badge: ProfileBadge): void { this.selectedBadge.set(badge); }
+  protected closeBadge(): void { this.selectedBadge.set(null); }
 
   protected save(): void {
     const current = this.profile();
