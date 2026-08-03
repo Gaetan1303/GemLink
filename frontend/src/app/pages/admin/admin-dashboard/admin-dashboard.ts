@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   inject,
   OnInit,
@@ -29,6 +30,9 @@ import {
   AdminLevel,
   AdminPointsScale,
   AdminUser,
+  AdminValidationSettings,
+  FineTuningJob,
+  FineTuningLog,
   ModelVersion,
 } from '../../../core/services/admin';
 import { HeaderImage } from '../../../shared/header-image/header-image';
@@ -65,6 +69,7 @@ export class AdminDashboardComponent implements OnInit {
   protected readonly dashboard = signal<AdminDashboard | null>(null);
   protected readonly users = signal<AdminUser[]>([]);
   protected readonly versions = signal<ModelVersion[]>([]);
+  protected readonly validationSettings = signal<AdminValidationSettings | null>(null);
   protected readonly badges = signal<AdminBadge[]>([]);
   protected readonly levels = signal<AdminLevel[]>([]);
   protected readonly mineralOptions = signal<PierreSummary[]>([]);
@@ -75,12 +80,33 @@ export class AdminDashboardComponent implements OnInit {
   protected readonly selectedLevel = signal<AdminLevel | null>(null);
   protected readonly levelPendingDeletion = signal<string | null>(null);
   protected readonly roleOptions: AdminUser['role'][] = ['user', 'expert', 'moderator', 'admin'];
+  protected readonly fineTuningOverview = computed(() => {
+    const dashboard = this.dashboard();
+    const summary = dashboard?.fineTuning;
+    return {
+      availableValidations: summary?.availableValidations ?? null,
+      trustScoreThreshold:
+        summary?.trustScoreThreshold ??
+        this.validationSettings()?.datasetCandidateTrustThreshold ??
+        null,
+      lastCycleAt: summary?.lastCycleAt ?? null,
+    };
+  });
+  protected readonly hasRunningFineTuning = computed(() =>
+    (this.dashboard()?.fineTuningJobs ?? []).some((job) =>
+      job.status === 'pending' || job.status === 'running',
+    ),
+  );
   protected readonly banForm = this.#fb.nonNullable.group({
     reason: ['', [Validators.required, Validators.maxLength(1000)]],
     until: [''],
   });
   protected readonly fineTuningForm = this.#fb.nonNullable.group({
-    versionName: ['', [Validators.required, Validators.maxLength(50)]],
+    versionName: ['', [
+      Validators.required,
+      Validators.maxLength(50),
+      Validators.pattern(/^vit-v\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/),
+    ]],
     minTrustScore: [70, [Validators.required, Validators.min(0), Validators.max(100)]],
   });
   protected readonly pointsForm = this.#fb.nonNullable.group({
@@ -114,7 +140,7 @@ export class AdminDashboardComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    timer(0, 10_000)
+    timer(0, 5_000)
       .pipe(takeUntilDestroyed(this.#destroyRef))
       .subscribe(() => this.loadDashboard());
     this.loadUsers();
@@ -185,8 +211,12 @@ export class AdminDashboardComponent implements OnInit {
       .startFineTuning(value.minTrustScore, value.versionName)
       .pipe(takeUntilDestroyed(this.#destroyRef))
       .subscribe({
-        next: () => {
-          this.fineTuningForm.reset({ versionName: '', minTrustScore: 70 });
+        next: (job) => {
+          this.dashboard.update((dashboard) => dashboard ? {
+            ...dashboard,
+            fineTuningJobs: [job, ...dashboard.fineTuningJobs.filter((item) => item.id !== job.id)],
+          } : dashboard);
+          this.fineTuningForm.controls.versionName.reset('');
           this.loadDashboard();
           this.loadVersions();
         },
@@ -204,6 +234,15 @@ export class AdminDashboardComponent implements OnInit {
         error: (error) => this.showError(error),
         complete: () => this.working.set(false),
       });
+  }
+  protected jobModelName(job: FineTuningJob): string {
+    return job.model?.name ?? job.modelVersion ?? 'Version ViT en préparation';
+  }
+  protected logMessage(log: FineTuningLog | string): string {
+    return typeof log === 'string' ? log : log.message;
+  }
+  protected logLevel(log: FineTuningLog | string): string {
+    return typeof log === 'string' ? 'INFO' : (log.level ?? 'INFO');
   }
   protected savePointsScale(): void {
     this.pointsForm.markAllAsTouched();
@@ -362,6 +401,7 @@ export class AdminDashboardComponent implements OnInit {
       .subscribe({
         next: (value) => {
           this.dashboard.set(value);
+          this.refreshRunningJobs(value.fineTuningJobs);
           this.loading.set(false);
         },
         error: (error) => {
@@ -384,7 +424,10 @@ export class AdminDashboardComponent implements OnInit {
       .getVitVersions()
       .pipe(takeUntilDestroyed(this.#destroyRef))
       .subscribe({
-        next: (value) => this.versions.set(value),
+        next: (value) => {
+          this.versions.set(value);
+          this.suggestNextVersion(value);
+        },
         error: (error) => this.showError(error),
       });
   }
@@ -393,7 +436,13 @@ export class AdminDashboardComponent implements OnInit {
       .getValidationSettings()
       .pipe(takeUntilDestroyed(this.#destroyRef))
       .subscribe({
-        next: (settings) => this.pointsForm.setValue(settings.points),
+        next: (settings) => {
+          this.validationSettings.set(settings);
+          this.pointsForm.setValue(settings.points);
+          this.fineTuningForm.controls.minTrustScore.setValue(
+            settings.datasetCandidateTrustThreshold,
+          );
+        },
         error: (error) => this.showError(error),
       });
   }
@@ -420,6 +469,37 @@ export class AdminDashboardComponent implements OnInit {
   }
   private replaceUser(updated: AdminUser): void {
     this.users.update((items) => items.map((user) => (user.id === updated.id ? updated : user)));
+  }
+  private refreshRunningJobs(jobs: FineTuningJob[]): void {
+    for (const job of jobs) {
+      if (job.status !== 'pending' && job.status !== 'running') continue;
+      this.#admin
+        .getFineTuningJob(job.id)
+        .pipe(takeUntilDestroyed(this.#destroyRef))
+        .subscribe({
+          next: (updated) => this.dashboard.update((dashboard) => dashboard ? {
+            ...dashboard,
+            fineTuningJobs: dashboard.fineTuningJobs.map((item) =>
+              item.id === updated.id ? { ...item, ...updated } : item,
+            ),
+          } : dashboard),
+          error: (error) => this.showError(error),
+        });
+    }
+  }
+  private suggestNextVersion(models: ModelVersion[]): void {
+    if (this.fineTuningForm.controls.versionName.value !== '') return;
+    const versions = models
+      .map((model) => /^vit-v(\d+)\.(\d+)\.(\d+)$/.exec(model.name))
+      .filter((match): match is RegExpExecArray => match !== null)
+      .map((match) => [Number(match[1]), Number(match[2]), Number(match[3])] as const)
+      .sort((left, right) =>
+        right[0] - left[0] || right[1] - left[1] || right[2] - left[2],
+      );
+    const latest = versions[0] ?? [1, 0, -1];
+    this.fineTuningForm.controls.versionName.setValue(
+      `vit-v${latest[0]}.${latest[1]}.${latest[2] + 1}`,
+    );
   }
   private showError(error: { error?: { message?: string } }): void {
     this.error.set(error.error?.message ?? 'Une opération d’administration a échoué.');

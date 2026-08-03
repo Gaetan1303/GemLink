@@ -10,7 +10,13 @@ export interface AdminDashboard {
   communityValidationRate: number;
   topMinerals: { name: string; count: number }[];
   fineTuningJobs: FineTuningJob[];
+  fineTuning?: FineTuningSummary;
   generatedAt: string;
+}
+export interface FineTuningSummary {
+  availableValidations: number;
+  trustScoreThreshold: number;
+  lastCycleAt: string | null;
 }
 export interface AdminUser {
   id: string;
@@ -35,14 +41,28 @@ export interface ModelVersion {
   status: 'training' | 'active' | 'deprecated';
   accuracy: number | null;
   f1Score: number | null;
+  createdAt?: string;
+  activatedAt?: string | null;
+}
+export interface FineTuningLog {
+  timestamp?: string;
+  level?: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | string;
+  message: string;
 }
 export interface FineTuningJob {
   id: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
   progress: number;
   minTrustScore: number;
-  model: ModelVersion;
-  error: string | null;
+  model?: ModelVersion;
+  modelVersion?: string;
+  error?: string | null;
+  logs?: (FineTuningLog | string)[];
+  sampleCount?: number;
+  excludedCandidateCount?: number;
+  createdAt?: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
 }
 export interface AdminPointsScale {
   postCreated: number;
@@ -113,6 +133,9 @@ export class Admin {
       minTrustScore,
       versionName,
     });
+  }
+  getFineTuningJob(id: string): Observable<FineTuningJob> {
+    return this.#http.get<FineTuningJob>(`${this.#url}/models/fine-tuning/${id}`);
   }
   getVitVersions(): Observable<ModelVersion[]> {
     return this.#http.get<ModelVersion[]>(`${this.#url}/models/vit`);

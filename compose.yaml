@@ -19,6 +19,9 @@ services:
 
       REDIS_HOST: gl-cache-redis
       REDIS_PORT: 6379
+      REDIS_URL: redis://gemlink_redis:6379
+      MESSENGER_TRANSPORT_DSN: redis://gemlink_redis:6379/messages
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://gemlink_redis:6379/messages_failed
 
       AI_SERVICE_URL: http://gl-ai-brain:3000
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
@@ -40,6 +43,38 @@ services:
   # ══════════════════════════════════════════════════════════════════════
   # BASE DE DONNÉES PRINCIPALE (dev/prod)
   # ══════════════════════════════════════════════════════════════════════
+  gemlink-worker:
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile
+    container_name: gemlink_worker
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+    command:
+      - php
+      - bin/console
+      - messenger:consume
+      - async
+      - --time-limit=3600
+      - --memory-limit=256M
+      - --sleep=1
+    environment:
+      AI_SERVICE_URL: http://gl-ai-brain:3000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
+      REDIS_URL: redis://gemlink_redis:6379
+      MESSENGER_TRANSPORT_DSN: redis://gemlink_redis:6379/messages
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://gemlink_redis:6379/messages_failed
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gl-ai-brain:
+        condition: service_started
+    networks:
+      - gl-core-net
+
   database:
     image: pgvector/pgvector:pg16
     container_name: gemlink_postgres
@@ -151,7 +186,11 @@ services:
       MEDIA_INTERNAL_BASE_URL: http://gemlink-php:8080
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:3000/health', timeout=4)"
       interval: 15s
       timeout: 5s
       retries: 5
