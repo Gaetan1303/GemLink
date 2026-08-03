@@ -11,6 +11,7 @@ use App\Repository\PublicationRepository;
 use App\Service\FeedCacheService;
 use App\Service\LikeService;
 use App\Service\PostService;
+use App\Service\SimilarPublicationService;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -55,6 +56,29 @@ final class PublicationControllerTest extends WebTestCase
         $posts->method('findOneActiveById')->willReturn(null);
         $client->request('GET', '/api/publications/' . Uuid::v7()->toRfc4122());
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+    }
+
+    public function testSimilarReturnsTheRankedActivePosts(): void
+    {
+        [$client, $posts, , $likes, , , $similar] = $this->clientWithDependencies();
+        $source = new Publication($this->user(), 'https://media.gem-link.org/source.jpg');
+        $source->setStatus(Publication::STATUS_ANALYZED);
+        $match = new Publication($this->user(), 'https://media.gem-link.org/match.jpg');
+        $match->setStatus(Publication::STATUS_ANALYZED);
+        $posts->method('findOneActiveById')->willReturn($source);
+        $posts->method('findActiveByIds')->willReturn([$match]);
+        $likes->method('countForPublication')->willReturn(0);
+        $similar->expects($this->once())->method('find')->with($source, 5)->willReturn([[
+            'id' => $match->getId()->toRfc4122(),
+            'similarity' => 0.975,
+        ]]);
+
+        $client->request('GET', '/api/publications/' . $source->getId()->toRfc4122() . '/similar');
+
+        self::assertResponseIsSuccessful();
+        $data = json_decode((string) $client->getResponse()->getContent(), true);
+        self::assertSame($match->getId()->toRfc4122(), $data['items'][0]['id']);
+        self::assertSame(0.975, $data['items'][0]['similarity']);
     }
 
     public function testCreateRequiresAuthentication(): void
@@ -107,7 +131,7 @@ final class PublicationControllerTest extends WebTestCase
         self::assertSame(['liked' => true, 'likeCount' => 1], json_decode((string) $client->getResponse()->getContent(), true));
     }
 
-    /** @return array{0: \Symfony\Bundle\FrameworkBundle\KernelBrowser, 1: \PHPUnit\Framework\MockObject\MockObject, 2: \PHPUnit\Framework\MockObject\MockObject, 3: \PHPUnit\Framework\MockObject\MockObject, 4: \PHPUnit\Framework\MockObject\MockObject, 5: \PHPUnit\Framework\MockObject\MockObject} */
+    /** @return array{0: \Symfony\Bundle\FrameworkBundle\KernelBrowser, 1: \PHPUnit\Framework\MockObject\MockObject, 2: \PHPUnit\Framework\MockObject\MockObject, 3: \PHPUnit\Framework\MockObject\MockObject, 4: \PHPUnit\Framework\MockObject\MockObject, 5: \PHPUnit\Framework\MockObject\MockObject, 6: \PHPUnit\Framework\MockObject\MockObject} */
     private function clientWithDependencies(): array
     {
         $client = static::createClient();
@@ -118,6 +142,7 @@ final class PublicationControllerTest extends WebTestCase
         $feed = $this->createStub(FeedCacheService::class);
         $likeService = $this->createMock(LikeService::class);
         $pierres = $this->createStub(PublicationPierreRepository::class);
+        $similar = $this->createMock(SimilarPublicationService::class);
         $pierres->method('findBestMatch')->willReturn(null);
         $container->set(PublicationRepository::class, $posts);
         $container->set(PostService::class, $postService);
@@ -125,7 +150,8 @@ final class PublicationControllerTest extends WebTestCase
         $container->set(FeedCacheService::class, $feed);
         $container->set(LikeService::class, $likeService);
         $container->set(PublicationPierreRepository::class, $pierres);
-        return [$client, $posts, $postService, $likes, $feed, $likeService];
+        $container->set(SimilarPublicationService::class, $similar);
+        return [$client, $posts, $postService, $likes, $feed, $likeService, $similar];
     }
 
     private function user(): User

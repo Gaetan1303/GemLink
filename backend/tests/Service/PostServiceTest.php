@@ -15,6 +15,7 @@ use App\Service\AiOrchestrationService;
 use App\Service\Media\MediaUploadService;
 use App\Service\Media\UploadedMedia;
 use App\Service\PostService;
+use App\Service\SimilarPublicationService;
 use App\Service\FeedCacheService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -171,6 +172,53 @@ final class PostServiceTest extends TestCase
         $this->postService->recordView($publication);
 
         $this->assertSame(1, $publication->getViewCount());
+    }
+
+    public function testEleventhViewPrecalculatesSimilarPosts(): void
+    {
+        $publication = new Publication($this->makeUser(), 'https://media.gem-link.org/x.jpg');
+        $publication->setStatus(Publication::STATUS_ANALYZED);
+        for ($view = 0; $view < 10; ++$view) $publication->incrementViewCount();
+        $similar = $this->createMock(SimilarPublicationService::class);
+        $similar->expects($this->once())->method('warmCache')->with($publication);
+        $service = new PostService(
+            $this->em,
+            $this->tags,
+            $this->mediaUploadService,
+            $this->aiOrchestration,
+            $this->feedCache,
+            $this->messageBus,
+            null,
+            $similar,
+        );
+
+        $service->recordView($publication);
+
+        self::assertSame(11, $publication->getViewCount());
+    }
+
+    public function testCacheWarmFailureDoesNotFailTheEleventhView(): void
+    {
+        $publication = new Publication($this->makeUser(), 'https://media.gem-link.org/x.jpg');
+        for ($view = 0; $view < 10; ++$view) $publication->incrementViewCount();
+        $similar = $this->createMock(SimilarPublicationService::class);
+        $similar->expects($this->once())
+            ->method('warmCache')
+            ->willThrowException(new \RuntimeException('Redis unavailable'));
+        $service = new PostService(
+            $this->em,
+            $this->tags,
+            $this->mediaUploadService,
+            $this->aiOrchestration,
+            $this->feedCache,
+            $this->messageBus,
+            null,
+            $similar,
+        );
+
+        $service->recordView($publication);
+
+        self::assertSame(11, $publication->getViewCount());
     }
 
     private function makeUser(string $role = 'USER'): User
