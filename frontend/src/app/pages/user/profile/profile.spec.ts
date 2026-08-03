@@ -28,6 +28,7 @@ describe('Profile', () => {
                 username: 'gemme',
                 avatarUrl: null,
                 bio: null,
+                trustScore: 82,
                 level: 1,
                 progression: {
                   level: 1,
@@ -60,5 +61,15 @@ describe('Profile', () => {
     expect(content).toContain('Niveau 1');
     expect(content).toContain('Progression vers le niveau 2');
     expect(progressBar.getAttribute('aria-label')).toBe('0% de progression vers le niveau suivant');
+  });
+
+  it('affiche le Trust Score public sans permettre sa modification', () => {
+    const content = fixture.nativeElement.textContent as string;
+    const meter = fixture.nativeElement.querySelector('meter');
+
+    expect(content).toContain('82/100');
+    expect(content).toContain('ne peut pas être modifié manuellement');
+    expect(meter.value).toBe(82);
+    expect(fixture.nativeElement.querySelector('[formControlName="trustScore"]')).toBeNull();
   });
 });

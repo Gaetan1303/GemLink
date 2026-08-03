@@ -57,14 +57,16 @@
     <mat-card class="panel training"
       ><mat-card-header
         ><mat-card-title>Fine-tuning en cours</mat-card-title
-        ><mat-card-subtitle>Mise à jour automatique toutes les 5 secondes</mat-card-subtitle></mat-card-header
+        ><mat-card-subtitle
+          >Mise à jour automatique toutes les 5 secondes</mat-card-subtitle
+        ></mat-card-header
       ><mat-card-content>
         @for (job of data.fineTuningJobs; track job.id) {
         <article class="job" [attr.aria-label]="'Cycle ' + jobModelName(job)">
           <div class="job__header">
             <div>
               <strong>{{ jobModelName(job) }}</strong>
-              <span>Trust Score strictement supérieur à {{ job.minTrustScore }}</span>
+              <span>Trust Score supérieur ou égal à {{ job.minTrustScore }}</span>
             </div>
             <span class="status" [class.status--active]="job.status === 'running'">
               {{ job.status }}
@@ -78,16 +80,14 @@
           />
           @if (job.sampleCount !== undefined) {
           <p class="job__samples">
-            <mat-icon>dataset</mat-icon>{{ job.sampleCount }} validations retenues
-            @if (job.excludedCandidateCount !== undefined) {
+            <mat-icon>dataset</mat-icon>{{ job.sampleCount }} validations retenues @if
+            (job.excludedCandidateCount !== undefined) {
             <span>· {{ job.excludedCandidateCount }} écartées</span>
             }
           </p>
-          }
-          @if (job.error) {
+          } @if (job.error) {
           <p class="job__error" role="alert"><mat-icon>error_outline</mat-icon>{{ job.error }}</p>
-          }
-          @if (job.logs?.length) {
+          } @if (job.logs?.length) {
           <details class="job-logs" open>
             <summary>Journal du cycle <span>{{ job.logs?.length }} entrées</span></summary>
             <ol aria-live="polite" aria-relevant="additions">
@@ -101,7 +101,9 @@
           }
         </article>
         } @empty {
-        <p class="empty">Aucun cycle actif. Le prochain entraînement peut être préparé ci-dessous.</p>
+        <p class="empty">
+          Aucun cycle actif. Le prochain entraînement peut être préparé ci-dessous.
+        </p>
         }
       </mat-card-content></mat-card
     >
@@ -228,7 +230,7 @@
       <mat-card class="panel level-list-panel"
         ><mat-card-content>
           <div class="level-list">
-          @for (level of levels(); track level.id; let last = $last; let index = $index) {
+            @for (level of levels(); track level.id; let last = $last; let index = $index) {
             <article
               class="level-row"
               [class.level-row--editing]="selectedLevel()?.id === level.id"
@@ -375,6 +377,57 @@
     </div>
   </section>
 
+  <section class="admin-section" aria-labelledby="trust-threshold-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Qualité du dataset IA</p>
+        <h2 id="trust-threshold-title">Seuil minimum de Trust Score</h2>
+      </div>
+      @if (validationSettings(); as settings) {
+      <span>Seuil actif : {{ settings.datasetCandidateTrustThreshold }}/100</span>
+      }
+    </div>
+    <mat-card class="panel trust-threshold-settings">
+      <mat-card-content>
+        <div class="trust-threshold-settings__intro">
+          <mat-icon>verified_user</mat-icon>
+          <p>
+            Les validations dont le Trust Score est inférieur à ce seuil sont exclues du dataset
+            candidat au fine-tuning. Un score égal au seuil reste admissible.
+          </p>
+        </div>
+        <form [formGroup]="trustThresholdForm" (ngSubmit)="saveTrustThreshold()">
+          <mat-form-field appearance="outline">
+            <mat-label>Trust Score minimum</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="datasetCandidateTrustThreshold"
+              min="0"
+              max="100"
+              step="1"
+              inputmode="numeric"
+            />
+            <span matTextSuffix>/100</span>
+            @if (trustThresholdForm.controls.datasetCandidateTrustThreshold.invalid) {
+            <mat-error>Saisissez un entier compris entre 0 et 100.</mat-error>
+            }
+          </mat-form-field>
+          <button
+            mat-flat-button
+            type="submit"
+            [disabled]="trustThresholdForm.invalid || working()"
+          >
+            <mat-icon>save</mat-icon>Enregistrer le seuil
+          </button>
+          @if (trustThresholdSaved()) {
+          <span class="settings-saved" role="status">Seuil enregistré.</span>
+          }
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </section>
+
   <section class="admin-section" aria-labelledby="fine-tuning-title">
     <div class="section-heading">
       <div>
@@ -424,10 +477,11 @@
             </div>
             <mat-form-field appearance="outline"
               ><mat-label>Nom de version</mat-label
-              ><input matInput class="version-name-input" formControlName="versionName"
-              />@if (fineTuningForm.controls.versionName.hasError('pattern')) {
+              ><input matInput class="version-name-input" formControlName="versionName" />@if
+              (fineTuningForm.controls.versionName.hasError('pattern')) {
               <mat-error>Format attendu : vit-v1.2.0</mat-error>
-              }</mat-form-field>
+              }</mat-form-field
+            >
             <mat-form-field appearance="outline" class="trust-score-field"
               ><mat-label>Seuil de Trust Score configuré</mat-label
               ><input
@@ -438,7 +492,8 @@
                 max="100"
                 readonly
               /><mat-hint class="training-form__hint"
-                >Inclusion si Trust Score > {{ fineTuningForm.controls.minTrustScore.value }}.</mat-hint
+                >Inclusion si Trust Score ≥ {{ fineTuningForm.controls.minTrustScore.value
+                }}.</mat-hint
               ></mat-form-field
             >
             <div class="training-form__quality">
@@ -532,9 +587,7 @@
                 ></mat-form-field
               >
             </td>
-            <td data-label="Trust Score">
-              {{ user.role === 'admin' ? 100 : user.trustScore }}/100
-            </td>
+            <td data-label="Trust Score">{{ user.trustScore }}/100</td>
             <td data-label="Statut">
               <span class="status" [class.status--banned]="user.status === 'banned'"
                 >{{ user.status }}</span
