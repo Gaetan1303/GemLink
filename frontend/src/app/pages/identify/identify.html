@@ -12,7 +12,7 @@
       @if (item.status === 'PENDING_ANALYSIS') { <p class="pending">Votre analyse est en attente. Elle sera traitée après les publications GemLink.</p> }
       @else if (item.status === 'ANALYSIS_FAILED') { <p class="error">Nous n’avons pas pu identifier cette image.</p> }
       @else if (item.result; as result) {
-        <div class="result"><span>Résultat IA</span><h2>{{ result.nom }}</h2><p>Confiance : {{ result.confidence | percent }}</p><p>{{ result.description }}</p></div>
+        <app-pipeline-result [result]="result" />
         <button type="button" class="btn-identify" (click)="publish()">Publier cette pierre</button>
         @if (!auth.isAuthenticated()) { <p class="hint">Connectez-vous pour publier votre découverte.</p> }
       }

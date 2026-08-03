@@ -15,6 +15,6 @@
 
 .btn-identify:disabled { opacity: .5; cursor: not-allowed; }
 
-.result { text-align: left; padding: 1rem; border: 1px solid rgba(123,201,154,.4); margin: 1rem 0; }.pending,.hint { color: theme.$text-dim; }
+.pending,.hint { color: theme.$text-dim; }
 
 .error { color: theme.$coral; }
