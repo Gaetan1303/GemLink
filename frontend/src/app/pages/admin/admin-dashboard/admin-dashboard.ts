@@ -76,6 +76,7 @@ export class AdminDashboardComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly working = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly trustThresholdSaved = signal(false);
   protected readonly selectedUser = signal<AdminUser | null>(null);
   protected readonly selectedLevel = signal<AdminLevel | null>(null);
   protected readonly levelPendingDeletion = signal<string | null>(null);
@@ -86,27 +87,30 @@ export class AdminDashboardComponent implements OnInit {
     return {
       availableValidations: summary?.availableValidations ?? null,
       trustScoreThreshold:
-        summary?.trustScoreThreshold ??
         this.validationSettings()?.datasetCandidateTrustThreshold ??
+        summary?.trustScoreThreshold ??
         null,
       lastCycleAt: summary?.lastCycleAt ?? null,
     };
   });
   protected readonly hasRunningFineTuning = computed(() =>
-    (this.dashboard()?.fineTuningJobs ?? []).some((job) =>
-      job.status === 'pending' || job.status === 'running',
-    ),
+    (this.dashboard()?.fineTuningJobs ?? []).some(
+      (job) => job.status === 'pending' || job.status === 'running'
+    )
   );
   protected readonly banForm = this.#fb.nonNullable.group({
     reason: ['', [Validators.required, Validators.maxLength(1000)]],
     until: [''],
   });
   protected readonly fineTuningForm = this.#fb.nonNullable.group({
-    versionName: ['', [
-      Validators.required,
-      Validators.maxLength(50),
-      Validators.pattern(/^vit-v\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/),
-    ]],
+    versionName: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(50),
+        Validators.pattern(/^vit-v\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/),
+      ],
+    ],
     minTrustScore: [70, [Validators.required, Validators.min(0), Validators.max(100)]],
   });
   protected readonly pointsForm = this.#fb.nonNullable.group({
@@ -116,6 +120,12 @@ export class AdminDashboardComponent implements OnInit {
     validationConsensusConfirmed: [
       15,
       [Validators.required, Validators.min(0), Validators.max(10000)],
+    ],
+  });
+  protected readonly trustThresholdForm = this.#fb.nonNullable.group({
+    datasetCandidateTrustThreshold: [
+      70,
+      [Validators.required, Validators.min(0), Validators.max(100), Validators.pattern(/^\d+$/)],
     ],
   });
   protected readonly badgeConditions: { value: AdminBadgeCondition; label: string }[] = [
@@ -146,6 +156,9 @@ export class AdminDashboardComponent implements OnInit {
     this.loadUsers();
     this.loadVersions();
     this.loadPointsSettings();
+    this.trustThresholdForm.valueChanges
+      .pipe(takeUntilDestroyed(this.#destroyRef))
+      .subscribe(() => this.trustThresholdSaved.set(false));
     this.loadBadges();
     this.loadLevels();
     this.#validation
@@ -212,10 +225,17 @@ export class AdminDashboardComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.#destroyRef))
       .subscribe({
         next: (job) => {
-          this.dashboard.update((dashboard) => dashboard ? {
-            ...dashboard,
-            fineTuningJobs: [job, ...dashboard.fineTuningJobs.filter((item) => item.id !== job.id)],
-          } : dashboard);
+          this.dashboard.update((dashboard) =>
+            dashboard
+              ? {
+                  ...dashboard,
+                  fineTuningJobs: [
+                    job,
+                    ...dashboard.fineTuningJobs.filter((item) => item.id !== job.id),
+                  ],
+                }
+              : dashboard
+          );
           this.fineTuningForm.controls.versionName.reset('');
           this.loadDashboard();
           this.loadVersions();
@@ -255,6 +275,37 @@ export class AdminDashboardComponent implements OnInit {
       .subscribe({
         next: (settings) => this.pointsForm.setValue(settings.points),
         error: (error) => this.showError(error),
+        complete: () => this.working.set(false),
+      });
+  }
+  protected saveTrustThreshold(): void {
+    this.trustThresholdForm.markAllAsTouched();
+    if (this.trustThresholdForm.invalid || this.working()) return;
+
+    this.working.set(true);
+    this.error.set(null);
+    this.trustThresholdSaved.set(false);
+    const datasetCandidateTrustThreshold =
+      this.trustThresholdForm.controls.datasetCandidateTrustThreshold.value;
+
+    this.#admin
+      .updateValidationSettings({ datasetCandidateTrustThreshold })
+      .pipe(takeUntilDestroyed(this.#destroyRef))
+      .subscribe({
+        next: (settings) => {
+          this.validationSettings.set(settings);
+          this.trustThresholdForm.controls.datasetCandidateTrustThreshold.setValue(
+            settings.datasetCandidateTrustThreshold
+          );
+          this.fineTuningForm.controls.minTrustScore.setValue(
+            settings.datasetCandidateTrustThreshold
+          );
+          this.trustThresholdSaved.set(true);
+        },
+        error: (error) => {
+          this.showError(error);
+          this.working.set(false);
+        },
         complete: () => this.working.set(false),
       });
   }
@@ -439,8 +490,11 @@ export class AdminDashboardComponent implements OnInit {
         next: (settings) => {
           this.validationSettings.set(settings);
           this.pointsForm.setValue(settings.points);
+          this.trustThresholdForm.controls.datasetCandidateTrustThreshold.setValue(
+            settings.datasetCandidateTrustThreshold
+          );
           this.fineTuningForm.controls.minTrustScore.setValue(
-            settings.datasetCandidateTrustThreshold,
+            settings.datasetCandidateTrustThreshold
           );
         },
         error: (error) => this.showError(error),
@@ -477,12 +531,17 @@ export class AdminDashboardComponent implements OnInit {
         .getFineTuningJob(job.id)
         .pipe(takeUntilDestroyed(this.#destroyRef))
         .subscribe({
-          next: (updated) => this.dashboard.update((dashboard) => dashboard ? {
-            ...dashboard,
-            fineTuningJobs: dashboard.fineTuningJobs.map((item) =>
-              item.id === updated.id ? { ...item, ...updated } : item,
+          next: (updated) =>
+            this.dashboard.update((dashboard) =>
+              dashboard
+                ? {
+                    ...dashboard,
+                    fineTuningJobs: dashboard.fineTuningJobs.map((item) =>
+                      item.id === updated.id ? { ...item, ...updated } : item
+                    ),
+                  }
+                : dashboard
             ),
-          } : dashboard),
           error: (error) => this.showError(error),
         });
     }
@@ -493,12 +552,10 @@ export class AdminDashboardComponent implements OnInit {
       .map((model) => /^vit-v(\d+)\.(\d+)\.(\d+)$/.exec(model.name))
       .filter((match): match is RegExpExecArray => match !== null)
       .map((match) => [Number(match[1]), Number(match[2]), Number(match[3])] as const)
-      .sort((left, right) =>
-        right[0] - left[0] || right[1] - left[1] || right[2] - left[2],
-      );
+      .sort((left, right) => right[0] - left[0] || right[1] - left[1] || right[2] - left[2]);
     const latest = versions[0] ?? [1, 0, -1];
     this.fineTuningForm.controls.versionName.setValue(
-      `vit-v${latest[0]}.${latest[1]}.${latest[2] + 1}`,
+      `vit-v${latest[0]}.${latest[1]}.${latest[2] + 1}`
     );
   }
   private showError(error: { error?: { message?: string } }): void {

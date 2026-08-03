@@ -75,6 +75,9 @@ export interface AdminValidationSettings {
   datasetCandidateTrustThreshold: number;
   points: AdminPointsScale;
 }
+export type AdminValidationSettingsUpdate = Partial<
+  Pick<AdminValidationSettings, 'consensusThreshold' | 'datasetCandidateTrustThreshold' | 'points'>
+>;
 export type AdminBadgeCondition =
   | 'POST_COUNT'
   | 'VALIDATION_COUNT'
@@ -147,7 +150,7 @@ export class Admin {
     return this.#http.get<AdminValidationSettings>(`${this.#url}/validation-settings`);
   }
   updateValidationSettings(
-    settings: Pick<AdminValidationSettings, 'points'>
+    settings: AdminValidationSettingsUpdate
   ): Observable<AdminValidationSettings> {
     return this.#http.patch<AdminValidationSettings>(`${this.#url}/validation-settings`, settings);
   }

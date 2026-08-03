@@ -49,8 +49,14 @@ class ValidationRepository extends ServiceEntityRepository
     public function findDatasetCandidates(int $trustScoreThreshold, int $limit = 500): array
     {
         return $this->createQueryBuilder('v')
-            ->andWhere('v.trustScoreSnapshot >= :threshold')
+            ->addSelect('validator', 'publication', 'pierre')
+            ->join('v.user', 'validator')
+            ->join('v.publication', 'publication')
+            ->join('v.pierre', 'pierre')
+            ->andWhere('validator.trustScore >= :threshold')
+            ->andWhere('publication.status = :validatedStatus')
             ->setParameter('threshold', $trustScoreThreshold)
+            ->setParameter('validatedStatus', Publication::STATUS_COMMUNITY_VALIDATED)
             ->orderBy('v.createdAt', 'ASC')
             ->setMaxResults($limit)
             ->getQuery()

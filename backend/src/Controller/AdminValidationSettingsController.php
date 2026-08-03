@@ -67,7 +67,7 @@ final class AdminValidationSettingsController extends AbstractController
         if (array_key_exists('datasetCandidateTrustThreshold', $payload)) {
             $value = $payload['datasetCandidateTrustThreshold'];
 
-            if (!is_numeric($value) || $value < 0 || $value > 100) {
+            if (!is_int($value) || $value < 0 || $value > 100) {
                 return $this->json(['message' => 'datasetCandidateTrustThreshold doit être un entier entre 0 et 100.'], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 

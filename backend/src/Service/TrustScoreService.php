@@ -6,7 +6,7 @@ use App\Entity\User;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 
-final class TrustScoreService
+class TrustScoreService
 {
     private const FULL_SENIORITY_AT = 20;
 
@@ -55,12 +55,18 @@ final class TrustScoreService
             return 0;
         }
 
-        $reliability = $confirmed / $total;
-        $seniorityFactor = 0.5 + 0.5 * min(1, $total / self::FULL_SENIORITY_AT);
-        $score = (int) round(100 * $reliability * $seniorityFactor);
+        $score = $this->calculate($confirmed, $total);
         $validator->setTrustScore($score);
         $this->em->flush();
 
         return $validator->getTrustScore();
+    }
+
+    private function calculate(int $confirmed, int $total): int
+    {
+        $reliability = $confirmed / $total;
+        $seniorityFactor = 0.5 + 0.5 * min(1, $total / self::FULL_SENIORITY_AT);
+
+        return max(0, min(100, (int) round(100 * $reliability * $seniorityFactor)));
     }
 }

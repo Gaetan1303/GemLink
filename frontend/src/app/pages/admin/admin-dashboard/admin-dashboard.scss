@@ -391,6 +391,39 @@ h2 {
   color: theme.$ink;
   background: theme.$gold;
 }
+.trust-threshold-settings__intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  max-width: 760px;
+  color: theme.$text-dim;
+  line-height: 1.6;
+}
+.trust-threshold-settings__intro mat-icon {
+  flex: 0 0 auto;
+  color: theme.$emerald;
+}
+.trust-threshold-settings__intro p {
+  margin: 0;
+}
+.trust-threshold-settings form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 1.15rem;
+}
+.trust-threshold-settings mat-form-field {
+  width: min(100%, 290px);
+}
+.trust-threshold-settings button {
+  color: theme.$ink;
+  background: theme.$gold;
+}
+.settings-saved {
+  color: theme.$emerald;
+  font-weight: 700;
+}
 .level-admin-layout {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);

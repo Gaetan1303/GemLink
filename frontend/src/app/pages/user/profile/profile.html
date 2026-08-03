@@ -1,170 +1,285 @@
 <app-header />
 <app-header-image></app-header-image>
 
-
 <main class="profile-page" id="main-content">
   @if (isLoading()) {
-    <div class="profile-page__loading"><mat-spinner diameter="44" /><span>Chargement du profil…</span></div>
+  <div class="profile-page__loading">
+    <mat-spinner diameter="44" /><span>Chargement du profil…</span>
+  </div>
   } @else if (errorMessage() && !profile()) {
-    <mat-card class="profile-page__message" role="alert"><mat-card-content>{{ errorMessage() }}</mat-card-content></mat-card>
-  } @else if (profile(); as user) {
-    @if (errorMessage()) { <div class="profile-page__error" role="alert">{{ errorMessage() }}</div> }
-
-    <section class="profile-hero">
-      <div class="profile-avatar" [class.profile-avatar--fallback]="!avatarPreview() && !user.avatarUrl">
-        @if (avatarPreview() || user.avatarUrl) {
-          <img [src]="avatarPreview() || user.avatarUrl" [alt]="'Avatar de ' + user.username" />
-        } @else { <mat-icon>person</mat-icon> }
-      </div>
-      <div>
-        <p class="profile-hero__eyebrow">Profil GemLink</p>
-        <h1>{{ user.username }}</h1>
-        <p>{{ user.bio || 'Ce membre n’a pas encore renseigné de bio.' }}</p>
-      </div>
-      <div class="profile-scores" aria-label="Progression communautaire">
-        <span><strong>Niveau {{ user.progression.level }}</strong>{{ user.progression.name }}</span>
-        @if (isOwnProfile()) {
-          <span><strong>{{ points()?.total ?? 0 }} pts</strong>Contribution</span>
-        }
-      </div>
-    </section>
-
-    <section class="level-progression" aria-labelledby="level-progression-title">
-      <div class="level-progression__heading">
-        <div>
-          <p class="profile-hero__eyebrow">Expertise minéralogique</p>
-          <h2 id="level-progression-title">{{ user.progression.name }}</h2>
-        </div>
-        <strong>{{ user.progression.progressPercent }}%</strong>
-      </div>
-      @if (user.progression.nextLevel !== null) {
-        <p>Progression vers le niveau {{ user.progression.nextLevel }} · {{ user.progression.nextLevelName }}</p>
-      } @else {
-        <p>Niveau maximum atteint. Votre expertise rayonne sur GemLink.</p>
-      }
-      <mat-progress-bar mode="determinate" [value]="user.progression.progressPercent" [attr.aria-label]="user.progression.progressPercent + '% de progression vers le niveau suivant'" />
-      <div class="level-progression__thresholds">
-        <span>{{ user.progression.minPoints }} pts</span>
-        @if (user.progression.nextLevelMinPoints !== null) { <span>{{ user.progression.nextLevelMinPoints }} pts</span> }
-      </div>
-    </section>
-
-    @if (isOwnProfile()) {
-      <section class="profile-section points-section" aria-labelledby="points-title">
-        <div class="section-heading">
-          <div>
-            <p class="profile-hero__eyebrow">Ma progression</p>
-            <h2 id="points-title">Historique des points</h2>
-          </div>
-          <div class="points-total" aria-label="Total de points"><mat-icon>diamond</mat-icon><strong>{{ points()?.total ?? 0 }}</strong><span>pts</span></div>
-        </div>
-
-        @if (isPointsLoading()) {
-          <p class="empty-copy">Mise à jour de votre progression…</p>
-        } @else if (points()?.transactions?.length) {
-          <div class="points-history">
-            @for (transaction of points()!.transactions; track transaction.date + transaction.action) {
-              <article class="points-transaction">
-                <div class="points-transaction__icon"><mat-icon>auto_awesome</mat-icon></div>
-                <div><strong>{{ pointsActionLabel(transaction.action) }}</strong><time [attr.datetime]="transaction.date">{{ transaction.date | date:'d MMMM y, HH:mm' }}</time></div>
-                <span>+{{ transaction.amount }} pts</span>
-              </article>
-            }
-          </div>
-        } @else {
-          <p class="empty-copy">Vos prochaines contributions apparaîtront ici.</p>
-        }
-      </section>
-
-      <section class="profile-section progression-guide" aria-labelledby="progression-guide-title">
-        <div class="section-heading">
-          <div>
-            <p class="profile-hero__eyebrow">Guide de contribution</p>
-            <h2 id="progression-guide-title">Comment progresser ?</h2>
-          </div>
-        </div>
-        <div class="progression-guide__grid">
-          <article class="progression-guide__card">
-            <div class="progression-guide__title"><span class="achievement-emblem"><mat-icon>diamond</mat-icon></span><div><p>Récompenses</p><h3>Gagner des points</h3></div></div>
-            <ul>
-              <li><span>Publier une découverte</span><strong>+10 pts</strong></li>
-              <li><span>Recevoir un like</span><strong>+2 pts</strong></li>
-              <li><span>Soumettre une validation</span><strong>+5 pts</strong></li>
-              <li><span>Validation confirmée par consensus</span><strong>+15 pts</strong></li>
-            </ul>
-            <p>Les points sont ajoutés après le traitement de votre action : actualisez votre profil quelques instants plus tard si nécessaire.</p>
-          </article>
-          <article class="progression-guide__card">
-            <div class="progression-guide__title"><span class="achievement-emblem achievement-emblem--violet"><mat-icon>workspace_premium</mat-icon></span><div><p>Succès GemLink</p><h3>Obtenir des badges</h3></div></div>
-            <p>Les badges reconnaissent les jalons de votre parcours communautaire : publications, validations et progression de niveau.</p>
-            <p>Ils sont attribués automatiquement lorsque les conditions définies par GemLink sont atteintes. Cliquez sur un badge obtenu pour découvrir son histoire.</p>
-          </article>
-        </div>
-      </section>
-
-      <mat-card class="profile-edit">
-        <mat-card-header><mat-card-title>Modifier mon profil</mat-card-title></mat-card-header>
-        <mat-card-content>
-          <form [formGroup]="form" (ngSubmit)="save()">
-            <label class="avatar-picker" for="avatar-input">
-              <mat-icon>photo_camera</mat-icon>
-              <span>Choisir un avatar</span>
-              <small>JPEG, PNG ou WebP · 2 Mo maximum</small>
-            </label>
-            <input id="avatar-input" type="file" accept="image/jpeg,image/png,image/webp" (change)="selectAvatar($event)" />
-
-            <mat-form-field appearance="outline">
-              <mat-label>Pseudo</mat-label>
-              <input matInput formControlName="username" maxlength="30" />
-              @if (form.controls.username.invalid && form.controls.username.touched) { <mat-error>3 à 30 caractères alphanumériques.</mat-error> }
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Bio</mat-label>
-              <textarea matInput formControlName="bio" maxlength="500" rows="5"></textarea>
-              <mat-hint align="end">{{ form.controls.bio.value.length }}/500</mat-hint>
-            </mat-form-field>
-            <app-button [type]="'submit'" [disabled]="form.invalid || isSaving()" [label]="isSaving() ? 'Enregistrement…' : 'Enregistrer les modifications'" />
-          </form>
-        </mat-card-content>
-      </mat-card>
-    }
-
-    <section class="profile-section">
-      <h2>Badges obtenus</h2>
-      @if (user.badges.length) {
-        <mat-chip-set class="profile-badge-list" aria-label="Badges obtenus">
-          @for (badge of user.badges; track badge.id) { <mat-chip class="profile-badge" tabindex="0" [matTooltip]="badge.description || badge.name" (click)="openBadge(badge)" (keydown.enter)="openBadge(badge)" (keydown.space)="openBadge(badge)"><mat-icon matChipAvatar>workspace_premium</mat-icon>{{ badge.name }}</mat-chip> }
-        </mat-chip-set>
-      } @else { <p class="empty-copy">Les premiers badges sont à portée de main.</p> }
-    </section>
-
-    <section class="profile-section">
-      <h2>Publications</h2>
-      @if (user.posts.length) {
-        <div class="post-grid">
-          @for (post of user.posts; track post.id) {
-            <a [routerLink]="['/posts', post.id]" class="post-card">
-              @if (post.mediaType === 'IMAGE') { <img [src]="post.mediaUrl" [alt]="post.title || 'Publication de ' + user.username" /> }
-              @else { <div class="post-card__video"><mat-icon>videocam</mat-icon></div> }
-              <span>{{ post.title || 'Sans titre' }}</span>
-            </a>
-          }
-        </div>
-      } @else { <p class="empty-copy">Aucune publication pour le moment.</p> }
-    </section>
+  <mat-card class="profile-page__message" role="alert"
+    ><mat-card-content>{{ errorMessage() }}</mat-card-content></mat-card
+  >
+  } @else if (profile(); as user) { @if (errorMessage()) {
+  <div class="profile-page__error" role="alert">{{ errorMessage() }}</div>
   }
 
-  @if (selectedBadge(); as badge) {
-    <div class="badge-showcase-overlay" role="dialog" aria-modal="true" [attr.aria-labelledby]="'badge-title-' + badge.id" (click)="closeBadge()">
-      <mat-card class="badge-showcase" (click)="$event.stopPropagation()">
-        <button type="button" class="badge-showcase__close" [attr.aria-label]="'Fermer le détail du badge ' + badge.name" (click)="closeBadge()"><mat-icon>close</mat-icon></button>
-        <div class="badge-showcase__emblem"><mat-icon>workspace_premium</mat-icon></div>
-        <p class="profile-hero__eyebrow">Accomplissement GemLink</p>
-        <h2 [id]="'badge-title-' + badge.id">{{ badge.name }}</h2>
-        <div class="badge-showcase__rule"><span></span></div>
-        <p>{{ badge.description || 'Cet accomplissement reconnaît votre contribution à la communauté GemLink.' }}</p>
-        <button mat-flat-button type="button" (click)="closeBadge()">Fermer l’écrin</button>
-      </mat-card>
+  <section class="profile-hero">
+    <div
+      class="profile-avatar"
+      [class.profile-avatar--fallback]="!avatarPreview() && !user.avatarUrl"
+    >
+      @if (avatarPreview() || user.avatarUrl) {
+      <img [src]="avatarPreview() || user.avatarUrl" [alt]="'Avatar de ' + user.username" />
+      } @else { <mat-icon>person</mat-icon> }
     </div>
+    <div>
+      <p class="profile-hero__eyebrow">Profil GemLink</p>
+      <h1>{{ user.username }}</h1>
+      <p>{{ user.bio || 'Ce membre n’a pas encore renseigné de bio.' }}</p>
+    </div>
+    <div class="profile-scores" aria-label="Progression communautaire">
+      <span><strong>Niveau {{ user.progression.level }}</strong>{{ user.progression.name }}</span>
+      <span class="trust-score-summary">
+        <strong>{{ user.trustScore }}/100</strong>Trust Score
+      </span>
+      @if (isOwnProfile()) {
+      <span><strong>{{ points()?.total ?? 0 }} pts</strong>Contribution</span>
+      }
+    </div>
+  </section>
+
+  <section class="trust-score" aria-labelledby="trust-score-title">
+    <div class="trust-score__icon" aria-hidden="true"><mat-icon>verified_user</mat-icon></div>
+    <div class="trust-score__content">
+      <p class="profile-hero__eyebrow">Fiabilité communautaire</p>
+      <h2 id="trust-score-title">Trust Score</h2>
+      <p>
+        Calculé automatiquement à partir des validations confirmées par le consensus et de
+        l’ancienneté des contributions. Ce score ne peut pas être modifié manuellement.
+      </p>
+      <div class="trust-score__bar">
+        <meter
+          min="0"
+          max="100"
+          low="40"
+          high="70"
+          optimum="100"
+          [value]="user.trustScore"
+          [attr.aria-label]="'Trust Score de ' + user.username + ' : ' + user.trustScore + ' sur 100'"
+        >
+          {{ user.trustScore }}/100
+        </meter>
+        <strong>{{ user.trustScore }}<small>/100</small></strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="level-progression" aria-labelledby="level-progression-title">
+    <div class="level-progression__heading">
+      <div>
+        <p class="profile-hero__eyebrow">Expertise minéralogique</p>
+        <h2 id="level-progression-title">{{ user.progression.name }}</h2>
+      </div>
+      <strong>{{ user.progression.progressPercent }}%</strong>
+    </div>
+    @if (user.progression.nextLevel !== null) {
+    <p>
+      Progression vers le niveau {{ user.progression.nextLevel }} · {{
+      user.progression.nextLevelName }}
+    </p>
+    } @else {
+    <p>Niveau maximum atteint. Votre expertise rayonne sur GemLink.</p>
+    }
+    <mat-progress-bar
+      mode="determinate"
+      [value]="user.progression.progressPercent"
+      [attr.aria-label]="user.progression.progressPercent + '% de progression vers le niveau suivant'"
+    />
+    <div class="level-progression__thresholds">
+      <span>{{ user.progression.minPoints }} pts</span>
+      @if (user.progression.nextLevelMinPoints !== null) {
+      <span>{{ user.progression.nextLevelMinPoints }} pts</span> }
+    </div>
+  </section>
+
+  @if (isOwnProfile()) {
+  <section class="profile-section points-section" aria-labelledby="points-title">
+    <div class="section-heading">
+      <div>
+        <p class="profile-hero__eyebrow">Ma progression</p>
+        <h2 id="points-title">Historique des points</h2>
+      </div>
+      <div class="points-total" aria-label="Total de points">
+        <mat-icon>diamond</mat-icon><strong>{{ points()?.total ?? 0 }}</strong><span>pts</span>
+      </div>
+    </div>
+
+    @if (isPointsLoading()) {
+    <p class="empty-copy">Mise à jour de votre progression…</p>
+    } @else if (points()?.transactions?.length) {
+    <div class="points-history">
+      @for (transaction of points()!.transactions; track transaction.date + transaction.action) {
+      <article class="points-transaction">
+        <div class="points-transaction__icon"><mat-icon>auto_awesome</mat-icon></div>
+        <div>
+          <strong>{{ pointsActionLabel(transaction.action) }}</strong
+          ><time [attr.datetime]="transaction.date"
+            >{{ transaction.date | date:'d MMMM y, HH:mm' }}</time
+          >
+        </div>
+        <span>+{{ transaction.amount }} pts</span>
+      </article>
+      }
+    </div>
+    } @else {
+    <p class="empty-copy">Vos prochaines contributions apparaîtront ici.</p>
+    }
+  </section>
+
+  <section class="profile-section progression-guide" aria-labelledby="progression-guide-title">
+    <div class="section-heading">
+      <div>
+        <p class="profile-hero__eyebrow">Guide de contribution</p>
+        <h2 id="progression-guide-title">Comment progresser ?</h2>
+      </div>
+    </div>
+    <div class="progression-guide__grid">
+      <article class="progression-guide__card">
+        <div class="progression-guide__title">
+          <span class="achievement-emblem"><mat-icon>diamond</mat-icon></span>
+          <div>
+            <p>Récompenses</p>
+            <h3>Gagner des points</h3>
+          </div>
+        </div>
+        <ul>
+          <li><span>Publier une découverte</span><strong>+10 pts</strong></li>
+          <li><span>Recevoir un like</span><strong>+2 pts</strong></li>
+          <li><span>Soumettre une validation</span><strong>+5 pts</strong></li>
+          <li><span>Validation confirmée par consensus</span><strong>+15 pts</strong></li>
+        </ul>
+        <p>
+          Les points sont ajoutés après le traitement de votre action : actualisez votre profil
+          quelques instants plus tard si nécessaire.
+        </p>
+      </article>
+      <article class="progression-guide__card">
+        <div class="progression-guide__title">
+          <span class="achievement-emblem achievement-emblem--violet"
+            ><mat-icon>workspace_premium</mat-icon></span
+          >
+          <div>
+            <p>Succès GemLink</p>
+            <h3>Obtenir des badges</h3>
+          </div>
+        </div>
+        <p>
+          Les badges reconnaissent les jalons de votre parcours communautaire : publications,
+          validations et progression de niveau.
+        </p>
+        <p>
+          Ils sont attribués automatiquement lorsque les conditions définies par GemLink sont
+          atteintes. Cliquez sur un badge obtenu pour découvrir son histoire.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <mat-card class="profile-edit">
+    <mat-card-header><mat-card-title>Modifier mon profil</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label class="avatar-picker" for="avatar-input">
+          <mat-icon>photo_camera</mat-icon>
+          <span>Choisir un avatar</span>
+          <small>JPEG, PNG ou WebP · 2 Mo maximum</small>
+        </label>
+        <input
+          id="avatar-input"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          (change)="selectAvatar($event)"
+        />
+
+        <mat-form-field appearance="outline">
+          <mat-label>Pseudo</mat-label>
+          <input matInput formControlName="username" maxlength="30" />
+          @if (form.controls.username.invalid && form.controls.username.touched) {
+          <mat-error>3 à 30 caractères alphanumériques.</mat-error> }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Bio</mat-label>
+          <textarea matInput formControlName="bio" maxlength="500" rows="5"></textarea>
+          <mat-hint align="end">{{ form.controls.bio.value.length }}/500</mat-hint>
+        </mat-form-field>
+        <app-button
+          [type]="'submit'"
+          [disabled]="form.invalid || isSaving()"
+          [label]="isSaving() ? 'Enregistrement…' : 'Enregistrer les modifications'"
+        />
+      </form>
+    </mat-card-content>
+  </mat-card>
+  }
+
+  <section class="profile-section">
+    <h2>Badges obtenus</h2>
+    @if (user.badges.length) {
+    <mat-chip-set class="profile-badge-list" aria-label="Badges obtenus">
+      @for (badge of user.badges; track badge.id) {
+      <mat-chip
+        class="profile-badge"
+        tabindex="0"
+        [matTooltip]="badge.description || badge.name"
+        (click)="openBadge(badge)"
+        (keydown.enter)="openBadge(badge)"
+        (keydown.space)="openBadge(badge)"
+        ><mat-icon matChipAvatar>workspace_premium</mat-icon>{{ badge.name }}</mat-chip
+      >
+      }
+    </mat-chip-set>
+    } @else {
+    <p class="empty-copy">Les premiers badges sont à portée de main.</p>
+    }
+  </section>
+
+  <section class="profile-section">
+    <h2>Publications</h2>
+    @if (user.posts.length) {
+    <div class="post-grid">
+      @for (post of user.posts; track post.id) {
+      <a [routerLink]="['/posts', post.id]" class="post-card">
+        @if (post.mediaType === 'IMAGE') {
+        <img [src]="post.mediaUrl" [alt]="post.title || 'Publication de ' + user.username" /> }
+        @else {
+        <div class="post-card__video"><mat-icon>videocam</mat-icon></div>
+        }
+        <span>{{ post.title || 'Sans titre' }}</span>
+      </a>
+      }
+    </div>
+    } @else {
+    <p class="empty-copy">Aucune publication pour le moment.</p>
+    }
+  </section>
+  } @if (selectedBadge(); as badge) {
+  <div
+    class="badge-showcase-overlay"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="'badge-title-' + badge.id"
+    (click)="closeBadge()"
+  >
+    <mat-card class="badge-showcase" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="badge-showcase__close"
+        [attr.aria-label]="'Fermer le détail du badge ' + badge.name"
+        (click)="closeBadge()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+      <div class="badge-showcase__emblem"><mat-icon>workspace_premium</mat-icon></div>
+      <p class="profile-hero__eyebrow">Accomplissement GemLink</p>
+      <h2 [id]="'badge-title-' + badge.id">{{ badge.name }}</h2>
+      <div class="badge-showcase__rule"><span></span></div>
+      <p>
+        {{ badge.description || 'Cet accomplissement reconnaît votre contribution à la communauté
+        GemLink.' }}
+      </p>
+      <button mat-flat-button type="button" (click)="closeBadge()">Fermer l’écrin</button>
+    </mat-card>
+  </div>
   }
 </main>

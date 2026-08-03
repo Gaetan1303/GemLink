@@ -17,6 +17,10 @@ class ProfileService
     /** @param array<string,mixed> $data */
     public function update(User $user, array $data, ?UploadedFile $avatar): User
     {
+        if (array_key_exists('trustScore', $data) || array_key_exists('trust_score', $data)) {
+            throw new InvalidArgumentException('Le Trust Score est calculé automatiquement et ne peut pas être modifié.');
+        }
+
         if (array_key_exists('username', $data)) {
             $username = is_string($data['username']) ? trim($data['username']) : '';
             if (preg_match('/^[a-zA-Z0-9]{3,30}$/', $username) !== 1) throw new InvalidArgumentException('Le pseudo doit contenir entre 3 et 30 caractères alphanumériques.');

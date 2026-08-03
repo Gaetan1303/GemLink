@@ -85,6 +85,28 @@ describe('Admin fine-tuning management', () => {
     request.flush({ id: 'job-1', status: 'pending', progress: 0, minTrustScore: 75 });
   });
 
+  it('updates the global dataset candidate Trust Score threshold', () => {
+    service
+      .updateValidationSettings({ datasetCandidateTrustThreshold: 68 })
+      .subscribe((settings) => {
+        expect(settings.datasetCandidateTrustThreshold).toBe(68);
+      });
+
+    const request = http.expectOne(`${adminUrl}/validation-settings`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ datasetCandidateTrustThreshold: 68 });
+    request.flush({
+      consensusThreshold: 0.7,
+      datasetCandidateTrustThreshold: 68,
+      points: {
+        postCreated: 10,
+        likeReceived: 2,
+        validationSubmitted: 5,
+        validationConsensusConfirmed: 15,
+      },
+    });
+  });
+
   it('polls the detailed job status including logs', () => {
     service.getFineTuningJob('job-1').subscribe((job) => {
       expect(job.progress).toBe(42);
@@ -108,6 +130,12 @@ describe('Admin fine-tuning management', () => {
     const request = http.expectOne(`${adminUrl}/models/vit/model-1/activate`);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({});
-    request.flush({ id: 'model-1', name: 'vit-v1.1.0', status: 'active', accuracy: .9, f1Score: .89 });
+    request.flush({
+      id: 'model-1',
+      name: 'vit-v1.1.0',
+      status: 'active',
+      accuracy: 0.9,
+      f1Score: 0.89,
+    });
   });
 });
