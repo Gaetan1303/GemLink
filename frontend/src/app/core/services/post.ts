@@ -146,8 +146,10 @@ export class PostService {
     return this.#http.get<Publication>(`${this.#apiUrl}/${postId}`);
   }
 
-  getSimilarPosts(postId: string): Observable<{ items: SimilarPublication[] }> {
-    return this.#http.get<{ items: SimilarPublication[] }>(`${this.#apiUrl}/${postId}/similar`);
+  getSimilarPosts(postId: string, limit = 5): Observable<{ items: SimilarPublication[] }> {
+    return this.#http.get<{ items: SimilarPublication[] }>(`${this.#apiUrl}/${postId}/similar`, {
+      params: { limit: Math.min(5, Math.max(1, limit)) },
+    });
   }
 
   /** US 2.3 CA-1 : le serveur ajoute ou retire le like selon son état actuel. */

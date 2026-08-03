@@ -9,7 +9,7 @@ import { vi } from 'vitest';
 
 import { PostDetail } from './post-detail';
 import { AuthService, User } from '../../../core/services/auth';
-import { PostService, Publication } from '../../../core/services/post';
+import { PostService, Publication, SimilarPublication } from '../../../core/services/post';
 
 function makePublication(overrides: Partial<Publication> = {}): Publication {
   return {
@@ -58,7 +58,10 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
         { provide: PostService, useValue: postServiceMock },
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({ id: postId }) } },
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ id: postId }) },
+            paramMap: of(convertToParamMap({ id: postId })),
+          },
         },
       ],
     });
@@ -116,6 +119,55 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     fixture.detectChanges();
 
     expect(postServiceMock.pollAnalysis).not.toHaveBeenCalled();
+  });
+
+  it('US 2.6 CA-1 : charge au maximum cinq posts similaires pour un post analysé', () => {
+    postServiceMock.getPost.mockReturnValue(of(makePublication({ status: 'ANALYZED' })));
+    configure(undefined);
+
+    fixture.detectChanges();
+
+    expect(postServiceMock.getSimilarPosts).toHaveBeenCalledWith('post-1', 5);
+  });
+
+  it('US 2.6 CA-1 : affiche au plus cinq cartes sous le titre Posts similaires', () => {
+    const items = Array.from({ length: 6 }, (_, index): SimilarPublication => ({
+      ...makePublication({ id: `similar-${index}`, status: 'ANALYZED', title: `Quartz ${index}` }),
+      similarity: .95 - index / 100,
+    }));
+    postServiceMock.getPost.mockReturnValue(of(makePublication({ status: 'ANALYZED' })));
+    postServiceMock.getSimilarPosts.mockReturnValue(of({ items }));
+    configure(undefined);
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#similar-posts-title')?.textContent).toContain('Posts similaires');
+    expect(fixture.nativeElement.querySelectorAll('.similar-post')).toHaveLength(5);
+  });
+
+  it.each(['PENDING_ANALYSIS', 'ANALYSIS_FAILED'] as const)(
+    'US 2.6 CA-3 : ne charge ni n’affiche les similaires pour le statut %s',
+    status => {
+      postServiceMock.getPost.mockReturnValue(of(makePublication({ status })));
+      configure(undefined);
+
+      fixture.detectChanges();
+
+      expect(postServiceMock.getSimilarPosts).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('.similar-posts')).toBeNull();
+    }
+  );
+
+  it('US 2.6 : charge les similaires lorsque le polling termine l’analyse', () => {
+    const pending = makePublication({ status: 'PENDING_ANALYSIS' });
+    const analyzed = makePublication({ status: 'ANALYZED' });
+    postServiceMock.getPost.mockReturnValue(of(pending));
+    postServiceMock.pollAnalysis.mockReturnValue(of(pending, analyzed));
+    configure(undefined);
+
+    fixture.detectChanges();
+
+    expect(postServiceMock.getSimilarPosts).toHaveBeenCalledWith('post-1', 5);
   });
 
   it('CA-4 : l\'auteur du post peut le supprimer', () => {
@@ -230,7 +282,10 @@ describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', ()
         { provide: PostService, useValue: postServiceMock },
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({ id: post.id }) } },
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ id: post.id }) },
+            paramMap: of(convertToParamMap({ id: post.id })),
+          },
         },
       ],
     });

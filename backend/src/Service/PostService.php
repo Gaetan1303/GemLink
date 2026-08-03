@@ -44,6 +44,7 @@ class PostService
         private readonly FeedCacheService $feedCache,
         private readonly MessageBusInterface $messageBus,
         private readonly ?BadgeAwardService $badgeAwards = null,
+        private readonly ?SimilarPublicationService $similarPublications = null,
     ) {
     }
 
@@ -130,6 +131,17 @@ class PostService
     {
         $post->incrementViewCount();
         $this->em->flush();
+
+        // CA-2: pre-calculate once, exactly when the post crosses the popular
+        // threshold. Further reads use the one-hour Redis cache. Cache warming
+        // is best-effort and must never make the post detail endpoint fail.
+        if ($post->getViewCount() === 11) {
+            try {
+                $this->similarPublications?->warmCache($post);
+            } catch (\Throwable) {
+                // A later request to /similar will rebuild the expired/missing cache.
+            }
+        }
     }
 
     private function assertCanDelete(Publication $post, User $actor): void

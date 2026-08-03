@@ -119,12 +119,15 @@ final class PublicationController extends AbstractController
         $publication = $this->findActiveOrFail($id);
         if ($publication instanceof JsonResponse) return $publication;
 
+        $matches = $this->similarPublications->find($publication, $request->query->getInt('limit', 5));
+        $similarities = array_column($matches, 'similarity', 'id');
         $items = [];
-        foreach ($this->similarPublications->find($publication, $request->query->getInt('limit', 5)) as $match) {
-            $similar = $this->publications->findOneActiveById(Uuid::fromString($match['id']));
-            if ($similar === null) continue;
-            $items[] = $this->serializePost($similar) + ['similarity' => $match['similarity']];
+        foreach ($this->publications->findActiveByIds(array_column($matches, 'id')) as $similar) {
+            $items[] = $this->serializePost($similar) + [
+                'similarity' => $similarities[$similar->getId()->toRfc4122()],
+            ];
         }
+
         return $this->json(['items' => $items]);
     }
 

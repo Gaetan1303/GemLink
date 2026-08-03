@@ -140,18 +140,27 @@
       <!-- US 2.4 — Commentaires MVP -->
       <app-comment-section [postId]="p.id" />
 
-      @if (similarPosts().length > 0) {
+      @if (isSimilarLoading() || similarPosts().length > 0) {
         <section class="similar-posts" aria-labelledby="similar-posts-title">
-          <h2 id="similar-posts-title">Pierres similaires</h2>
-          <div class="similar-posts__grid">
-            @for (similar of similarPosts(); track similar.id) {
-              <a class="similar-post" [routerLink]="['/posts', similar.id]">
-                <img [src]="similar.mediaUrl" [alt]="similar.title || 'Pierre similaire'" />
-                <span>{{ similar.title || similar.identification?.nom || 'Sans titre' }}</span>
-                <small>{{ similar.similarity | percent:'1.0-0' }} similaire</small>
-              </a>
-            }
-          </div>
+          <div class="similar-posts__heading"><div><span class="similar-posts__eyebrow">Exploration minéralogique</span><h2 id="similar-posts-title">Posts similaires</h2></div><p>Les spécimens visuellement les plus proches de cette pierre.</p></div>
+          @if (isSimilarLoading()) {
+            <div class="similar-posts__grid similar-posts__grid--loading" aria-label="Chargement des posts similaires">
+              @for (placeholder of [1, 2, 3]; track placeholder) { <div class="similar-post-skeleton"></div> }
+            </div>
+          } @else {
+            <div class="similar-posts__grid">
+              @for (similar of similarPosts(); track similar.id) {
+                <a class="similar-post" [routerLink]="['/posts', similar.id]" [attr.aria-label]="'Consulter le post similaire ' + (similar.title || similar.identification?.nom || similar.id)">
+                  <div class="similar-post__media">
+                    @if (similar.mediaType === 'IMAGE') { <img [src]="similar.mediaUrl" [alt]="similar.title || similar.identification?.nom || 'Pierre similaire'" /> }
+                    @else { <span class="similar-post__video"><mat-icon>videocam</mat-icon></span> }
+                    <strong>{{ similar.similarity | percent:'1.0-0' }}</strong>
+                  </div>
+                  <div class="similar-post__body"><small>N° {{ similar.id.slice(0, 8) | uppercase }}</small><span>{{ similar.title || similar.identification?.nom || 'Sans titre' }}</span><em>Découvrir <mat-icon>arrow_forward</mat-icon></em></div>
+                </a>
+              }
+            </div>
+          }
 
           @if (canReport()) {
             <button type="button" class="btn-secondary" (click)="showReport.set(!showReport())">Signaler</button>
