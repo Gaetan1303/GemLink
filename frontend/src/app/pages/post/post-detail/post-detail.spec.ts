@@ -21,6 +21,8 @@ function makePublication(overrides: Partial<Publication> = {}): Publication {
     mediaType: 'IMAGE',
     status: 'PENDING_ANALYSIS',
     viewCount: 3,
+    likeCount: 0,
+    likedByCurrentUser: false,
     tags: ['violet'],
     identification: null,
     createdAt: new Date().toISOString(),
@@ -38,6 +40,8 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     getPost: ReturnType<typeof vi.fn>;
     deletePost: ReturnType<typeof vi.fn>;
     pollAnalysis: ReturnType<typeof vi.fn>;
+    toggleLike: ReturnType<typeof vi.fn>;
+    getSimilarPosts: ReturnType<typeof vi.fn>;
   };
 
   function configure(userValue: User | null | undefined, postId = 'post-1'): void {
@@ -50,7 +54,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideNoopAnimations(),
-        { provide: AuthService, useValue: { currentUser } },
+        { provide: AuthService, useValue: { currentUser, isAuthenticated: () => !!currentUser() } },
         { provide: PostService, useValue: postServiceMock },
         {
           provide: ActivatedRoute,
@@ -71,6 +75,8 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
       // US 3.1 : par défaut aucune émission, pour ne pas déclencher de
       // comportement de polling non testé dans ces specs-ci.
       pollAnalysis: vi.fn().mockReturnValue(of()),
+      toggleLike: vi.fn(),
+      getSimilarPosts: vi.fn().mockReturnValue(of({ items: [] })),
     };
   });
 
@@ -114,7 +120,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
 
   it('CA-4 : l\'auteur du post peut le supprimer', () => {
     postServiceMock.getPost.mockReturnValue(of(makePublication({ author: { id: '42', username: 'gemuser', avatarUrl: null } })));
-    configure({ id: 42, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '42', username: 'gemuser', role: 'ROLE_USER' });
 
     fixture.detectChanges();
 
@@ -123,7 +129,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
 
   it('CA-4 : un utilisateur non lié au post ne peut pas le supprimer', () => {
     postServiceMock.getPost.mockReturnValue(of(makePublication({ author: { id: '42', username: 'gemuser', avatarUrl: null } })));
-    configure({ id: 99, username: 'autre', role: 'ROLE_USER' });
+    configure({ id: '99', username: 'autre', role: 'ROLE_USER' });
 
     fixture.detectChanges();
 
@@ -132,7 +138,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
 
   it('CA-4 : un administrateur peut supprimer le post d\'un tiers', () => {
     postServiceMock.getPost.mockReturnValue(of(makePublication({ author: { id: '42', username: 'gemuser', avatarUrl: null } })));
-    configure({ id: 1, username: 'admin', role: 'ROLE_ADMIN' });
+    configure({ id: '1', username: 'admin', role: 'ROLE_ADMIN' });
 
     fixture.detectChanges();
 
@@ -142,7 +148,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
   it('deletePost() redirige vers /posts après suppression réussie', () => {
     postServiceMock.getPost.mockReturnValue(of(makePublication({ author: { id: '1', username: 'gemuser', avatarUrl: null } })));
     postServiceMock.deletePost.mockReturnValue(of(undefined));
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
 
     fixture.detectChanges();
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
@@ -158,13 +164,39 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     postServiceMock.deletePost.mockReturnValue(
       throwError(() => ({ error: { message: 'Non autorisé.' } }))
     );
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
 
     fixture.detectChanges();
     component.deletePost();
 
     expect(component['deleteError']()).toBe('Non autorisé.');
     expect(component['isDeleting']()).toBe(false);
+  });
+
+  it('US 2.3 CA-2 : met le like à jour immédiatement puis confirme la réponse serveur', () => {
+    postServiceMock.getPost.mockReturnValue(of(makePublication()));
+    postServiceMock.toggleLike.mockReturnValue(of({ liked: true, likeCount: 1 }));
+    configure({ id: '99', username: 'liker', role: 'ROLE_USER' });
+    fixture.detectChanges();
+
+    component['toggleLike']();
+
+    expect(postServiceMock.toggleLike).toHaveBeenCalledWith('post-1');
+    expect(component['post']()?.likedByCurrentUser).toBe(true);
+    expect(component['post']()?.likeCount).toBe(1);
+  });
+
+  it('US 2.3 CA-2 : restaure le compteur après une erreur réseau', () => {
+    postServiceMock.getPost.mockReturnValue(of(makePublication({ likeCount: 4 })));
+    postServiceMock.toggleLike.mockReturnValue(throwError(() => new Error('network error')));
+    configure({ id: '99', username: 'liker', role: 'ROLE_USER' });
+    fixture.detectChanges();
+
+    component['toggleLike']();
+
+    expect(component['post']()?.likedByCurrentUser).toBe(false);
+    expect(component['post']()?.likeCount).toBe(4);
+    expect(component['likeError']()).toContain('annulée');
   });
 });
 
@@ -174,6 +206,8 @@ describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', ()
     getPost: ReturnType<typeof vi.fn>;
     deletePost: ReturnType<typeof vi.fn>;
     pollAnalysis: ReturnType<typeof vi.fn>;
+    toggleLike: ReturnType<typeof vi.fn>;
+    getSimilarPosts: ReturnType<typeof vi.fn>;
   };
 
   function configure(post: Publication): void {
@@ -181,6 +215,8 @@ describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', ()
       getPost: vi.fn().mockReturnValue(of(post)),
       deletePost: vi.fn(),
       pollAnalysis: vi.fn().mockReturnValue(of()),
+      toggleLike: vi.fn(),
+      getSimilarPosts: vi.fn().mockReturnValue(of({ items: [] })),
     };
 
     TestBed.configureTestingModule({
@@ -190,7 +226,7 @@ describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', ()
         provideHttpClientTesting(),
         provideRouter([]),
         provideNoopAnimations(),
-        { provide: AuthService, useValue: { currentUser: signal<User | null | undefined>(undefined) } },
+        { provide: AuthService, useValue: { currentUser: signal<User | null | undefined>(undefined), isAuthenticated: () => false } },
         { provide: PostService, useValue: postServiceMock },
         {
           provide: ActivatedRoute,

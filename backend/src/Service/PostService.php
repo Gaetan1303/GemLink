@@ -9,11 +9,13 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\PostAccessDeniedException;
 use App\Exception\PostValidationException;
+use App\Message\AwardPointsMessage;
 use App\Repository\TagRepository;
 use App\Service\Media\MediaUploadService;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * US 2.1 : logique métier de publication d'un post (CA-1 à CA-4).
@@ -39,6 +41,9 @@ class PostService
         private readonly TagRepository $tags,
         private readonly MediaUploadService $mediaUploadService,
         private readonly AiOrchestrationService $aiOrchestration,
+        private readonly FeedCacheService $feedCache,
+        private readonly MessageBusInterface $messageBus,
+        private readonly ?BadgeAwardService $badgeAwards = null,
     ) {
     }
 
@@ -76,6 +81,16 @@ class PostService
 
         $this->em->persist($publication);
         $this->em->flush();
+        if ($this->badgeAwards !== null) {
+            $this->badgeAwards->onPostCreated($author);
+            $this->em->flush();
+        }
+        $this->feedCache->prepend($publication);
+        $this->messageBus->dispatch(new AwardPointsMessage(
+            $author->getId()->toRfc4122(),
+            PointsService::ACTION_POST_CREATED,
+            $publication->getId()->toRfc4122(),
+        ));
 
         // CA-3 : ne bloque jamais la réponse — le traitement se fait dans le worker Messenger.
         $this->aiOrchestration->requestAnalysis($publication);
@@ -156,7 +171,9 @@ class PostService
                 continue;
             }
 
-            $trimmed = trim($tagName);
+            // Le préfixe # est une convention de saisie/UI, pas une partie
+            // de l'identifiant stocké : évite de rendre ##quartz au profil.
+            $trimmed = ltrim(trim($tagName), '#');
 
             if ($trimmed === '') {
                 continue;

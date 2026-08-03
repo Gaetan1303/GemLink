@@ -14,7 +14,7 @@ import { PublicVitrine, PublicVitrineItem, VitrineService } from '../../../core/
 // exactement comme post-detail l'est pour un post.
 @Component({
   selector: 'app-vitrine-public',
-  imports: [CommonModule, SharedModule, NavBarMobile],
+  imports: [CommonModule, SharedModule,],
   templateUrl: './vitrine-public.html',
   styleUrls: ['./vitrine-public.scss'],
 })

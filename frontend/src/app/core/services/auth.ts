@@ -28,7 +28,7 @@ export interface LoginResponse {
 }
 
 export interface User {
-  id:       number;
+  id:       string;
   username: string;
   role:     MenuRole;
 }
@@ -162,13 +162,13 @@ export class AuthService {
         username: string;
         iat: number;
         exp: number;
-        id: number;
+        id: string;
       } = jwtDecode(token);
 
       this.currentUser.set({
         id:       decoded.id,
         username: decoded.username,
-        role:     decoded.roles[0] ?? 'VISITEUR',
+        role:     decoded.roles.includes('ROLE_ADMIN') ? 'ROLE_ADMIN' : 'ROLE_USER',
       });
     } catch (error) {
       console.error('Failed to decode token:', error);

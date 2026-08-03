@@ -4,7 +4,7 @@
   [ngClass]="{
     'analysis-badge--pending':  status === 'PENDING_ANALYSIS',
     'analysis-badge--failed':   status === 'ANALYSIS_FAILED',
-    'analysis-badge--analyzed': status === 'ANALYZED'
+    'analysis-badge--analyzed': status === 'ANALYZED' || status === 'COMMUNITY_VALIDATED'
   }"
   [@statusChange]="status"
 >
@@ -14,6 +14,9 @@
   } @else if (status === 'ANALYSIS_FAILED') {
     <mat-icon>error_outline</mat-icon>
     Non identifiée
+  } @else if (status === 'COMMUNITY_VALIDATED') {
+    <mat-icon>verified</mat-icon>
+    Validée par la communauté
   } @else {
     <mat-icon>auto_awesome</mat-icon>
     Identifiée

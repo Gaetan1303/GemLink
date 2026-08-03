@@ -1,5 +1,5 @@
 <div><app-header /></div>
-<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
 <app-header-image></app-header-image>
 
 <main class="post-create-page" id="main-content">
@@ -65,7 +65,6 @@
             type="text"
             formControlName="title"
             placeholder="Ex. Améthyste trouvée en Bretagne"
-            [disabled]="isSubmitting()"
           />
           @if (postForm.get('title')?.hasError('maxlength')) {
             <p class="field-error">Le titre ne peut pas dépasser 200 caractères.</p>
@@ -79,7 +78,6 @@
             rows="5"
             formControlName="description"
             placeholder="Où et comment l'avez-vous trouvée ?"
-            [disabled]="isSubmitting()"
           ></textarea>
           @if (postForm.get('description')?.hasError('maxlength')) {
             <p class="field-error">La description ne peut pas dépasser 2000 caractères.</p>
@@ -92,8 +90,7 @@
             id="tags"
             type="text"
             formControlName="tagsInput"
-            placeholder="violet, quartz, améthyste (séparés par des virgules)"
-            [disabled]="isSubmitting()"
+            placeholder="#violet, #quartz, #améthyste (séparés par des virgules)"
           />
           @if (postForm.get('tagsInput')?.hasError('tooManyTags')) {
             <p class="field-error">10 tags maximum.</p>
@@ -105,7 +102,7 @@
           class="btn-submit"
           [disabled]="!canSubmit()"
           [attr.aria-busy]="isSubmitting()">
-          @if (isSubmitting()) { Publication en cours... } @else { Ajouter à la collection }
+          @if (isSubmitting()) { Envoi pour identification… } @else { Identifier ma pierre }
         </button>
 
       </form>

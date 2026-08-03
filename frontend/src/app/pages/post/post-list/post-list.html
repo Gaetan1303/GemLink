@@ -1,5 +1,5 @@
 <div><app-header /></div>
-<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
 <app-header-image></app-header-image>
 
 
@@ -43,8 +43,15 @@
 
   <div class="post-list-container">
 
+    @if (activeTag(); as tag) {
+      <div class="active-tag-filter"><span>Filtre actif : #{{ tag }}</span><button type="button" (click)="clearTag()"><mat-icon>close</mat-icon>Tout afficher</button></div>
+    }
+
     @if (loadError()) {
       <div class="alert alert--error" role="alert">{{ loadError() }}</div>
+    }
+    @if (likeError()) {
+      <div class="alert alert--error" role="alert">{{ likeError() }}</div>
     }
 
     @if (isLoading()) {
@@ -66,12 +73,12 @@
     } @else {
       <div class="post-grid">
         @for (post of posts(); track post.id; let i = $index) {
-          <a
-            [routerLink]="['/posts', post.id]"
+          <article
             class="post-card"
             [style.animation-delay.ms]="i * 60"
           >
-            <div class="post-card__media">
+            <a [routerLink]="['/posts', post.id]" class="post-card__link" [attr.aria-label]="'Voir le post ' + (post.title || post.id)">
+              <div class="post-card__media">
               @if (post.mediaType === 'IMAGE') {
                 <img [src]="post.mediaUrl" [alt]="post.title ?? 'Pierre publiée par ' + post.author.username" />
               } @else {
@@ -80,22 +87,35 @@
                 </div>
               }
             </div>
-            <div class="post-card__info">
-              <span class="post-card__catalog">N° {{ post.id.slice(0, 8) | uppercase }}</span>
-              <span class="post-card__title">{{ post.title || 'Sans titre' }}</span>
-              <span class="post-card__author">{{ post.author.username }}</span>
+              <div class="post-card__info">
+                <span class="post-card__catalog">N° {{ post.id.slice(0, 8) | uppercase }}</span>
+                <span class="post-card__title">{{ post.title || 'Sans titre' }}</span>
+                <span class="post-card__author">{{ post.author.username }}</span>
 
-              @if (post.status !== 'ANALYZED') {
-                <app-analysis-status [status]="post.status" size="sm" />
-              }
-            </div>
-          </a>
+                @if (post.status !== 'ANALYZED') {
+                  <app-analysis-status [status]="post.status" size="sm" />
+                }
+              </div>
+            </a>
+            <button
+              type="button"
+              class="btn-like"
+              [class.btn-like--active]="post.likedByCurrentUser"
+              [disabled]="!authService.isAuthenticated() || likingPostIds().has(post.id)"
+              [attr.aria-pressed]="post.likedByCurrentUser"
+              [attr.aria-label]="post.likedByCurrentUser ? 'Retirer mon like' : 'Liker ce post'"
+              (click)="toggleLike(post)"
+            >
+              <mat-icon>{{ post.likedByCurrentUser ? 'favorite' : 'favorite_border' }}</mat-icon>
+              <span>{{ post.likeCount }}</span>
+            </button>
+          </article>
         }
       </div>
 
       <div class="pagination">
         <button type="button" (click)="goToPrevPage()" [disabled]="!hasPrevPage()">Précédent</button>
-        <span class="pagination__meta">Page {{ page() }} / {{ totalPages() }}</span>
+        <span class="pagination__meta">Page {{ page() }}</span>
         <button type="button" (click)="goToNextPage()" [disabled]="!hasNextPage()">Suivant</button>
       </div>
     }

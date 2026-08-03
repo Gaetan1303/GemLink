@@ -20,6 +20,8 @@ function makePublication(overrides: Partial<Publication> = {}): Publication {
     mediaType: 'IMAGE',
     status: 'PENDING_ANALYSIS',
     viewCount: 0,
+    likeCount: 0,
+    likedByCurrentUser: false,
     tags: [],
     identification: null,
     createdAt: new Date().toISOString(),
@@ -101,7 +103,7 @@ describe('PostCreate', () => {
   });
 
   it('rejette un fichier invalide selon PostService.validateMediaFile', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     postServiceMock.validateMediaFile.mockReturnValue('Formats acceptés : JPEG, PNG, WebP pour une image, MP4 pour une vidéo.');
     fixture.detectChanges();
 
@@ -112,7 +114,7 @@ describe('PostCreate', () => {
   });
 
   it('accepte un fichier valide et le mémorise', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     const file = makeFile();
@@ -123,7 +125,7 @@ describe('PostCreate', () => {
   });
 
   it('submit() refuse sans fichier sélectionné', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component.submit();
@@ -133,7 +135,7 @@ describe('PostCreate', () => {
   });
 
   it('US 3.1 : submit() réussi redirige vers le détail du post créé (pas un écran statique)', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
     selectFile(makeFile());
 
@@ -148,7 +150,7 @@ describe('PostCreate', () => {
   });
 
   it('submit() affiche une erreur si la création échoue', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
     selectFile(makeFile());
 
@@ -166,7 +168,7 @@ describe('PostCreate', () => {
   });
 
   it('parse les tags séparés par des virgules et les limite à 10', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
     selectFile(makeFile());
 

@@ -16,7 +16,7 @@ const LOGOUT_URL = `${environment.apiUrl}/auth/logout`;
 
 const JWT_VALIDE = [
   btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
-  btoa(JSON.stringify({ id: 1, username: 'gemuser', roles: ['USER'], iat: 1000, exp: 1000 + 900 })),
+  btoa(JSON.stringify({ id: '1', username: 'gemuser', roles: ['USER'], iat: 1000, exp: 1000 + 900 })),
   'signature',
 ].map(p => p.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')).join('.');
 

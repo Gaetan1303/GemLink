@@ -10,8 +10,14 @@ use App\Exception\InvalidMediaException;
 use App\Exception\PostAccessDeniedException;
 use App\Exception\PostValidationException;
 use App\Repository\PublicationPierreRepository;
+use App\Repository\PublicationLikeRepository;
 use App\Repository\PublicationRepository;
+use App\Service\LikeService;
 use App\Service\PostService;
+use App\Service\SimilarPublicationService;
+use App\Service\FeedCacheService;
+use App\Service\AdminSettingsProvider;
+use DateTimeImmutable;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -44,28 +50,49 @@ final class PublicationController extends AbstractController
         private readonly PostService $postService,
         private readonly PublicationRepository $publications,
         private readonly PublicationPierreRepository $publicationPierres,
+        private readonly FeedCacheService $feedCache,
+        private readonly PublicationLikeRepository $likes,
+        private readonly LikeService $likeService,
+        private readonly AdminSettingsProvider $settings,
+        private readonly SimilarPublicationService $similarPublications,
     ) {
     }
 
     /**
-     * US 2.2 — Feed public paginé, du plus récent au plus ancien.
-     * Query params : page (défaut 1), limit (défaut 20, max 50).
+     * Feed cursor-based. `nextCursor` is an opaque position, never an offset.
      */
     #[Route('', name: 'publication_index', methods: ['GET'])]
     public function index(Request $request): JsonResponse
     {
-        $page = max(1, $request->query->getInt('page', 1));
         $limit = min(self::MAX_PAGE_SIZE, max(1, $request->query->getInt('limit', self::DEFAULT_PAGE_SIZE)));
+        $cursor = $this->decodeCursor($request->query->get('cursor'));
+        if ($cursor === false) return $this->json(['message' => 'Curseur de feed invalide.'], Response::HTTP_BAD_REQUEST);
 
-        $items = $this->publications->findActivePaginated($page, $limit);
-        $total = $this->publications->countActive();
+        $tag = $this->stringQuery($request, 'tag');
+        $mineral = $this->stringQuery($request, 'mineral');
+        $minConfidence = $request->query->has('minConfidence') ? $request->query->get('minConfidence') : null;
+        if ($minConfidence !== null && (!is_numeric($minConfidence) || (float) $minConfidence < 0 || (float) $minConfidence > 1)) {
+            return $this->json(['message' => 'minConfidence doit être compris entre 0 et 1.'], Response::HTTP_BAD_REQUEST);
+        }
+        $personalized = $request->query->getBoolean('personalized');
+        $user = $this->getUser();
+        if ($personalized && !$user instanceof User) return $this->json(['message' => 'Authentification requise pour le feed personnalisé.'], Response::HTTP_UNAUTHORIZED);
+
+        // The unfiltered first global page is served from the Redis List hot index.
+        if ($cursor === null && !$personalized && $tag === null && $mineral === null && $minConfidence === null) {
+            $items = array_slice($this->publications->findActiveByIds($this->feedCache->recentIds()), 0, $limit + 1);
+        } else {
+            $items = $this->publications->findFeed($cursor['date'] ?? null, $cursor['id'] ?? null, $limit, $tag, $mineral, $minConfidence === null ? null : (float) $minConfidence, $personalized ? $user : null);
+        }
+        $hasNextPage = count($items) > $limit;
+        $items = array_slice($items, 0, $limit);
+        $last = $items === [] ? null : $items[array_key_last($items)];
 
         return $this->json([
             'items' => array_map($this->serializePost(...), $items),
-            'page' => $page,
             'limit' => $limit,
-            'total' => $total,
-            'totalPages' => (int) ceil($total / $limit),
+            'nextCursor' => $hasNextPage && $last instanceof Publication ? $this->encodeCursor($last) : null,
+            'hasNextPage' => $hasNextPage,
         ]);
     }
 
@@ -84,6 +111,21 @@ final class PublicationController extends AbstractController
         $this->postService->recordView($publication);
 
         return $this->json($this->serializePost($publication));
+    }
+
+    #[Route('/{id}/similar', name: 'publication_similar', methods: ['GET'])]
+    public function similar(string $id, Request $request): JsonResponse
+    {
+        $publication = $this->findActiveOrFail($id);
+        if ($publication instanceof JsonResponse) return $publication;
+
+        $items = [];
+        foreach ($this->similarPublications->find($publication, $request->query->getInt('limit', 5)) as $match) {
+            $similar = $this->publications->findOneActiveById(Uuid::fromString($match['id']));
+            if ($similar === null) continue;
+            $items[] = $this->serializePost($similar) + ['similarity' => $match['similarity']];
+        }
+        return $this->json(['items' => $items]);
     }
 
     /**
@@ -143,6 +185,22 @@ final class PublicationController extends AbstractController
         return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 
+    /** US 2.3 CA-1 : un même endpoint alterne ajout et retrait du like. */
+    #[Route('/{id}/like', name: 'publication_like_toggle', methods: ['POST'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function toggleLike(string $id): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $publication = $this->findActiveOrFail($id);
+
+        if ($publication instanceof JsonResponse) {
+            return $publication;
+        }
+
+        return $this->json($this->likeService->toggle($user, $publication));
+    }
+
     /**
      * @return Publication|JsonResponse une réponse d'erreur (400/404) toute prête,
      *         ou le post actif trouvé
@@ -188,6 +246,32 @@ final class PublicationController extends AbstractController
         ), static fn (string $tag): bool => $tag !== ''));
     }
 
+    private function stringQuery(Request $request, string $name): ?string
+    {
+        $value = $request->query->get($name);
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    /** @return array{date: DateTimeImmutable, id: Uuid}|null|false */
+    private function decodeCursor(mixed $cursor): array|null|false
+    {
+        if ($cursor === null || $cursor === '') return null;
+        if (!is_string($cursor)) return false;
+        $encoded = strtr($cursor, '-_', '+/');
+        $decoded = base64_decode($encoded . str_repeat('=', (4 - strlen($encoded) % 4) % 4), true);
+        if ($decoded === false) return false;
+        try {
+            $data = json_decode($decoded, true, 3, JSON_THROW_ON_ERROR);
+            if (!is_array($data) || !isset($data['d'], $data['i'])) return false;
+            return ['date' => new DateTimeImmutable((string) $data['d']), 'id' => Uuid::fromString((string) $data['i'])];
+        } catch (\Throwable) { return false; }
+    }
+
+    private function encodeCursor(Publication $post): string
+    {
+        return rtrim(strtr(base64_encode(json_encode(['d' => $post->getCreatedAt()->format(DATE_ATOM), 'i' => $post->getId()->toRfc4122()], JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -208,6 +292,10 @@ final class PublicationController extends AbstractController
             'mediaType' => $publication->getMediaType(),
             'status' => $publication->getStatus(),
             'viewCount' => $publication->getViewCount(),
+            'likeCount' => $this->likes->countForPublication($publication),
+            'likedByCurrentUser' => $this->getUser() instanceof User
+                ? $this->likes->findOneFor($publication, $this->getUser()) !== null
+                : false,
             'tags' => array_map(
                 static fn ($tag) => $tag->getName(),
                 $publication->getTags()->toArray()
@@ -231,16 +319,24 @@ final class PublicationController extends AbstractController
         }
 
         $pierre = $match->getPierre();
+        $confidence = $match->getConfidence();
+        $confidenceThreshold = $this->settings->getIdentificationConfidenceThreshold();
 
         return [
+            'id' => $pierre->getId()->toRfc4122(),
             'nom' => $pierre->getName(),
             'categorie' => $pierre->getCategory(),
             'durete' => $pierre->getHardness(),
             'systemeCristallin' => $pierre->getCrystalSystem(),
             'composition' => $pierre->getComposition(),
             'description' => $pierre->getDescription(),
-            'confidence' => $match->getConfidence(),
-            'isHighConfidence' => $match->isHighConfidence(),
+            'confidence' => $confidence,
+            'confidencePercent' => (int) round($confidence * 100),
+            'confidenceThreshold' => $confidenceThreshold,
+            'isHighConfidence' => $confidence >= $confidenceThreshold,
+            'isUncertain' => $confidence < $confidenceThreshold,
+            'catalogueUrl' => '/api/pierres/' . $pierre->getId()->toRfc4122(),
+            'communityValidated' => $publication->getStatus() === Publication::STATUS_COMMUNITY_VALIDATED,
         ];
     }
 }

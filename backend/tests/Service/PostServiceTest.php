@@ -15,10 +15,12 @@ use App\Service\AiOrchestrationService;
 use App\Service\Media\MediaUploadService;
 use App\Service\Media\UploadedMedia;
 use App\Service\PostService;
+use App\Service\FeedCacheService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * US 2.1 : PostService orchestre MediaUploadService (CA-1/CA-2/CA-3, upload)
@@ -31,6 +33,8 @@ final class PostServiceTest extends TestCase
     private TagRepository&MockObject $tags;
     private MediaUploadService&MockObject $mediaUploadService;
     private AiOrchestrationService&MockObject $aiOrchestration;
+    private FeedCacheService&MockObject $feedCache;
+    private MessageBusInterface&MockObject $messageBus;
     private PostService $postService;
 
     protected function setUp(): void
@@ -39,12 +43,17 @@ final class PostServiceTest extends TestCase
         $this->tags = $this->createMock(TagRepository::class);
         $this->mediaUploadService = $this->createMock(MediaUploadService::class);
         $this->aiOrchestration = $this->createMock(AiOrchestrationService::class);
+        $this->feedCache = $this->createMock(FeedCacheService::class);
+        $this->messageBus = $this->createMock(MessageBusInterface::class);
+        $this->messageBus->method('dispatch')->willReturn(new \Symfony\Component\Messenger\Envelope(new \stdClass()));
 
         $this->postService = new PostService(
             $this->em,
             $this->tags,
             $this->mediaUploadService,
             $this->aiOrchestration,
+            $this->feedCache,
+            $this->messageBus,
         );
     }
 
@@ -88,6 +97,7 @@ final class PostServiceTest extends TestCase
         $this->aiOrchestration->expects($this->once())
             ->method('requestAnalysis')
             ->with($this->isInstanceOf(Publication::class));
+        $this->feedCache->expects($this->once())->method('prepend')->with($this->isInstanceOf(Publication::class));
 
         $publication = $this->postService->createPost($author, $file, 'Améthyste', 'Trouvée en Bretagne', ['violet', 'quartz']);
 

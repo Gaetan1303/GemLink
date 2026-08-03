@@ -1,0 +1,90 @@
+<section class="comment-section" aria-labelledby="comment-section-title">
+  <h2 id="comment-section-title" class="comment-section__title">Commentaires</h2>
+
+  <!-- CA-1 : formulaire réservé aux utilisateurs authentifiés -->
+  @if (isAuthenticated()) {
+    <form class="comment-form" (ngSubmit)="submit()">
+      <textarea
+        class="comment-form__input"
+        rows="3"
+        placeholder="Partagez votre avis sur cette pièce..."
+        [ngModel]="newContent()"
+        (ngModelChange)="newContent.set($event)"
+        name="content"
+        [maxlength]="maxLength"
+        [disabled]="isSubmitting()"
+      ></textarea>
+
+      <div class="comment-form__footer">
+        @if (submitError()) {
+          <p class="field-error" role="alert">{{ submitError() }}</p>
+        }
+
+        <span class="comment-form__counter" [class.comment-form__counter--warning]="remainingChars() < 50">
+          {{ remainingChars() }}
+        </span>
+
+        <button type="submit" class="btn-comment-submit" [disabled]="!canSubmit()">
+          @if (isSubmitting()) { Envoi... } @else { Publier }
+        </button>
+      </div>
+    </form>
+  } @else {
+    <p class="comment-section__login-hint">
+      <a routerLink="/auth/login">Connectez-vous</a> pour laisser un commentaire.
+    </p>
+  }
+
+  <!-- CA-3 : liste chronologique croissante, pagination cursor-based -->
+  @if (isLoading()) {
+    <p class="comment-section__loading">Chargement des commentaires...</p>
+  } @else if (loadError()) {
+    <p class="field-error" role="alert">{{ loadError() }}</p>
+  } @else if (comments().length === 0) {
+    <p class="comment-section__empty">Aucun commentaire pour l'instant. Soyez le premier à réagir.</p>
+  } @else {
+    @if (deleteError()) {
+      <p class="field-error" role="alert">{{ deleteError() }}</p>
+    }
+
+    <ul class="comment-list">
+      @for (comment of comments(); track comment.id) {
+        <li class="comment-item">
+          <div class="comment-item__header">
+            <span class="comment-item__author">{{ comment.author.username }}</span>
+            <span class="comment-item__date">{{ comment.createdAt | date:'d MMM y, HH:mm' }}</span>
+          </div>
+
+          <p class="comment-item__content">{{ comment.content }}</p>
+
+          @if (canDeleteComment(comment)) {
+            @if (confirmDeleteId() === comment.id) {
+              <div class="comment-item__confirm">
+                <span>Supprimer ce commentaire ?</span>
+                <button
+                  type="button"
+                  class="btn-comment-delete"
+                  [disabled]="deletingId() === comment.id"
+                  (click)="deleteComment(comment.id)"
+                >
+                  @if (deletingId() === comment.id) { Suppression... } @else { Oui, supprimer }
+                </button>
+                <button type="button" class="btn-comment-cancel" (click)="cancelDelete()">Annuler</button>
+              </div>
+            } @else {
+              <button type="button" class="btn-comment-trigger-delete" (click)="confirmDelete(comment.id)">
+                Supprimer
+              </button>
+            }
+          }
+        </li>
+      }
+    </ul>
+
+    @if (nextCursor()) {
+      <button type="button" class="btn-comment-load-more" [disabled]="isLoadingMore()" (click)="loadMore()">
+        @if (isLoadingMore()) { Chargement... } @else { Voir plus de commentaires }
+      </button>
+    }
+  }
+</section>

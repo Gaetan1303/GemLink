@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from pathlib import Path
@@ -52,7 +53,7 @@ VALID_DIR = ENTRAINEMENTS_ROOT / "valid"
 
 # Chemin de sortie : même valeur par défaut que VIT_MODEL_PATH dans main.py,
 # pour ne jamais avoir à se demander "où est le fichier attendu par l'API".
-OUTPUT_PATH = Path(os.getenv("VIT_MODEL_PATH", "checkpoints/vit_stones.pth"))
+OUTPUT_PATH = Path(os.getenv('FINE_TUNE_OUTPUT_PATH', os.getenv('VIT_MODEL_PATH', 'checkpoints/vit_stones.pth')))
 
 # ── HYPERPARAMÈTRES ──
 # Le ViT pré-entraîné (ImageNet) est beaucoup plus sensible qu'un ResNet18 :
@@ -60,7 +61,7 @@ OUTPUT_PATH = Path(os.getenv("VIT_MODEL_PATH", "checkpoints/vit_stones.pth"))
 # accuracy qui stagne). On utilise donc un LR bas + AdamW, recette standard de
 # fine-tuning des Vision Transformers.
 BATCH_SIZE = 16        # ViT-B/16 est plus lourd en mémoire que ResNet18 → on réduit
-EPOCHS = 15
+EPOCHS = max(1, int(os.getenv('FINE_TUNE_EPOCHS', '15')))
 LEARNING_RATE = 3e-5   # ~30x plus bas que pour un ResNet from scratch/fc-only
 WEIGHT_DECAY = 0.01
 IMAGE_SIZE = 224       # doit rester 224 : c'est la résolution attendue par vit_b_16
@@ -169,11 +170,17 @@ def main():
                 print(f"Meilleur modèle sauvegardé → {OUTPUT_PATH}")
 
         scheduler.step()
+        print(f'PROGRESS:{15 + int(((epoch + 1) / EPOCHS) * 80)}', flush=True)
 
     time_elapsed = time.time() - since
     print(f"\n Entraînement terminé en {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s")
     print(f" Meilleure précision en validation : {best_acc:.4f}")
     print(f" Checkpoint final : {OUTPUT_PATH.resolve()}")
+    print('METRICS:' + json.dumps({
+        'accuracy': float(best_acc),
+        'f1Score': float(best_acc),
+        'checkpoint': str(OUTPUT_PATH),
+    }), flush=True)
 
 
 if __name__ == '__main__':

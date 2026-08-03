@@ -1,19 +1,21 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { finalize, Subscription } from 'rxjs';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { SharedModule } from '../../../shared/shared-module';
-import { NavBarMobile } from '../../../components/nav-bar-mobile/nav-bar-mobile';
 import { AuthService } from '../../../core/services/auth';
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
-import { PostService, Publication } from '../../../core/services/post';
+import { PostService, Publication, SimilarPublication } from '../../../core/services/post';
+import { CommentSection } from '../../../shared/comment-section/comment-section';
+import { ValidationWidget } from '../../../shared/validation-widget/validation-widget';
+import { ReportReason, ReportService } from '../../../core/services/report';
 
 // US 2.2 — Consultation des posts : détail public d'un post.
 // US 3.1 — Suivi en direct de l'analyse IA (polling) + transitions animées.
 @Component({
   selector: 'app-post-detail',
-  imports: [CommonModule, SharedModule, NavBarMobile],
+  imports: [CommonModule, RouterLink, SharedModule, CommentSection, ValidationWidget],
   templateUrl: './post-detail.html',
   styleUrls: ['./post-detail.scss'],
   animations: [
@@ -40,8 +42,9 @@ export class PostDetail implements OnInit, OnDestroy {
 
   private readonly route       = inject(ActivatedRoute);
   private readonly router      = inject(Router);
-  private readonly authService = inject(AuthService);
+  protected readonly authService = inject(AuthService);
   private readonly postService = inject(PostService);
+  private readonly reportService = inject(ReportService);
 
   protected readonly currentRole = computed<MenuRole>(
     () => this.authService.currentUser()?.role ?? 'VISITEUR'
@@ -50,10 +53,15 @@ export class PostDetail implements OnInit, OnDestroy {
   protected readonly post       = signal<Publication | null>(null);
   protected readonly isLoading  = signal(true);
   protected readonly loadError  = signal<string | null>(null);
+  protected readonly similarPosts = signal<SimilarPublication[]>([]);
 
   protected readonly isDeleting = signal(false);
   protected readonly deleteError = signal<string | null>(null);
   protected readonly showDeleteConfirm = signal(false);
+  protected readonly isLiking = signal(false);
+  protected readonly likeError = signal<string | null>(null);
+  protected readonly showReport = signal(false);
+  protected readonly reportMessage = signal<string | null>(null);
 
   // CA-4 : l'autorisation finale est toujours vérifiée côté serveur ; ceci
   // ne fait que masquer/afficher le bouton pour l'UX (modérateur non
@@ -68,6 +76,36 @@ export class PostDetail implements OnInit, OnDestroy {
 
     return user.role === 'ROLE_ADMIN' || String(user.id) === currentPost.author.id;
   });
+
+  // US 2.7 CA-1 : un utilisateur authentifié peut valider l'identification
+  // IA de n'importe quel post sauf le sien (pas de sens à s'auto-valider).
+  // Même logique de "masquage UX seulement" que canDelete — le serveur
+  // revérifie IS_AUTHENTICATED_FULLY de toute façon.
+  protected readonly canValidate = computed(() => {
+    const user = this.authService.currentUser();
+    const currentPost = this.post();
+
+    if (!user || !currentPost) {
+      return false;
+    }
+
+    return String(user.id) !== currentPost.author.id;
+  });
+
+  protected readonly canReport = computed(() => {
+    const user = this.authService.currentUser();
+    const currentPost = this.post();
+    return !!user && !!currentPost && String(user.id) !== currentPost.author.id;
+  });
+
+  protected submitReport(reasonType: ReportReason): void {
+    const currentPost = this.post();
+    if (!currentPost) return;
+    this.reportService.create(currentPost.id, reasonType).subscribe({
+      next: () => { this.reportMessage.set('Signalement transmis à la modération.'); this.showReport.set(false); },
+      error: (error) => this.reportMessage.set(error?.error?.message ?? 'Impossible de transmettre le signalement.'),
+    });
+  }
 
   // US 3.1 : bouton dans la fiche d'identification qui fait défiler le
   // texte de la description (souvent longue — générée par l'agent
@@ -102,6 +140,10 @@ export class PostDetail implements OnInit, OnDestroy {
         if (post.status === 'PENDING_ANALYSIS') {
           this.watchAnalysis(id);
         }
+        this.postService.getSimilarPosts(id).subscribe({
+          next: ({ items }) => this.similarPosts.set(items),
+          error: () => this.similarPosts.set([]),
+        });
       },
       error: (err) => {
         this.loadError.set(
@@ -124,6 +166,40 @@ export class PostDetail implements OnInit, OnDestroy {
 
   cancelDelete(): void {
     this.showDeleteConfirm.set(false);
+  }
+
+  protected toggleLike(): void {
+    const currentPost = this.post();
+    if (!currentPost || !this.authService.isAuthenticated() || this.isLiking()) {
+      return;
+    }
+
+    const previousLiked = currentPost.likedByCurrentUser;
+    const previousCount = currentPost.likeCount;
+    const optimisticLiked = !previousLiked;
+    const optimisticCount = Math.max(0, previousCount + (optimisticLiked ? 1 : -1));
+
+    this.likeError.set(null);
+    this.post.set({ ...currentPost, likedByCurrentUser: optimisticLiked, likeCount: optimisticCount });
+    this.isLiking.set(true);
+
+    this.postService.toggleLike(currentPost.id).pipe(
+      finalize(() => this.isLiking.set(false)),
+    ).subscribe({
+      next: (result) => this.post.update(post => post && ({
+        ...post,
+        likedByCurrentUser: result.liked,
+        likeCount: result.likeCount,
+      })),
+      error: () => {
+        this.post.update(post => post && ({
+          ...post,
+          likedByCurrentUser: previousLiked,
+          likeCount: previousCount,
+        }));
+        this.likeError.set('Le like n’a pas pu être enregistré. La modification a été annulée.');
+      },
+    });
   }
 
   deletePost(): void {

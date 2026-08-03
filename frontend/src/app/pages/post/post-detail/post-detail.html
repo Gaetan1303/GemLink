@@ -1,5 +1,5 @@
 <div><app-header /></div>
-<div><app-nav-bar-mobile [role]="currentRole()" /></div>
+
 <app-header-image></app-header-image>
 
 <main class="post-detail-page" id="main-content">
@@ -38,6 +38,24 @@
             <div><dt>Déposé le</dt><dd>{{ p.createdAt | date:'d MMM y' }}</dd></div>
             <div><dt>Vues</dt><dd>{{ p.viewCount }}</dd></div>
           </dl>
+
+          <div class="post-like">
+            <button
+              type="button"
+              class="btn-like"
+              [class.btn-like--active]="p.likedByCurrentUser"
+              [disabled]="!authService.isAuthenticated() || isLiking()"
+              [attr.aria-pressed]="p.likedByCurrentUser"
+              [attr.aria-label]="p.likedByCurrentUser ? 'Retirer mon like' : 'Liker ce post'"
+              (click)="toggleLike()"
+            >
+              <mat-icon>{{ p.likedByCurrentUser ? 'favorite' : 'favorite_border' }}</mat-icon>
+              {{ p.likeCount }}
+            </button>
+            @if (likeError()) {
+              <p class="field-error" role="alert">{{ likeError() }}</p>
+            }
+          </div>
 
           @if (p.description) {
             <p class="post-description">{{ p.description }}</p>
@@ -85,10 +103,14 @@
             </div>
           }
 
+          @if ((p.status === 'ANALYZED' || p.status === 'COMMUNITY_VALIDATED') && p.identification && canValidate()) {
+            <app-validation-widget [postId]="p.id" />
+          }
+
           @if (p.tags.length > 0) {
             <div class="post-tags">
               @for (tag of p.tags; track tag) {
-                <span class="tag">#{{ tag }}</span>
+                <a class="tag" [routerLink]="'/posts'" [queryParams]="{ tag: tag }" [attr.aria-label]="'Filtrer les publications par le tag ' + tag">#{{ tag }}</a>
               }
             </div>
           }
@@ -114,6 +136,37 @@
           }
         </div>
       </div>
+
+      <!-- US 2.4 — Commentaires MVP -->
+      <app-comment-section [postId]="p.id" />
+
+      @if (similarPosts().length > 0) {
+        <section class="similar-posts" aria-labelledby="similar-posts-title">
+          <h2 id="similar-posts-title">Pierres similaires</h2>
+          <div class="similar-posts__grid">
+            @for (similar of similarPosts(); track similar.id) {
+              <a class="similar-post" [routerLink]="['/posts', similar.id]">
+                <img [src]="similar.mediaUrl" [alt]="similar.title || 'Pierre similaire'" />
+                <span>{{ similar.title || similar.identification?.nom || 'Sans titre' }}</span>
+                <small>{{ similar.similarity | percent:'1.0-0' }} similaire</small>
+              </a>
+            }
+          </div>
+
+          @if (canReport()) {
+            <button type="button" class="btn-secondary" (click)="showReport.set(!showReport())">Signaler</button>
+            @if (showReport()) {
+              <div class="report-reasons">
+                <button type="button" (click)="submitReport('INAPPROPRIATE_CONTENT')">Contenu inapproprié</button>
+                <button type="button" (click)="submitReport('WRONG_IDENTIFICATION')">Mauvaise identification</button>
+                <button type="button" (click)="submitReport('SPAM')">Spam</button>
+                <button type="button" (click)="submitReport('HARASSMENT')">Harcèlement</button>
+              </div>
+            }
+            @if (reportMessage()) { <p role="status">{{ reportMessage() }}</p> }
+          }
+        </section>
+      }
     }
 
   </div>

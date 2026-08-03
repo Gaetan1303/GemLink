@@ -82,15 +82,15 @@ describe('PostService — US 2.1 Publication d\'un post MVP', () => {
   });
 
   describe('listPosts', () => {
-    it('US 2.2 : envoie une requête GET paginée', () => {
-      service.listPosts(2, 10).subscribe();
+    it('US 2.2 : envoie une requête GET avec curseur', () => {
+      service.listPosts('opaque-cursor', 10).subscribe();
 
       const req = httpTesting.expectOne(r =>
-        r.url === PUBLICATIONS_URL && r.params.get('page') === '2' && r.params.get('limit') === '10'
+        r.url === PUBLICATIONS_URL && r.params.get('cursor') === 'opaque-cursor' && r.params.get('limit') === '10'
       );
       expect(req.request.method).toBe('GET');
 
-      req.flush({ items: [], page: 2, limit: 10, total: 0, totalPages: 0 });
+      req.flush({ items: [], limit: 10, nextCursor: null, hasNextPage: false });
     });
   });
 
@@ -102,6 +102,18 @@ describe('PostService — US 2.1 Publication d\'un post MVP', () => {
       expect(req.request.method).toBe('GET');
 
       req.flush({ id: 'post-uuid-123' });
+    });
+  });
+
+  describe('toggleLike', () => {
+    it('US 2.3 CA-1 : envoie une requête POST vers le endpoint de toggle', () => {
+      service.toggleLike('post-uuid-123').subscribe();
+
+      const req = httpTesting.expectOne(`${PUBLICATIONS_URL}/post-uuid-123/like`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+
+      req.flush({ liked: true, likeCount: 1 });
     });
   });
 

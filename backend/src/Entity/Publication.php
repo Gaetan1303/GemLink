@@ -26,6 +26,14 @@ class Publication
     public const STATUS_ANALYZED = 'ANALYZED';
     public const STATUS_ANALYSIS_FAILED = 'ANALYSIS_FAILED';
 
+    /**
+     * US 2.7 CA-4 : label mis à jour par consensus communautaire pondéré.
+     * Le label gagnant lui-même est écrit dans publication_pierre via
+     * PublicationPierreRepository::upsertMatch(), pas dans une colonne
+     * dédiée sur Publication.
+     */
+    public const STATUS_COMMUNITY_VALIDATED = 'COMMUNITY_VALIDATED';
+
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
     private Uuid $id;

@@ -7,7 +7,7 @@ import { environment } from '../../../environments/environment';
 // ── US 2.1 — Publication d'un post MVP ──────────────────────────
 
 export type MediaType = 'IMAGE' | 'VIDEO';
-export type PostStatus = 'PENDING_ANALYSIS' | 'ANALYZED' | 'ANALYSIS_FAILED';
+export type PostStatus = 'PENDING_ANALYSIS' | 'ANALYZED' | 'ANALYSIS_FAILED' | 'COMMUNITY_VALIDATED';
 
 export interface PostAuthor {
   id:        string;
@@ -39,18 +39,43 @@ export interface Publication {
   mediaType:      MediaType;
   status:         PostStatus;
   viewCount:      number;
+  likeCount:      number;
+  likedByCurrentUser: boolean;
   tags:           string[];
   identification: PublicationIdentification | null;
   createdAt:      string;
 }
 
+export interface SimilarPublication extends Publication {
+  similarity: number;
+}
+
+/** Réponse du toggle `POST /api/publications/{id}/like`. */
+export interface LikeToggleResponse {
+  liked: boolean;
+  likeCount: number;
+}
+
+export interface PublicIdentification {
+  id: string;
+  status: PostStatus;
+  result: PublicationIdentification | null;
+  expiresAt: string;
+}
+
 // US 2.2 — Consultation des posts (liste + détail)
 export interface PublicationPage {
-  items:      Publication[];
-  page:       number;
-  limit:      number;
-  total:      number;
-  totalPages: number;
+  items:       Publication[];
+  limit:       number;
+  nextCursor:  string | null;
+  hasNextPage: boolean;
+}
+
+export interface FeedFilters {
+  tag?: string;
+  mineral?: string;
+  minConfidence?: number;
+  personalized?: boolean;
 }
 
 // CA-2 : mêmes limites que le backend (validation client = confort UX,
@@ -104,8 +129,14 @@ export class PostService {
   /**
    * US 2.2 — Feed public paginé (accessible aux visiteurs non authentifiés).
    */
-  listPosts(page = 1, limit = 20): Observable<PublicationPage> {
-    return this.#http.get<PublicationPage>(this.#apiUrl, { params: { page, limit } });
+  listPosts(cursor: string | null = null, limit = 20, filters: FeedFilters = {}): Observable<PublicationPage> {
+    const params: Record<string, string | number | boolean> = { limit };
+    if (cursor) params['cursor'] = cursor;
+    if (filters.tag) params['tag'] = filters.tag;
+    if (filters.mineral) params['mineral'] = filters.mineral;
+    if (filters.minConfidence !== undefined) params['minConfidence'] = filters.minConfidence;
+    if (filters.personalized) params['personalized'] = true;
+    return this.#http.get<PublicationPage>(this.#apiUrl, { params });
   }
 
   /**
@@ -113,6 +144,25 @@ export class PostService {
    */
   getPost(postId: string): Observable<Publication> {
     return this.#http.get<Publication>(`${this.#apiUrl}/${postId}`);
+  }
+
+  getSimilarPosts(postId: string): Observable<{ items: SimilarPublication[] }> {
+    return this.#http.get<{ items: SimilarPublication[] }>(`${this.#apiUrl}/${postId}/similar`);
+  }
+
+  /** US 2.3 CA-1 : le serveur ajoute ou retire le like selon son état actuel. */
+  toggleLike(postId: string): Observable<LikeToggleResponse> {
+    return this.#http.post<LikeToggleResponse>(`${this.#apiUrl}/${postId}/like`, {});
+  }
+
+  identifyPublic(file: File): Observable<PublicIdentification> {
+    const formData = new FormData();
+    formData.append('image', file);
+    return this.#http.post<PublicIdentification>(`${environment.apiUrl}/api/public/identifications`, formData);
+  }
+
+  getPublicIdentification(id: string): Observable<PublicIdentification> {
+    return this.#http.get<PublicIdentification>(`${environment.apiUrl}/api/public/identifications/${id}`);
   }
 
   /**

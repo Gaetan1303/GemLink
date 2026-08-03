@@ -1,4 +1,6 @@
 security:
+    role_hierarchy:
+        ROLE_ADMIN: [ROLE_MODERATOR]
     password_hashers:
         App\Entity\User:
             algorithm: argon2id
@@ -32,6 +34,11 @@ security:
                 password_path: password
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
+        auth_logout:
+            pattern: ^/auth/logout$
+            stateless: true
+            provider: app_user_provider
+            jwt: ~
         api:
             pattern: ^/api
             stateless: true
@@ -43,9 +50,17 @@ security:
         - { path: ^/api/(docs|contexts|openapi), roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: PUBLIC_ACCESS, methods: [OPTIONS] }
         # US 1.5 : logout requiert un utilisateur authentifié
-        - { path: ^/api/auth/logout$, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/auth/logout$, roles: IS_AUTHENTICATED_FULLY }
         # US 2.2 : liste/détail des posts publics (visiteur non authentifié inclus)
+        # US 2.4 CA-3 : lecture des commentaires publique elle aussi ; doit
+        # être déclarée avant la règle générique ^/api/publications ci-dessous
+        # pour ne pas être masquée (elle matcherait de toute façon, mais on
+        # garde l'ordre explicite pour la lisibilité).
+        - { path: '^/api/publications/[^/]+/comments', roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/publications, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/profiles, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/leaderboard, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: '^/api/vitrines/[^/]+$', roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

@@ -126,6 +126,9 @@ public function __construct(
         }
 
         $user = $email !== '' ? $this->userRepository->findOneBy(['email' => $email]) : null;
+        if ($user instanceof User && $user->isTemporaryBanExpired()) {
+            $user->unban();
+        }
         if (
             !$user instanceof User
             || $user->getStatus() !== 'ACTIVE'
@@ -136,6 +139,7 @@ public function __construct(
         }
 
         $this->resetLoginAttempts($email);
+        $user->markLoggedIn();
 
         ['refreshToken' => $refreshToken, 'refreshTokenExpiresAt' => $expiresAt, 'refreshTokenEntity' => $entity]
             = $this->issueRefreshToken($user);
@@ -149,6 +153,7 @@ public function __construct(
             'token' => $this->jwtManager->createFromPayload($user, [
                 'jti' => $jti,
                 'email' => $user->getEmail(),
+                'id' => $user->getId()->toRfc4122(),
             ]),
             'refreshToken' => $refreshToken,
             'refreshTokenExpiresAt' => $expiresAt,
@@ -181,6 +186,15 @@ public function __construct(
 
         $user = $refreshToken->getUser();
 
+        if ($user->isTemporaryBanExpired()) {
+            $user->unban();
+        }
+        if ($user->getStatus() !== 'ACTIVE') {
+            $refreshToken->revoke();
+            $this->em->flush();
+            throw new InvalidArgumentException('Compte indisponible.');
+        }
+
         // CA-2 : révoquer l'ancien refresh token avant d'en émettre un nouveau
         $refreshToken->revoke();
 
@@ -199,6 +213,7 @@ public function __construct(
             'token' => $this->jwtManager->createFromPayload($user, [
                 'jti' => $jti,
                 'email' => $user->getEmail(),
+                'id' => $user->getId()->toRfc4122(),
             ]),
             'refreshToken' => $newRawToken,
             'refreshTokenExpiresAt' => $expiresAt,
@@ -226,7 +241,7 @@ public function __construct(
             $payload = $this->decodeJwtPayloadUnsafe($rawJwt);
             $jti = isset($payload['jti']) && is_string($payload['jti']) ? $payload['jti'] : '';
             $exp = isset($payload['exp']) && is_int($payload['exp']) ? $payload['exp'] : 0;
-            $ttl = $exp - time();
+            $ttl = min(self::JWT_TTL_SECONDS, $exp - time());
 
             if ($jti !== '' && $ttl > 0) {
                 $item = $this->cachePool->getItem(JwtBlocklistListener::blocklistKey($jti));

@@ -1,3 +1,5 @@
 backend/.env
+.env
+!.env.example
 backend/.env
 backend/.env

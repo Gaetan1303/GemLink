@@ -2,6 +2,8 @@ import io
 import os
 import json
 import logging
+import secrets
+import tempfile
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Header, Depends
@@ -10,12 +12,14 @@ import torch
 from torchvision import transforms
 from PIL import Image
 import aiohttp
+import cv2
 
 # Import de votre architecture, du détecteur et des utilitaires
 from vit import get_model
 from ultralytics import YOLO
 from utils import crop_with_padding
 from schema import StoneAnalysisResponse
+from fine_tuning import FineTuneRequest, jobs as fine_tuning_jobs, start_job
 import open_clip
 
 # Configuration des logs
@@ -39,16 +43,59 @@ CLIP_MODEL_PRETRAINED = os.getenv("CLIP_MODEL_PRETRAINED", "openai")
 
 # Clé partagée avec Symfony : ce service ne doit JAMAIS être appelable
 # directement par le frontend Angular, uniquement par le backend Symfony.
-INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
-if not INTERNAL_API_KEY:
-    logger.warning(" INTERNAL_API_KEY non définie : les endpoints /predict, /analyze et /api/chat "
-                    "sont accessibles sans authentification. À ne jamais faire en production.")
+INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', '')
+INSECURE_INTERNAL_API_KEYS = {
+    'changeme-en-production',
+    'replace-with-a-long-random-secret',
+}
+INTERNAL_API_KEY_CONFIGURED = (
+    len(INTERNAL_API_KEY) >= 16
+    and INTERNAL_API_KEY not in INSECURE_INTERNAL_API_KEYS
+)
+if not INTERNAL_API_KEY_CONFIGURED:
+    logger.critical(
+        'INTERNAL_API_KEY absente ou trop faible : le service démarre en mode dégradé '
+        'et tous les endpoints internes restent bloqués.'
+    )
+
+
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_VIDEO_BYTES = 100 * 1024 * 1024
 
 
 async def verify_internal_key(x_internal_key: str = Header(None)):
     """Dépendance FastAPI : vérifie que l'appel vient bien de Symfony (ou d'un service autorisé)."""
-    if INTERNAL_API_KEY and x_internal_key != INTERNAL_API_KEY:
+    if not INTERNAL_API_KEY_CONFIGURED:
+        raise HTTPException(status_code=503, detail='Service IA non configuré : clé interne absente.')
+    if not x_internal_key or not secrets.compare_digest(x_internal_key, INTERNAL_API_KEY):
         raise HTTPException(status_code=403, detail="Accès interdit : clé interne manquante ou invalide.")
+
+
+def decode_video_frame(contents: bytes) -> Image.Image:
+    if len(contents) > MAX_VIDEO_BYTES:
+        raise ValueError('La vidéo dépasse la taille maximale de 100 Mo.')
+
+    temporary_path = ''
+    try:
+        with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temporary:
+            temporary.write(contents)
+            temporary_path = temporary.name
+        capture = cv2.VideoCapture(temporary_path)
+        if not capture.isOpened():
+            raise ValueError('La vidéo ne peut pas être décodée.')
+        try:
+            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+            if frame_count > 1:
+                capture.set(cv2.CAP_PROP_POS_FRAMES, frame_count // 2)
+            success, frame = capture.read()
+        finally:
+            capture.release()
+        if not success or frame is None:
+            raise ValueError('Aucune image exploitable trouvée dans la vidéo.')
+        return Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    finally:
+        if temporary_path and os.path.exists(temporary_path):
+            os.unlink(temporary_path)
 
 
 # ==============================================================================
@@ -119,6 +166,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="GemLink AI Orchestrator API", version="1.1.0", lifespan=lifespan)
+
+
+@app.post('/fine-tune', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)], status_code=202)
+async def fine_tune(request: FineTuneRequest):
+    return start_job(request, app.state.http_session)
+
+
+@app.get('/fine-tune/{job_id}', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)])
+async def fine_tune_status(job_id: str):
+    state = fine_tuning_jobs.get(job_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail='Job de fine-tuning introuvable.')
+    return state
 
 
 # ==============================================================================
@@ -314,6 +374,24 @@ async def analyze(
     """
     upload = media or file
 
+    if upload is not None and upload.content_type == 'video/mp4':
+        try:
+            contents = await upload.read()
+            image = decode_video_frame(contents)
+            vision_result = run_vision_pipeline(image)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error))
+        except Exception as error:
+            logger.error('Erreur durant le traitement vidéo : %s', error, exc_info=True)
+            raise HTTPException(status_code=500, detail='Erreur interne de traitement vidéo.')
+
+        knowledge_data = await ask_knowledge_agent(vision_result['predicted_class'])
+        knowledge_data['confidence'] = vision_result['confidence']
+        knowledge_data['detector_confidence'] = vision_result['detector_confidence']
+        knowledge_data['bbox'] = vision_result['bbox']
+        knowledge_data['embedding'] = vision_result['embedding']
+        return StoneAnalysisResponse(**knowledge_data)
+
     if upload is None:
         raise HTTPException(status_code=422, detail="Champ fichier manquant : utilisez 'media' ou 'file'.")
 
@@ -322,6 +400,8 @@ async def analyze(
 
     try:
         contents = await upload.read()
+        if len(contents) > MAX_IMAGE_BYTES:
+            raise ValueError('L’image dépasse la taille maximale de 10 Mo.')
         image = Image.open(io.BytesIO(contents)).convert("RGB")
         vision_result = run_vision_pipeline(image)
     except ValueError as e:
@@ -352,7 +432,8 @@ async def analyze(
 async def health_check():
     models_ready = hasattr(app.state, "detector") and hasattr(app.state, "classifier_model")
     return {
-        "status": "healthy" if models_ready else "degraded",
+        "status": "healthy" if models_ready and INTERNAL_API_KEY_CONFIGURED else "degraded",
         "device": app.state.device if hasattr(app.state, "device") else "unknown",
-        "ollama_connectivity": not app.state.http_session.closed
+        "ollama_connectivity": not app.state.http_session.closed,
+        "internal_api_key_configured": INTERNAL_API_KEY_CONFIGURED,
     }

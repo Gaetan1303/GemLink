@@ -113,7 +113,7 @@ describe('VitrineCreate', () => {
   });
 
   it('CA-1 : submit() refuse un titre vide', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['vitrineForm'].patchValue({ title: '' });
@@ -126,7 +126,7 @@ describe('VitrineCreate', () => {
   // ── CA-2 : sélection multiple de fichiers ───────────────────
 
   it('CA-2 : onFilesSelected() accumule les fichiers valides et rejette les invalides', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     postServiceMock.validateMediaFile.mockImplementation((file: File) =>
@@ -145,7 +145,7 @@ describe('VitrineCreate', () => {
   });
 
   it('CA-2 : plusieurs appels à onFilesSelected() cumulent les fichiers déjà sélectionnés', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     selectFiles(component, [makeFile('pierre1.jpg')]);
@@ -155,7 +155,7 @@ describe('VitrineCreate', () => {
   });
 
   it('removeSelectedFile() retire un fichier de la sélection', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     selectFiles(component, [makeFile('pierre1.jpg'), makeFile('pierre2.jpg')]);
@@ -168,7 +168,7 @@ describe('VitrineCreate', () => {
   // ── submit() : création + upload séquentiel ─────────────────
 
   it('submit() sans fichier : crée la Vitrine et affiche directement la confirmation', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['vitrineForm'].patchValue({ title: 'Mes Améthystes' });
@@ -183,7 +183,7 @@ describe('VitrineCreate', () => {
   });
 
   it('submit() avec fichiers : upload chaque fichier séquentiellement puis affiche la confirmation', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['vitrineForm'].patchValue({ title: 'Mes Améthystes' });
@@ -204,7 +204,7 @@ describe('VitrineCreate', () => {
   });
 
   it('submit() affiche une erreur de création sans lancer d\'upload', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['vitrineForm'].patchValue({ title: 'Mes Améthystes' });
@@ -221,7 +221,7 @@ describe('VitrineCreate', () => {
   });
 
   it('submit() affiche un message d\'avertissement si un upload échoue, sans bloquer la confirmation', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['vitrineForm'].patchValue({ title: 'Mes Améthystes' });
@@ -240,7 +240,7 @@ describe('VitrineCreate', () => {
   // ── Écran de confirmation de création ────────────────────────
 
   it('viewVitrine() redirige vers le détail sans publier', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['vitrineForm'].patchValue({ title: 'Mes Améthystes' });
@@ -258,7 +258,7 @@ describe('VitrineCreate', () => {
   // ── Deuxième confirmation : publication ──────────────────────
 
   it('askPublishConfirmation() ouvre la modale de confirmation', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['vitrineForm'].patchValue({ title: 'Mes Améthystes' });
@@ -272,7 +272,7 @@ describe('VitrineCreate', () => {
   });
 
   it('cancelPublishConfirmation() ferme la modale sans publier', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['vitrineForm'].patchValue({ title: 'Mes Améthystes' });
@@ -288,7 +288,7 @@ describe('VitrineCreate', () => {
   });
 
   it('confirmPublish() réussi publie puis redirige vers le détail', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['vitrineForm'].patchValue({ title: 'Mes Améthystes' });
@@ -308,7 +308,7 @@ describe('VitrineCreate', () => {
   });
 
   it('CA-4 : confirmPublish() affiche le message explicite si la Vitrine est vide', () => {
-    configure({ id: 1, username: 'gemuser', role: 'ROLE_USER' });
+    configure({ id: '1', username: 'gemuser', role: 'ROLE_USER' });
     fixture.detectChanges();
 
     component['vitrineForm'].patchValue({ title: 'Mes Améthystes' });

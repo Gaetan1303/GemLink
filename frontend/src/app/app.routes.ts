@@ -1,10 +1,25 @@
 import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
-import { Profile } from './pages/user/profile/profile';
-
-
+import { adminGuard } from './core/guards/admin-guard';
 export const routes: Routes = [
   { path: '', component: Home },
+  {
+    path: 'leaderboard',
+    loadComponent: () => import('./pages/leaderboard/leaderboard').then(m => m.Leaderboard),
+  },
+  {
+    path: 'admin',
+    canActivate: [adminGuard],
+    loadComponent: () => import('./pages/admin/admin-dashboard/admin-dashboard').then(m => m.AdminDashboardComponent),
+  },
+  {
+    path: 'admin/moderation',
+    canActivate: [adminGuard],
+    loadComponent: () => import('./pages/admin/moderation/moderation').then(m => m.Moderation),
+  },
+  
+  { path: 'identifier',
+     loadComponent: () => import('./pages/identify/identify').then(m => m.Identify) },
   {
     path: 'mentions-legales',
     loadComponent: () => import('./pages/home/mentions-legales/mentions-legales').then(m => m.MentionsLegales)
@@ -62,6 +77,14 @@ export const routes: Routes = [
   {
     path: 'users/me',
     loadComponent: () => import('./pages/user/profile/profile').then(m => m.Profile)
+  },
+  {
+    path: 'users/:id',
+    loadComponent: () => import('./pages/user/profile/profile').then(m => m.Profile)
+  },
+  {
+    path: 'notifications',
+    loadComponent: () => import('./pages/notifications/notifications').then(m => m.Notifications)
   },
 
   {

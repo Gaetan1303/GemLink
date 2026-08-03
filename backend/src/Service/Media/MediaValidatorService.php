@@ -71,11 +71,28 @@ class MediaValidatorService
 
         $duration = $this->probeDurationSeconds($pathname);
 
-        if ($duration !== null && $duration > self::MAX_VIDEO_DURATION_SECONDS) {
+        if ($duration === null) {
+            throw new InvalidMediaException('Impossible de vérifier la durée de la vidéo.');
+        }
+
+        if ($duration > self::MAX_VIDEO_DURATION_SECONDS) {
             throw new InvalidMediaException('La vidéo dépasse la durée maximale autorisée de 60 secondes.');
         }
 
         return new MediaValidationResult($mediaType, $mimeType, $sizeBytes, $duration);
+    }
+
+    /** Parcours anonyme : images uniquement, 1 Mo maximum (anti-abus MVP). */
+    public function validatePublicIdentificationImage(UploadedFile $file): MediaValidationResult
+    {
+        $validation = $this->validate($file);
+        if ($validation->mediaType !== Publication::MEDIA_TYPE_IMAGE) {
+            throw new InvalidMediaException('L’identification publique accepte uniquement les images JPEG, PNG ou WebP.');
+        }
+        if ($validation->sizeBytes > 1024 * 1024) {
+            throw new InvalidMediaException('L’image dépasse la taille maximale autorisée de 1 Mo.');
+        }
+        return $validation;
     }
 
     /**
@@ -91,7 +108,6 @@ class MediaValidatorService
         }
 
         $mimeType = finfo_file($finfo, $pathname);
-        finfo_close($finfo);
 
         if ($mimeType === false || $mimeType === '') {
             throw new InvalidMediaException('Impossible de déterminer le type réel du fichier média.');

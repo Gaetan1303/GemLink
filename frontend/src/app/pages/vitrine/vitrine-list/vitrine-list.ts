@@ -17,7 +17,7 @@ interface CoverTile {
 // une grille statique avec badge "+N" pour le reste).
 @Component({
   selector: 'app-vitrine-list',
-  imports: [CommonModule, RouterLink, SharedModule, NavBarMobile],
+  imports: [CommonModule, RouterLink, SharedModule, ],
   templateUrl: './vitrine-list.html',
   styleUrls: ['./vitrine-list.scss'],
 })

@@ -23,7 +23,7 @@ services:
   php:
     environment:
       AI_SERVICE_URL: http://ai-orchestrator:3000
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-changeme-en-production}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
     networks:
       - gemlink-network
     depends_on:
@@ -48,7 +48,7 @@ services:
       OLLAMA_URL: http://ollama:11434
       VIT_MODEL_PATH: checkpoints/vit_stones.pth
       YOLO_MODEL_PATH: runs/detect/runs/stone_detector/weights/best.pt
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-changeme-en-production}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]

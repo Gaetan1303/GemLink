@@ -6,7 +6,7 @@ import { MenuRole } from '../../../components/menu-burger/menu-navigation.model'
 
 @Component({
   selector: 'app-presse',
-  imports: [SharedModule, NavBarMobile,],
+  imports: [SharedModule,],
   templateUrl: './presse.html',
   styleUrls: ['./presse.scss'],
 })

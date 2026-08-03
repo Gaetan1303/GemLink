@@ -1,0 +1,6 @@
+framework:
+    rate_limiter:
+        public_identification:
+            policy: fixed_window
+            limit: 2
+            interval: '1 day'

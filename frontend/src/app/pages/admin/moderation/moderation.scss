@@ -1,0 +1,50 @@
+.moderation-page {
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+.eyebrow {
+  margin-bottom: 0;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.report-list {
+  display: grid;
+  gap: 1rem;
+}
+
+article {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: .75rem;
+}
+
+img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: .5rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-top: 1rem;
+}
+
+.danger {
+  background: #a40000;
+  color: white;
+}
+
+.error { color: #a40000; }
+
+@media (max-width: 620px) {
+  article { grid-template-columns: 1fr; }
+}
