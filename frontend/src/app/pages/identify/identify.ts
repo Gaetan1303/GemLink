@@ -6,9 +6,10 @@ import { switchMap, takeWhile } from 'rxjs/operators';
 import { SharedModule } from '../../shared/shared-module';
 import { AuthService } from '../../core/services/auth';
 import { PostService, PublicIdentification } from '../../core/services/post';
+import { PipelineResult } from '../../shared/pipeline-result/pipeline-result';
 
 @Component({ selector: 'app-identify', 
-  imports: [CommonModule, SharedModule], 
+  imports: [CommonModule, SharedModule, PipelineResult],
   templateUrl: './identify.html', 
   styleUrls: ['./identify.scss'] })
   

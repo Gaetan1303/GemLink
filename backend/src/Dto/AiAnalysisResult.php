@@ -13,6 +13,7 @@ final class AiAnalysisResult
     /**
      * @param float[] $embedding
      * @param array{yolo: string, vit: string, clip: string} $modelVersion
+     * @param list<array{nom: string, confidence: float, detectorConfidence: float, bbox: list<int>}> $detections
      */
     private function __construct(
         private readonly string $label,
@@ -25,6 +26,7 @@ final class AiAnalysisResult
         private readonly float $detectorConfidence,
         private readonly array $embedding,
         private readonly array $modelVersion,
+        private readonly array $detections,
     ) {
     }
 
@@ -63,6 +65,7 @@ final class AiAnalysisResult
             detectorConfidence: (float) $data['detector_confidence'],
             embedding: array_map('floatval', $data['embedding']),
             modelVersion: array_map('strval', $data['model_version']),
+            detections: self::normalizeDetections($data),
         );
     }
 
@@ -118,6 +121,49 @@ final class AiAnalysisResult
     public function getClipModelVersion(): string
     {
         return $this->modelVersion['clip'];
+    }
+
+    /** @return list<array{nom: string, confidence: float, detectorConfidence: float, bbox: list<int>}> */
+    public function getDetections(): array
+    {
+        return $this->detections;
+    }
+
+    /** @return list<array{nom: string, confidence: float, detectorConfidence: float, bbox: list<int>}> */
+    private static function normalizeDetections(array $data): array
+    {
+        if (!isset($data['detections']) || !is_array($data['detections']) || $data['detections'] === []) {
+            return [[
+                'nom' => (string) $data['nom'],
+                'confidence' => (float) $data['confidence'],
+                'detectorConfidence' => (float) $data['detector_confidence'],
+                'bbox' => array_map('intval', array_pad(array_slice(is_array($data['bbox'] ?? null) ? $data['bbox'] : [], 0, 4), 4, 0)),
+            ]];
+        }
+
+        $detections = [];
+        foreach ($data['detections'] as $index => $detection) {
+            if (!is_array($detection)) {
+                throw AiAnalysisException::missingField(sprintf('detections.%s', $index));
+            }
+            foreach (['label', 'confidence', 'detector_confidence', 'bbox'] as $field) {
+                if (!array_key_exists($field, $detection)) {
+                    throw AiAnalysisException::missingField(sprintf('detections.%s.%s', $index, $field));
+                }
+            }
+            if (!is_array($detection['bbox']) || count($detection['bbox']) !== 4) {
+                throw AiAnalysisException::missingField(sprintf('detections.%s.bbox', $index));
+            }
+
+            $detections[] = [
+                'nom' => (string) $detection['label'],
+                'confidence' => (float) $detection['confidence'],
+                'detectorConfidence' => (float) $detection['detector_confidence'],
+                'bbox' => array_map('intval', $detection['bbox']),
+            ];
+        }
+
+        return $detections;
     }
 
     /**

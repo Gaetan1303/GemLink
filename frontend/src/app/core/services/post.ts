@@ -28,6 +28,22 @@ export interface PublicationIdentification {
   description:       string | null;
   confidence:        number;
   isHighConfidence:  boolean;
+  detectorConfidence?: number;
+  detections?: PipelineDetection[];
+  modelVersion?: PipelineModelVersion;
+}
+
+export interface PipelineDetection {
+  nom:                string;
+  confidence:         number;
+  detectorConfidence: number | null;
+  bbox:                [number, number, number, number];
+}
+
+export interface PipelineModelVersion {
+  yolo: string;
+  vit:  string;
+  clip: string;
 }
 
 export interface Publication {

@@ -20,10 +20,17 @@ final class AiAnalysisResultTest extends TestCase
                 'vit' => 'vit-stones-v4',
                 'clip' => 'clip-vit-b-32-openai',
             ],
+            'detections' => [
+                ['label' => 'Quartz', 'confidence' => 0.91, 'detector_confidence' => 0.87, 'bbox' => [10, 20, 100, 120], 'embedding' => array_fill(0, 512, 1 / sqrt(512))],
+                ['label' => 'Améthyste', 'confidence' => 0.82, 'detector_confidence' => 0.79, 'bbox' => [110, 20, 190, 130], 'embedding' => array_fill(0, 512, 1 / sqrt(512))],
+            ],
         ]);
 
         self::assertSame('clip-vit-b-32-openai', $result->getClipModelVersion());
         self::assertSame('vit-stones-v4', $result->getModelVersion()['vit']);
+        self::assertCount(2, $result->getDetections());
+        self::assertSame('Améthyste', $result->getDetections()[1]['nom']);
+        self::assertSame([110, 20, 190, 130], $result->getDetections()[1]['bbox']);
     }
 
     public function testRejectsAnIncompleteModelVersion(): void

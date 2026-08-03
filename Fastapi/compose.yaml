@@ -48,6 +48,7 @@ services:
       OLLAMA_URL: http://ollama:11434
       VIT_MODEL_PATH: checkpoints/vit_stones.pth
       YOLO_MODEL_PATH: runs/detect/runs/stone_detector/weights/best.pt
+      YOLO_INFERENCE_SIZE: ${YOLO_INFERENCE_SIZE:-960}
       YOLO_MODEL_VERSION: ${YOLO_MODEL_VERSION:-yolov8-stone-detector-v1}
       VIT_MODEL_VERSION: ${VIT_MODEL_VERSION:-vit-stones-v1}
       CLIP_MODEL_VERSION: ${CLIP_MODEL_VERSION:-clip-vit-b-32-openai}

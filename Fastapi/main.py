@@ -41,6 +41,7 @@ OLLAMA_TEXT_MODEL = os.getenv("OLLAMA_TEXT_MODEL", "gemma3:1b")
 CLIP_MODEL_ARCH = os.getenv("CLIP_MODEL_ARCH", "ViT-B-32")
 CLIP_MODEL_PRETRAINED = os.getenv("CLIP_MODEL_PRETRAINED", "openai")
 DETECTION_CONFIDENCE_THRESHOLD = 0.5
+YOLO_INFERENCE_SIZE = int(os.getenv("YOLO_INFERENCE_SIZE", "960"))
 YOLO_MODEL_VERSION = os.getenv("YOLO_MODEL_VERSION", f"yolov8:{os.path.basename(YOLO_MODEL_PATH)}")
 VIT_MODEL_VERSION = os.getenv("VIT_MODEL_VERSION", f"vit:{os.path.basename(VIT_MODEL_PATH)}")
 CLIP_MODEL_VERSION = os.getenv("CLIP_MODEL_VERSION", f"clip:{CLIP_MODEL_ARCH}:{CLIP_MODEL_PRETRAINED}")
@@ -236,9 +237,15 @@ def run_vision_pipeline(image: Image.Image) -> dict:
     yolo_results = app.state.detector(
         image,
         conf=DETECTION_CONFIDENCE_THRESHOLD,
+        imgsz=YOLO_INFERENCE_SIZE,
         verbose=False,
     )
     if len(yolo_results) == 0 or len(yolo_results[0].boxes) == 0:
+        logger.warning(
+            "YOLO n'a localisé aucun minéral (seuil=%.2f, imgsz=%d).",
+            DETECTION_CONFIDENCE_THRESHOLD,
+            YOLO_INFERENCE_SIZE,
+        )
         raise ValueError("Aucun minéral localisé dans l'image.")
 
     detections = []

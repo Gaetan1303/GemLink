@@ -12,9 +12,11 @@ class FakeDetector:
     def __init__(self, boxes):
         self.boxes = boxes
         self.confidence_argument = None
+        self.image_size_argument = None
 
-    def __call__(self, _image, *, conf, verbose):
+    def __call__(self, _image, *, conf, imgsz, verbose):
         self.confidence_argument = conf
+        self.image_size_argument = imgsz
         assert verbose is False
         return [SimpleNamespace(boxes=self.boxes)]
 
@@ -43,6 +45,7 @@ class ClassificationPipelineTest(unittest.TestCase):
             result = main.run_vision_pipeline(Image.new("RGB", (100, 100)))
 
         self.assertEqual(0.5, detector.confidence_argument)
+        self.assertEqual(960, detector.image_size_argument)
         self.assertEqual(2, len(result["detections"]))
         self.assertTrue(all(item["label"] == "quartz" for item in result["detections"]))
         self.assertAlmostEqual(0.90, result["detections"][0]["detector_confidence"], places=5)

@@ -24,7 +24,7 @@ final class AnalyzePublicIdentificationMessageHandler
         if (!$identification instanceof PublicIdentification || $identification->isExpired()) return;
         try {
             $result = $this->analyze($identification);
-            $identification->markAnalyzed(['nom' => $result->getLabel(), 'categorie' => $result->getCategory(), 'durete' => $result->getHardnessValue(), 'systemeCristallin' => $result->getCrystalSystem(), 'composition' => $result->getComposition(), 'description' => $result->getDescription(), 'confidence' => $result->getConfidence(), 'isHighConfidence' => $result->getConfidence() >= .75]);
+            $identification->markAnalyzed(['nom' => $result->getLabel(), 'categorie' => $result->getCategory(), 'durete' => $result->getHardnessValue(), 'systemeCristallin' => $result->getCrystalSystem(), 'composition' => $result->getComposition(), 'description' => $result->getDescription(), 'confidence' => $result->getConfidence(), 'detectorConfidence' => $result->getDetectorConfidence(), 'isHighConfidence' => $result->getConfidence() >= .75, 'detections' => $result->getDetections(), 'modelVersion' => $result->getModelVersion()]);
             $this->em->flush();
             $this->service->releaseActiveLock($identification);
         } catch (\Throwable $exception) { throw $exception; }
