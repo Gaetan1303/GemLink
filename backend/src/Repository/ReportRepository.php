@@ -19,14 +19,23 @@ class ReportRepository extends ServiceEntityRepository
     /** @return Report[] */
     public function findForModeration(string $status = 'PENDING', int $limit = 100): array
     {
+        $countForPublication = $this->getEntityManager()->createQueryBuilder()
+            ->select('COUNT(sibling.id)')
+            ->from(Report::class, 'sibling')
+            ->where('sibling.publication = publication')
+            ->andWhere('sibling.status = :status')
+            ->getDQL();
+
         return $this->createQueryBuilder('report')
             ->addSelect('user', 'publication', 'author')
+            ->addSelect(sprintf('(%s) AS HIDDEN reportCount', $countForPublication))
             ->join('report.user', 'user')
             ->join('report.publication', 'publication')
             ->join('publication.user', 'author')
             ->andWhere('report.status = :status')
             ->setParameter('status', $status)
-            ->orderBy('report.createdAt', 'ASC')
+            ->orderBy('reportCount', 'DESC')
+            ->addOrderBy('report.createdAt', 'ASC')
             ->setMaxResults($limit)
             ->getQuery()->getResult();
     }

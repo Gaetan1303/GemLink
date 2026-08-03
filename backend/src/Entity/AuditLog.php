@@ -17,6 +17,7 @@ use Symfony\Component\Uid\Uuid;
  */
 #[ORM\Entity(repositoryClass: AuditLogRepository::class)]
 #[ORM\Table(name: 'audit_log')]
+#[ORM\Index(name: 'idx_audit_log_target_history', fields: ['targetType', 'targetId', 'createdAt'])]
 class AuditLog
 {
     public const ACTION_COMMENT_DELETED = 'COMMENT_DELETED';
@@ -25,6 +26,7 @@ class AuditLog
 
     public const TARGET_TYPE_COMMENTAIRE = 'COMMENTAIRE';
     public const TARGET_TYPE_REPORT = 'REPORT';
+    public const TARGET_TYPE_PUBLICATION = 'PUBLICATION';
 
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
@@ -43,16 +45,20 @@ class AuditLog
     #[ORM\Column(name: 'target_id', type: 'uuid')]
     private Uuid $targetId;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $reason;
+
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $createdAt;
 
-    public function __construct(User $user, string $action, string $targetType, Uuid $targetId)
+    public function __construct(User $user, string $action, string $targetType, Uuid $targetId, ?string $reason = null)
     {
         $this->id = Uuid::v7();
         $this->user = $user;
         $this->action = $action;
         $this->targetType = $targetType;
         $this->targetId = $targetId;
+        $this->reason = $reason;
         $this->createdAt = new DateTimeImmutable();
     }
 
@@ -79,6 +85,11 @@ class AuditLog
     public function getTargetId(): Uuid
     {
         return $this->targetId;
+    }
+
+    public function getReason(): ?string
+    {
+        return $this->reason;
     }
 
     public function getCreatedAt(): DateTimeImmutable

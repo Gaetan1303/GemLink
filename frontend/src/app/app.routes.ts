@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
 import { adminGuard } from './core/guards/admin-guard';
+import { moderationGuard } from './core/guards/moderation-guard';
 export const routes: Routes = [
   { path: '', component: Home },
   {
@@ -14,7 +15,7 @@ export const routes: Routes = [
   },
   {
     path: 'admin/moderation',
-    canActivate: [adminGuard],
+    canActivate: [moderationGuard],
     loadComponent: () => import('./pages/admin/moderation/moderation').then(m => m.Moderation),
   },
   
