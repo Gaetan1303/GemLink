@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
@@ -10,26 +10,16 @@ import { PostService, Publication, SimilarPublication } from '../../../core/serv
 import { CommentSection } from '../../../shared/comment-section/comment-section';
 import { ValidationWidget } from '../../../shared/validation-widget/validation-widget';
 import { ReportReason, ReportService } from '../../../core/services/report';
+import { PostAnalysisResult } from '../post-analysis-result/post-analysis-result';
 
 // US 2.2 — Consultation des posts : détail public d'un post.
 // US 3.1 — Suivi en direct de l'analyse IA (polling) + transitions animées.
 @Component({
   selector: 'app-post-detail',
-  imports: [CommonModule, RouterLink, SharedModule, CommentSection, ValidationWidget],
+  imports: [CommonModule, RouterLink, SharedModule, CommentSection, ValidationWidget, PostAnalysisResult],
   templateUrl: './post-detail.html',
   styleUrls: ['./post-detail.scss'],
   animations: [
-    // Révélation de la fiche minéralogique une fois l'analyse aboutie :
-    // hauteur + fondu, pour ne pas faire "sauter" le layout brutalement.
-    trigger('identificationReveal', [
-      transition(':enter', [
-        style({ height: 0, opacity: 0, transform: 'translateY(-6px)' }),
-        animate(
-          '420ms 100ms cubic-bezier(0.22, 1, 0.36, 1)',
-          style({ height: '*', opacity: 1, transform: 'translateY(0)' }),
-        ),
-      ]),
-    ]),
     // Disparition en fondu de l'overlay de scan dès que l'analyse se termine.
     trigger('scanFade', [
       transition(':leave', [
@@ -107,16 +97,6 @@ export class PostDetail implements OnInit, OnDestroy {
       error: (error) => this.reportMessage.set(error?.error?.message ?? 'Impossible de transmettre le signalement.'),
     });
   }
-
-  // US 3.1 : bouton dans la fiche d'identification qui fait défiler le
-  // texte de la description (souvent longue — générée par l'agent
-  // connaissance IA) sans que l'utilisateur ait à scroller manuellement
-  // dans le petit encart. `{ static: false }` car l'élément est sous un
-  // @if conditionnel (n'existe qu'une fois le post ANALYZED).
-  @ViewChild('identificationDescriptionEl', { static: false })
-  private identificationDescriptionEl?: ElementRef<HTMLElement>;
-
-  protected readonly isDescriptionScrolledToEnd = signal(false);
 
   // US 3.1 : l'analyse IA est asynchrone côté serveur (CA-1/CA-2/CA-3). Tant
   // que le post arrive en PENDING_ANALYSIS, on ré-interroge l'API pour
@@ -270,26 +250,4 @@ export class PostDetail implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * US 3.1 : fait défiler en douceur le texte de la description dans la
-   * fiche d'identification (encart à hauteur limitée, cf. post-detail.scss).
-   * Bascule : si on est déjà en bas, on remonte en haut plutôt que de
-   * rester bloqué en fin de texte — un seul bouton fait l'aller-retour.
-   */
-  protected scrollIdentificationText(): void {
-    const el = this.identificationDescriptionEl?.nativeElement;
-
-    if (!el) {
-      return;
-    }
-
-    const isNearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
-
-    el.scrollTo({
-      top: isNearBottom ? 0 : el.scrollHeight,
-      behavior: 'smooth',
-    });
-
-    this.isDescriptionScrolledToEnd.set(!isNearBottom);
-  }
 }
