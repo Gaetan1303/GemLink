@@ -198,7 +198,11 @@ export class AuthService {
       this.currentUser.set({
         id:       decoded.id,
         username: decoded.username,
-        role:     decoded.roles.includes('ROLE_ADMIN') ? 'ROLE_ADMIN' : 'ROLE_USER',
+        role: decoded.roles.includes('ROLE_ADMIN')
+          ? 'ROLE_ADMIN'
+          : decoded.roles.includes('ROLE_MODERATOR')
+            ? 'ROLE_MODERATOR'
+            : 'ROLE_USER',
       });
     } catch (error) {
       console.error('Failed to decode token:', error);
