@@ -85,6 +85,17 @@ class OpticalProperties(BaseModel):
         return data
 
 
+class CropAnalysis(BaseModel):
+    """Vision result for one area detected by YOLO."""
+
+    bbox: list[int] = Field(..., min_length=4, max_length=4)
+    detector_confidence: float = Field(..., ge=0.0, le=1.0)
+    label: str
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    embedding: list[float] = Field(..., min_length=512, max_length=512)
+    all_probabilities: dict[str, float] = Field(default_factory=dict)
+
+
 class StoneAnalysisResponse(BaseModel):
     # Informations Générales
     nom: str
@@ -102,14 +113,19 @@ class StoneAnalysisResponse(BaseModel):
     histoire_symbolique: Optional[str] = Field(None, description="Anecdotes historiques ou vertus associées")
 
     # Métadonnées de Vision (pour ton pipeline YOLO + ViT)
-    confidence: float
-    detector_confidence: float
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    detector_confidence: float = Field(..., ge=0.0, le=1.0)
     bbox: Optional[list[int]] = None
 
     # Embedding CLIP ViT-B/32 (512D, L2-normalisé), généré par run_vision_pipeline
     # dans main.py — jamais fourni par l'agent connaissance (Ollama). Persisté
     # par Symfony dans pgvector pour la recherche par similarité entre publications.
     embedding: list[float] = Field(..., min_length=512, max_length=512)
+
+    # Full per-crop results. Root vision fields remain the primary detection
+    # for backward compatibility with the Symfony workers.
+    detections: list[CropAnalysis] = Field(default_factory=list)
+    model_version: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="before")
     @classmethod

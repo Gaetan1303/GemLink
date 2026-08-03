@@ -77,6 +77,7 @@ final class AnalyzeMediaMessageHandlerTest extends TestCase
             new MockResponse(json_encode([
                 'nom' => 'Améthyste', 'confidence' => 0.9, 'detector_confidence' => 0.9,
                 'embedding' => array_fill(0, 512, 0.1),
+                'model_version' => ['yolo' => 'yolo-v1', 'vit' => 'vit-v1', 'clip' => 'clip-v1'],
             ], JSON_THROW_ON_ERROR), ['http_code' => 200]),
         ]);
 
@@ -123,7 +124,7 @@ final class AnalyzeMediaMessageHandlerTest extends TestCase
 
         $handler = $this->makeHandler(new MockHttpClient([
             new MockResponse('image-content', ['http_code' => 200, 'response_headers' => ['content-type: image/jpeg']]),
-            new MockResponse(json_encode(['nom' => 'Quartz', 'confidence' => 0.9, 'detector_confidence' => 0.9, 'embedding' => array_fill(0, 512, 0.1)], JSON_THROW_ON_ERROR), ['http_code' => 200]),
+            new MockResponse(json_encode(['nom' => 'Quartz', 'confidence' => 0.9, 'detector_confidence' => 0.9, 'embedding' => array_fill(0, 512, 0.1), 'model_version' => ['yolo' => 'yolo-v1', 'vit' => 'vit-v1', 'clip' => 'clip-v1']], JSON_THROW_ON_ERROR), ['http_code' => 200]),
         ]), $tags);
         $handler(new AnalyzeMediaMessage($publication->getId()->toRfc4122()));
 

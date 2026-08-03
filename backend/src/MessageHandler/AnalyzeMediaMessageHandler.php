@@ -47,7 +47,6 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 #[AsMessageHandler]
 final class AnalyzeMediaMessageHandler
 {
-    private const CLIP_MODEL_NAME = 'clip-vit-b32-openai';
     private const STORAGE_MODE_LOCAL = 'local';
     private const STORAGE_MODE_R2 = 'r2';
 
@@ -234,8 +233,10 @@ final class AnalyzeMediaMessageHandler
      */
     private function persistEmbedding(Publication $publication, AiAnalysisResult $result): void
     {
-        $modelVersion = $this->modelVersions->findActiveByType(VersionModeleIa::TYPE_CLIP)
-            ?? $this->createDefaultClipModelVersion();
+        $modelVersion = $this->modelVersions->findOneBy([
+            'name' => $result->getClipModelVersion(),
+            'modelType' => VersionModeleIa::TYPE_CLIP,
+        ]) ?? $this->createClipModelVersion($result->getClipModelVersion());
 
         $existing = $this->embeddings->findOneBy(['publication' => $publication]);
 
@@ -253,10 +254,10 @@ final class AnalyzeMediaMessageHandler
      * si la table ai_model_version n'a pas encore été initialisée par une
      * fixture ou l'écran d'admin IA (US 5.x).
      */
-    private function createDefaultClipModelVersion(): VersionModeleIa
+    private function createClipModelVersion(string $name): VersionModeleIa
     {
         $modelVersion = new VersionModeleIa(
-            self::CLIP_MODEL_NAME,
+            $name,
             VersionModeleIa::TYPE_CLIP,
             VersionModeleIa::STATUS_ACTIVE,
         );

@@ -40,6 +40,15 @@ OLLAMA_TEXT_MODEL = os.getenv("OLLAMA_TEXT_MODEL", "gemma3:1b")
 # dans pgvector (table embedding) pour la recherche par similarité entre publications.
 CLIP_MODEL_ARCH = os.getenv("CLIP_MODEL_ARCH", "ViT-B-32")
 CLIP_MODEL_PRETRAINED = os.getenv("CLIP_MODEL_PRETRAINED", "openai")
+DETECTION_CONFIDENCE_THRESHOLD = 0.5
+YOLO_MODEL_VERSION = os.getenv("YOLO_MODEL_VERSION", f"yolov8:{os.path.basename(YOLO_MODEL_PATH)}")
+VIT_MODEL_VERSION = os.getenv("VIT_MODEL_VERSION", f"vit:{os.path.basename(VIT_MODEL_PATH)}")
+CLIP_MODEL_VERSION = os.getenv("CLIP_MODEL_VERSION", f"clip:{CLIP_MODEL_ARCH}:{CLIP_MODEL_PRETRAINED}")
+MODEL_VERSIONS = {
+    "yolo": YOLO_MODEL_VERSION,
+    "vit": VIT_MODEL_VERSION,
+    "clip": CLIP_MODEL_VERSION,
+}
 
 # Clé partagée avec Symfony : ce service ne doit JAMAIS être appelable
 # directement par le frontend Angular, uniquement par le backend Symfony.
@@ -224,39 +233,56 @@ def run_vision_pipeline(image: Image.Image) -> dict:
     Réutilisée par /predict (rapide, agent vision seul) et /analyze (agent vision + agent connaissance).
     Lève ValueError si aucun minéral n'est détecté.
     """
-    yolo_results = app.state.detector(image, verbose=False)
+    yolo_results = app.state.detector(
+        image,
+        conf=DETECTION_CONFIDENCE_THRESHOLD,
+        verbose=False,
+    )
     if len(yolo_results) == 0 or len(yolo_results[0].boxes) == 0:
         raise ValueError("Aucun minéral localisé dans l'image.")
 
-    best_box = yolo_results[0].boxes[0]
-    bbox = best_box.xyxy[0].cpu().numpy().tolist()
-    det_conf = float(best_box.conf[0].cpu().item())
+    detections = []
+    for box in yolo_results[0].boxes:
+        det_conf = float(box.conf[0].detach().cpu().item())
+        if det_conf <= DETECTION_CONFIDENCE_THRESHOLD:
+            continue
 
-    # Crop avec marge pour ne pas couper un bord de la pierre (bbox YOLO souvent trop serrée)
-    crop_img = crop_with_padding(image, bbox)
+        bbox = box.xyxy[0].detach().cpu().tolist()
+        crop_img = crop_with_padding(image, bbox)
+        input_tensor = app.state.preprocess(crop_img).unsqueeze(0).to(app.state.device)
 
-    input_tensor = app.state.preprocess(crop_img).unsqueeze(0).to(app.state.device)
+        with torch.inference_mode():
+            outputs = app.state.classifier_model(input_tensor)
+            probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
+            top_prob, top_idx = torch.max(probabilities, dim=0)
 
-    with torch.no_grad():
-        outputs = app.state.classifier_model(input_tensor)
-        probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
-        top_prob, top_idx = torch.max(probabilities, dim=0)
+        detections.append({
+            "bbox": [int(round(v)) for v in bbox],
+            "detector_confidence": det_conf,
+            "label": app.state.classes[top_idx.item()],
+            "confidence": float(top_prob.item()),
+            "embedding": compute_clip_embedding(crop_img),
+            "all_probabilities": {
+                app.state.classes[i]: float(probabilities[i].item())
+                for i in range(len(app.state.classes))
+            },
+        })
 
-        class_name = app.state.classes[top_idx.item()]
-        class_conf = float(top_prob.item())
+    if not detections:
+        raise ValueError("Aucun minéral détecté avec une confiance supérieure à 0.5.")
 
-    embedding = compute_clip_embedding(crop_img)
+    detections.sort(key=lambda item: item["detector_confidence"], reverse=True)
+    primary = detections[0]
 
     return {
-        "bbox": [int(v) for v in bbox],
-        "detector_confidence": det_conf,
-        "predicted_class": class_name,
-        "confidence": class_conf,
-        "embedding": embedding,
-        "all_probabilities": {
-            app.state.classes[i]: float(probabilities[i].item())
-            for i in range(len(app.state.classes))
-        },
+        "bbox": primary["bbox"],
+        "detector_confidence": primary["detector_confidence"],
+        "predicted_class": primary["label"],
+        "confidence": primary["confidence"],
+        "embedding": primary["embedding"],
+        "all_probabilities": primary["all_probabilities"],
+        "detections": detections,
+        "model_version": MODEL_VERSIONS.copy(),
     }
 
 
@@ -269,9 +295,9 @@ def compute_clip_embedding(crop_img: Image.Image) -> list[float]:
     """
     image_input = app.state.clip_preprocess(crop_img).unsqueeze(0).to(app.state.device)
 
-    with torch.no_grad():
+    with torch.inference_mode():
         features = app.state.clip_model.encode_image(image_input)
-        features = features / features.norm(dim=-1, keepdim=True)
+        features = features / features.norm(dim=-1, keepdim=True).clamp_min(1e-12)
 
     return features.squeeze(0).cpu().tolist()
 
@@ -390,6 +416,8 @@ async def analyze(
         knowledge_data['detector_confidence'] = vision_result['detector_confidence']
         knowledge_data['bbox'] = vision_result['bbox']
         knowledge_data['embedding'] = vision_result['embedding']
+        knowledge_data['detections'] = vision_result['detections']
+        knowledge_data['model_version'] = vision_result['model_version']
         return StoneAnalysisResponse(**knowledge_data)
 
     if upload is None:
@@ -420,6 +448,8 @@ async def analyze(
     # (calculé dans run_vision_pipeline), persisté ensuite par Symfony dans
     # pgvector pour la recherche par similarité.
     knowledge_data["embedding"] = vision_result["embedding"]
+    knowledge_data["detections"] = vision_result["detections"]
+    knowledge_data["model_version"] = vision_result["model_version"]
 
     try:
         return StoneAnalysisResponse(**knowledge_data)

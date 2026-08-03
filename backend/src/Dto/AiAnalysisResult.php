@@ -12,6 +12,7 @@ final class AiAnalysisResult
 {
     /**
      * @param float[] $embedding
+     * @param array{yolo: string, vit: string, clip: string} $modelVersion
      */
     private function __construct(
         private readonly string $label,
@@ -23,12 +24,13 @@ final class AiAnalysisResult
         private readonly float $confidence,
         private readonly float $detectorConfidence,
         private readonly array $embedding,
+        private readonly array $modelVersion,
     ) {
     }
 
     public static function fromArray(array $data): self
     {
-        foreach (['nom', 'confidence', 'detector_confidence', 'embedding'] as $required) {
+        foreach (['nom', 'confidence', 'detector_confidence', 'embedding', 'model_version'] as $required) {
             if (!array_key_exists($required, $data)) {
                 throw AiAnalysisException::missingField($required);
             }
@@ -36,6 +38,16 @@ final class AiAnalysisResult
 
         if (!is_array($data['embedding']) || count($data['embedding']) !== 512) {
             throw AiAnalysisException::invalidEmbedding(is_array($data['embedding']) ? count($data['embedding']) : 0);
+        }
+
+        if (!is_array($data['model_version'])) {
+            throw AiAnalysisException::missingField('model_version');
+        }
+
+        foreach (['yolo', 'vit', 'clip'] as $modelType) {
+            if (!isset($data['model_version'][$modelType]) || trim((string) $data['model_version'][$modelType]) === '') {
+                throw AiAnalysisException::missingField(sprintf('model_version.%s', $modelType));
+            }
         }
 
         $physique = $data['physique'] ?? [];
@@ -50,6 +62,7 @@ final class AiAnalysisResult
             confidence: (float) $data['confidence'],
             detectorConfidence: (float) $data['detector_confidence'],
             embedding: array_map('floatval', $data['embedding']),
+            modelVersion: array_map('strval', $data['model_version']),
         );
     }
 
@@ -94,6 +107,17 @@ final class AiAnalysisResult
     public function getEmbedding(): array
     {
         return $this->embedding;
+    }
+
+    /** @return array{yolo: string, vit: string, clip: string} */
+    public function getModelVersion(): array
+    {
+        return $this->modelVersion;
+    }
+
+    public function getClipModelVersion(): string
+    {
+        return $this->modelVersion['clip'];
     }
 
     /**
