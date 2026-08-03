@@ -11,7 +11,7 @@ import { PostList } from './post-list';
 import { AuthService, User } from '../../../core/services/auth';
 import { PostService, Publication, PublicationPage } from '../../../core/services/post';
 
-function makePublication(id: string, title: string): Publication {
+function makePublication(id: string, title: string, overrides: Partial<Publication> = {}): Publication {
   return {
     id,
     author: { id: '1', username: 'gemuser', avatarUrl: null },
@@ -26,6 +26,7 @@ function makePublication(id: string, title: string): Publication {
     tags: [],
     identification: null,
     createdAt: new Date().toISOString(),
+    ...overrides,
   };
 }
 
@@ -82,6 +83,20 @@ describe('PostList — US 2.2 Consultation des posts (liste)', () => {
 
     expect(component['loadError']()).toContain('Impossible de charger');
     expect(component['isLoading']()).toBe(false);
+  });
+
+  it('remplace les polygones du hero par une carte de spécimen analysé', () => {
+    postServiceMock.listPosts.mockReturnValue(of({
+      items: [makePublication('post-1', 'Quartz fumé', { status: 'ANALYZED' })],
+      limit: 20, nextCursor: null, hasNextPage: false,
+    }));
+
+    fixture.detectChanges();
+
+    const card = fixture.nativeElement.querySelector('.hero-specimen-card');
+    expect(fixture.nativeElement.querySelector('.hero-facet')).toBeNull();
+    expect(card).not.toBeNull();
+    expect(card.textContent).toContain('Quartz fumé');
   });
 
   it('goToNextPage() charge la page suivante si elle existe', () => {

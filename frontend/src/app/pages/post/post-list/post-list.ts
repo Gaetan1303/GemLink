@@ -36,6 +36,10 @@ export class PostList implements OnInit {
   protected readonly likeError  = signal<string | null>(null);
   protected readonly activeTag = signal<string | null>(null);
   protected readonly likingPostIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly heroPost = computed(() => this.posts().find(post =>
+    post.mediaType === 'IMAGE'
+    && (post.status === 'ANALYZED' || post.status === 'COMMUNITY_VALIDATED')
+  ) ?? null);
 
   protected readonly hasNextPage = signal(false);
   protected readonly hasPrevPage = computed(() => this.page() > 1);

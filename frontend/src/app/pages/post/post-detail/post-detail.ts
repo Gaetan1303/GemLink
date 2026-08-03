@@ -54,6 +54,7 @@ export class PostDetail implements OnInit, OnDestroy {
   protected readonly isLoading  = signal(true);
   protected readonly loadError  = signal<string | null>(null);
   protected readonly similarPosts = signal<SimilarPublication[]>([]);
+  protected readonly isSimilarLoading = signal(false);
 
   protected readonly isDeleting = signal(false);
   protected readonly deleteError = signal<string | null>(null);
@@ -122,9 +123,19 @@ export class PostDetail implements OnInit, OnDestroy {
   // révéler le résultat dès qu'il est prêt, sans que l'utilisateur ait à
   // recharger la page.
   private pollSubscription: Subscription | null = null;
+  private routeSubscription: Subscription | null = null;
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
+    this.routeSubscription = this.route.paramMap.subscribe(params => this.loadPost(params.get('id')));
+  }
+
+  private loadPost(id: string | null): void {
+    this.pollSubscription?.unsubscribe();
+    this.post.set(null);
+    this.similarPosts.set([]);
+    this.loadError.set(null);
+    this.isLoading.set(true);
+    this.isSimilarLoading.set(false);
 
     if (!id) {
       this.loadError.set('Post introuvable.');
@@ -139,11 +150,9 @@ export class PostDetail implements OnInit, OnDestroy {
 
         if (post.status === 'PENDING_ANALYSIS') {
           this.watchAnalysis(id);
+        } else {
+          this.loadSimilarPosts(post);
         }
-        this.postService.getSimilarPosts(id).subscribe({
-          next: ({ items }) => this.similarPosts.set(items),
-          error: () => this.similarPosts.set([]),
-        });
       },
       error: (err) => {
         this.loadError.set(
@@ -158,6 +167,7 @@ export class PostDetail implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.pollSubscription?.unsubscribe();
+    this.routeSubscription?.unsubscribe();
   }
 
   confirmDelete(): void {
@@ -234,8 +244,29 @@ export class PostDetail implements OnInit, OnDestroy {
    */
   private watchAnalysis(id: string): void {
     this.pollSubscription = this.postService.pollAnalysis(id).subscribe({
-      next: (post) => this.post.set(post),
+      next: (post) => {
+        this.post.set(post);
+        if (post.status !== 'PENDING_ANALYSIS') this.loadSimilarPosts(post);
+      },
       error: () => this.pollSubscription?.unsubscribe(),
+    });
+  }
+
+  private loadSimilarPosts(post: Publication): void {
+    if (post.status !== 'ANALYZED' && post.status !== 'COMMUNITY_VALIDATED') {
+      this.similarPosts.set([]);
+      this.isSimilarLoading.set(false);
+      return;
+    }
+
+    this.isSimilarLoading.set(true);
+    this.postService.getSimilarPosts(post.id, 5).pipe(
+      finalize(() => this.isSimilarLoading.set(false)),
+    ).subscribe({
+      next: ({ items }) => {
+        if (this.post()?.id === post.id) this.similarPosts.set(items.slice(0, 5));
+      },
+      error: () => this.similarPosts.set([]),
     });
   }
 

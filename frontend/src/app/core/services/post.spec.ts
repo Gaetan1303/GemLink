@@ -105,6 +105,19 @@ describe('PostService — US 2.1 Publication d\'un post MVP', () => {
     });
   });
 
+  describe('getSimilarPosts', () => {
+    it('US 2.6 CA-1 : demande au maximum cinq posts similaires', () => {
+      service.getSimilarPosts('post-uuid-123', 12).subscribe();
+
+      const req = httpTesting.expectOne(request =>
+        request.url === `${PUBLICATIONS_URL}/post-uuid-123/similar`
+        && request.params.get('limit') === '5'
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush({ items: [] });
+    });
+  });
+
   describe('toggleLike', () => {
     it('US 2.3 CA-1 : envoie une requête POST vers le endpoint de toggle', () => {
       service.toggleLike('post-uuid-123').subscribe();

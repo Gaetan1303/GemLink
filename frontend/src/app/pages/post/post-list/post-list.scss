@@ -10,25 +10,19 @@
 // ── Hero ──────────────────────────────────────────────────────────
 .post-list-hero {
   position: relative;
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  align-items: center;
+  gap: clamp(2rem, 6vw, 5rem);
+  max-width: 1120px;
+  margin: 0 auto;
   padding: 3.5rem 1.5rem 3rem;
   border-bottom: 1px solid theme.$line;
-
-  .hero-facet {
-    position: absolute;
-    top: -80px;
-    right: -60px;
-    width: 420px;
-    height: 420px;
-    opacity: 0.14;
-    pointer-events: none;
-  }
 
   &__content {
     position: relative;
     max-width: 640px;
-    margin: 0 auto;
-    text-align: center;
+    text-align: left;
   }
 
   &__subtitle {
@@ -55,6 +49,45 @@
     font-size: 2.4rem;
     color: theme.$gold;
     margin: 0;
+  }
+}
+
+.hero-specimen-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46% 1fr;
+  min-height: 220px;
+  overflow: hidden;
+  color: theme.$text;
+  text-decoration: none;
+  background: linear-gradient(145deg, theme.$surface-raised, theme.$surface 72%);
+  border: 1px solid rgba(197, 160, 89, .5);
+  box-shadow: 0 22px 55px rgba(0, 0, 0, .32);
+  transition: transform .2s ease, border-color .2s ease;
+  @include theme.facet-corner;
+
+  &:hover { border-color: theme.$gold; transform: translateY(-4px); }
+
+  &__media {
+    position: relative;
+    min-height: 220px;
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+    > span { position: absolute; left: .65rem; bottom: .65rem; display: inline-flex; align-items: center; gap: .3rem; padding: .35rem .5rem; color: theme.$ink; background: rgba(197, 160, 89, .92); font-family: theme.$font-mono; font-size: .62rem; text-transform: uppercase; }
+    mat-icon { width: 15px; height: 15px; font-size: 15px; }
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: .65rem;
+    padding: 1.15rem;
+
+    small { @include theme.catalog-label; color: theme.$violet; }
+    strong { color: theme.$gold; font-family: theme.$font-display; font-size: 1.15rem; line-height: 1.25; }
+    > span { display: flex; align-items: center; gap: .25rem; color: theme.$text-dim; font-size: .78rem; line-height: 1.45; }
+    mat-icon { flex: 0 0 auto; width: 16px; height: 16px; font-size: 16px; }
   }
 }
 
@@ -303,4 +336,15 @@
 @media (prefers-reduced-motion: reduce) {
   .post-card { animation: none; opacity: 1; }
   .skeleton-card { animation: none; }
+}
+
+@media (max-width: 760px) {
+  .post-list-hero { grid-template-columns: 1fr; padding-top: 2rem; }
+  .post-list-hero__content { text-align: center; }
+  .hero-specimen-card { width: min(100%, 480px); margin: 0 auto; }
+}
+
+@media (max-width: 430px) {
+  .hero-specimen-card { grid-template-columns: 1fr; }
+  .hero-specimen-card__media { min-height: 180px; }
 }
