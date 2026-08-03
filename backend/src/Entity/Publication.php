@@ -25,6 +25,8 @@ class Publication
     public const STATUS_PENDING_ANALYSIS = 'PENDING_ANALYSIS';
     public const STATUS_ANALYZED = 'ANALYZED';
     public const STATUS_ANALYSIS_FAILED = 'ANALYSIS_FAILED';
+    public const STATUS_AUTO_HIDDEN = 'AUTO_HIDDEN';
+    public const STATUS_PUBLISHED = 'PUBLISHED';
 
     /**
      * US 2.7 CA-4 : label mis à jour par consensus communautaire pondéré.

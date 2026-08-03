@@ -2,10 +2,12 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ModerationReport, ReportService } from '../../../core/services/report';
+import { SharedModule } from '../../../shared/shared-module';
+
 
 @Component({
   selector: 'app-moderation',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, SharedModule],
   templateUrl: './moderation.html',
   styleUrl: './moderation.scss',
 })

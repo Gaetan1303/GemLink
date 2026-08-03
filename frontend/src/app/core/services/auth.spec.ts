@@ -89,6 +89,31 @@ describe('AuthService — US 1.5 Déconnexion', () => {
     req.flush({ message: 'Déconnexion réussie.' });
   });
 
+  it('devrait supprimer un JWT expiré avant son envoi par l’intercepteur', () => {
+    const expiredToken = [
+      btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
+      btoa(JSON.stringify({ id: '1', username: 'gemuser', roles: ['ROLE_USER'], exp: 1 })),
+      'signature',
+    ].map(p => p.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')).join('.');
+    localStorage.setItem('token', expiredToken);
+
+    expect(service.getUsableAccessToken()).toBeNull();
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(service.currentUser()).toBeNull();
+  });
+
+  it('devrait conserver un JWT non expiré', () => {
+    const validToken = [
+      btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
+      btoa(JSON.stringify({ id: '1', username: 'gemuser', roles: ['ROLE_USER'], exp: Math.floor(Date.now() / 1000) + 900 })),
+      'signature',
+    ].map(p => p.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')).join('.');
+    localStorage.setItem('token', validToken);
+
+    expect(service.getUsableAccessToken()).toBe(validToken);
+    expect(localStorage.getItem('token')).toBe(validToken);
+  });
+
   // ── CA-3 : nettoyage local + redirection après succès ───────────────────
 
   it('CA-3 — devrait supprimer le token du localStorage après succès', () => {

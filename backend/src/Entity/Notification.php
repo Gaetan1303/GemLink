@@ -23,6 +23,7 @@ class Notification
     public const TYPE_NEW_LIKE = 'NEW_LIKE';
     public const TYPE_LEVEL_UP = 'LEVEL_UP';
     public const TYPE_BADGE_AWARDED = 'BADGE_AWARDED';
+    public const TYPE_POST_REMOVED_BY_MODERATION = 'POST_REMOVED_BY_MODERATION';
 
     public const TARGET_TYPE_PUBLICATION = 'PUBLICATION';
     public const TARGET_TYPE_LEVEL = 'LEVEL';
