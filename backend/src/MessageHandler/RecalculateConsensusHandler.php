@@ -54,6 +54,18 @@ final class RecalculateConsensusHandler
         $result = $this->consensusCalculator->calculate($publication);
 
         if (!$result->isValidated || $result->winningPierreId === null) {
+            // Un consensus précédemment acquis peut être rouvert après une
+            // nouvelle validation. Les résultats qui alimentaient le Trust
+            // Score ne sont alors plus définitifs et doivent être retirés.
+            if ($publication->getStatus() === Publication::STATUS_COMMUNITY_VALIDATED) {
+                $validators = $this->validatorsFor($publication);
+                $publication->setStatus(Publication::STATUS_ANALYZED);
+                $this->em->flush();
+                foreach ($validators as $validator) {
+                    $this->trustScores?->recalculate($validator);
+                }
+            }
+
             return;
         }
 
@@ -91,6 +103,17 @@ final class RecalculateConsensusHandler
         foreach ($validators as $validator) {
             $this->trustScores?->recalculate($validator);
         }
+    }
+
+    /** @return array<string, \App\Entity\User> */
+    private function validatorsFor(Publication $publication): array
+    {
+        $validators = [];
+        foreach ($this->validations->findByPublication($publication) as $validation) {
+            $validators[$validation->getUser()->getId()->toRfc4122()] = $validation->getUser();
+        }
+
+        return $validators;
     }
 
     private function supportsConsensus(Validation $validation, \App\Entity\Pierre $winningPierre): bool

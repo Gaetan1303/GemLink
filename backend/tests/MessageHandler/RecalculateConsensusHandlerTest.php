@@ -7,6 +7,7 @@ namespace App\Tests\MessageHandler;
 use App\Entity\Pierre;
 use App\Entity\Publication;
 use App\Entity\User;
+use App\Entity\Validation;
 use App\Message\RecalculateConsensusMessage;
 use App\MessageHandler\RecalculateConsensusHandler;
 use App\Repository\PierreRepository;
@@ -15,6 +16,7 @@ use App\Repository\PublicationRepository;
 use App\Repository\ValidationRepository;
 use App\Service\ConsensusCalculatorService;
 use App\Service\ConsensusResult;
+use App\Service\TrustScoreService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -33,6 +35,9 @@ final class RecalculateConsensusHandlerTest extends TestCase
     private LoggerInterface&MockObject $logger;
     private ValidationRepository&MockObject $validations;
     private MessageBusInterface&MockObject $messageBus;
+    private TrustScoreService&MockObject $trustScores;
+    /** @var Validation[] */
+    private array $publicationValidations = [];
     private RecalculateConsensusHandler $handler;
 
     protected function setUp(): void
@@ -44,9 +49,11 @@ final class RecalculateConsensusHandlerTest extends TestCase
         $this->em = $this->createMock(EntityManagerInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
         $this->validations = $this->createMock(ValidationRepository::class);
-        $this->validations->method('findByPublication')->willReturn([]);
+        $this->validations->method('findByPublication')
+            ->willReturnCallback(fn () => $this->publicationValidations);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+        $this->trustScores = $this->createMock(TrustScoreService::class);
 
         $this->handler = new RecalculateConsensusHandler(
             $this->publications,
@@ -57,6 +64,7 @@ final class RecalculateConsensusHandlerTest extends TestCase
             $this->logger,
             $this->validations,
             $this->messageBus,
+            $this->trustScores,
         );
     }
 
@@ -80,6 +88,24 @@ final class RecalculateConsensusHandlerTest extends TestCase
         $this->handler->__invoke(new RecalculateConsensusMessage((string) $publication->getId()));
 
         $this->assertSame(Publication::STATUS_PENDING_ANALYSIS, $publication->getStatus());
+    }
+
+    public function testLostConsensusReopensPublicationAndRecalculatesValidators(): void
+    {
+        $publication = $this->makePublication()->setStatus(Publication::STATUS_COMMUNITY_VALIDATED);
+        $pierre = new Pierre('Améthyste');
+        $validator = new User();
+        $validator->setUsername('validator')->setEmail('validator@example.com')->setPasswordHash('hashed');
+        $this->publicationValidations = [new Validation($validator, $publication, $pierre, 50)];
+
+        $this->publications->method('find')->willReturn($publication);
+        $this->consensusCalculator->method('calculate')->willReturn(ConsensusResult::none());
+        $this->em->expects($this->once())->method('flush');
+        $this->trustScores->expects($this->once())->method('recalculate')->with($validator);
+
+        $this->handler->__invoke(new RecalculateConsensusMessage((string) $publication->getId()));
+
+        $this->assertSame(Publication::STATUS_ANALYZED, $publication->getStatus());
     }
 
     public function testValidatedConsensusUpsertsMatchAndUpdatesStatus(): void
