@@ -1,0 +1,28 @@
+<main class="leaderboard-page">
+  <p class="eyebrow">Communauté</p>
+  <h1>Classement GemLink</h1>
+
+  @if (loading()) {
+    <p>Chargement…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  } @else {
+    <ol>
+      @for (entry of entries(); track entry.id) {
+        <li [class.podium]="entry.rank <= 3">
+          <strong class="rank">#{{ entry.rank }}</strong>
+          @if (entry.avatarUrl) {
+            <img [src]="entry.avatarUrl" [alt]="'Avatar de ' + entry.username" />
+          } @else {
+            <span class="avatar-placeholder" aria-hidden="true">{{ entry.username.charAt(0) | uppercase }}</span>
+          }
+          <a [routerLink]="['/users', entry.id]">{{ entry.username }}</a>
+          <span>Niveau {{ entry.level }}</span>
+          <b>{{ entry.points }} points</b>
+        </li>
+      } @empty {
+        <li class="empty">Le classement est encore vide.</li>
+      }
+    </ol>
+  }
+</main>

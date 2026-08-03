@@ -33,6 +33,9 @@ COPY . .
 
 ENV PATH=/root/.local/bin:$PATH
 ENV PYTHONUNBUFFERED=1
+ENV YOLO_CONFIG_DIR=/tmp/Ultralytics
+
+RUN mkdir -p /tmp/Ultralytics && chmod 0777 /tmp/Ultralytics
 
 RUN find . -type d -name "__pycache__" -exec rm -r {} + 2>/dev/null || true
 

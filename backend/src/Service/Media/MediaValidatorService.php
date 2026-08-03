@@ -71,7 +71,11 @@ class MediaValidatorService
 
         $duration = $this->probeDurationSeconds($pathname);
 
-        if ($duration !== null && $duration > self::MAX_VIDEO_DURATION_SECONDS) {
+        if ($duration === null) {
+            throw new InvalidMediaException('Impossible de vérifier la durée de la vidéo.');
+        }
+
+        if ($duration > self::MAX_VIDEO_DURATION_SECONDS) {
             throw new InvalidMediaException('La vidéo dépasse la durée maximale autorisée de 60 secondes.');
         }
 
@@ -104,7 +108,6 @@ class MediaValidatorService
         }
 
         $mimeType = finfo_file($finfo, $pathname);
-        finfo_close($finfo);
 
         if ($mimeType === false || $mimeType === '') {
             throw new InvalidMediaException('Impossible de déterminer le type réel du fichier média.');

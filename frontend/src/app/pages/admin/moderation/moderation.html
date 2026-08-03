@@ -1,0 +1,43 @@
+<main class="moderation-page">
+  <p class="eyebrow">Administration</p>
+  <h1>Signalements à modérer</h1>
+
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p>Chargement…</p>
+  } @else {
+    <div class="report-list">
+      @for (report of reports(); track report.id) {
+        <article>
+          <img [src]="report.publication.mediaUrl" alt="Publication signalée" />
+          <div class="report-content">
+            <h2>{{ report.publication.title || 'Sans titre' }}</h2>
+            <p><strong>{{ report.reasonType }}</strong> · signalé par {{ report.reporter.username }}</p>
+            @if (report.description) {
+              <p>{{ report.description }}</p>
+            }
+            <a [routerLink]="['/posts', report.publication.id]">Voir la publication</a>
+            <div class="actions">
+              <button
+                type="button"
+                [disabled]="processingId() === report.id"
+                (click)="decide(report, 'REJECTED')"
+              >Rejeter le signalement</button>
+              <button
+                type="button"
+                class="danger"
+                [disabled]="processingId() === report.id"
+                (click)="decide(report, 'ACCEPTED')"
+              >Masquer la publication</button>
+            </div>
+          </div>
+        </article>
+      } @empty {
+        <p>Aucun signalement en attente.</p>
+      }
+    </div>
+  }
+</main>

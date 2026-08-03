@@ -60,6 +60,8 @@ class CommentService
         if (!$postAuthor->getId()->equals($author->getId())) {
             $notification = new Notification($postAuthor, Notification::TYPE_NEW_COMMENT);
             $notification->setTarget($publication->getId(), Notification::TARGET_TYPE_PUBLICATION);
+            $notification->setActor($author);
+            $notification->setContent(sprintf('%s a commenté votre publication.', $author->getUsername()));
             $this->em->persist($notification);
         }
 

@@ -11,6 +11,7 @@ use App\Repository\PublicationPierreRepository;
 use App\Repository\PublicationRepository;
 use App\Service\ConsensusCalculatorService;
 use App\Service\PointsService;
+use App\Service\TrustScoreService;
 use App\Repository\ValidationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -38,6 +39,7 @@ final class RecalculateConsensusHandler
         private readonly LoggerInterface $logger,
         private readonly ValidationRepository $validations,
         private readonly MessageBusInterface $messageBus,
+        private readonly ?TrustScoreService $trustScores = null,
     ) {
     }
 
@@ -73,7 +75,9 @@ final class RecalculateConsensusHandler
 
         // Each supporting validation has its own source id, so a later
         // consensus recalculation or a Messenger retry cannot award twice.
+        $validators = [];
         foreach ($this->validations->findByPublication($publication) as $validation) {
+            $validators[$validation->getUser()->getId()->toRfc4122()] = $validation->getUser();
             if (!$this->supportsConsensus($validation, $winningPierre)) {
                 continue;
             }
@@ -83,6 +87,9 @@ final class RecalculateConsensusHandler
                 PointsService::ACTION_VALIDATION_CONSENSUS_CONFIRMED,
                 $validation->getId()->toRfc4122(),
             ));
+        }
+        foreach ($validators as $validator) {
+            $this->trustScores?->recalculate($validator);
         }
     }
 

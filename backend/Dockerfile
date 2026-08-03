@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libpq-dev \
     libicu-dev \
+    ffmpeg \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 

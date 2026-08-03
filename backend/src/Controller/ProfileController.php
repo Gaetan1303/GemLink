@@ -77,7 +77,7 @@ final class ProfileController extends AbstractController
     {
         $progression = $this->progression->calculate($user->getPoints());
 
-        return ['id' => $user->getId()->toRfc4122(), 'username' => $user->getUsername(), 'avatarUrl' => $user->getAvatarUrl(), 'bio' => $user->getBio(), 'level' => $progression['level'], 'progression' => $progression,
+        return ['id' => $user->getId()->toRfc4122(), 'username' => $user->getUsername(), 'avatarUrl' => $user->getAvatarUrl(), 'bio' => $user->getBio(), 'trustScore' => $user->getTrustScore(), 'level' => $progression['level'], 'progression' => $progression,
             'badges' => array_map(static fn ($badge) => ['id' => $badge->getId()->toRfc4122(), 'name' => $badge->getName(), 'description' => $badge->getDescription()], $user->getBadges()->toArray()),
             'interestTags' => array_map(static fn ($tag) => $tag->getName(), $user->getInterestTags()->toArray()),
             'posts' => array_map(fn (Publication $p) => ['id' => $p->getId()->toRfc4122(), 'title' => $p->getTitle(), 'description' => $p->getDescription(), 'mediaUrl' => $p->getMediaUrl(), 'mediaType' => $p->getMediaType(), 'createdAt' => $p->getCreatedAt()->format(DATE_ATOM)], $this->publications->findActiveByUser($user))];

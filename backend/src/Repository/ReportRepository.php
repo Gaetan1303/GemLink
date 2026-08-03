@@ -16,6 +16,21 @@ class ReportRepository extends ServiceEntityRepository
         parent::__construct($registry, Report::class);
     }
 
+    /** @return Report[] */
+    public function findForModeration(string $status = 'PENDING', int $limit = 100): array
+    {
+        return $this->createQueryBuilder('report')
+            ->addSelect('user', 'publication', 'author')
+            ->join('report.user', 'user')
+            ->join('report.publication', 'publication')
+            ->join('publication.user', 'author')
+            ->andWhere('report.status = :status')
+            ->setParameter('status', $status)
+            ->orderBy('report.createdAt', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()->getResult();
+    }
+
     //    /**
     //     * @return Report[] Returns an array of Report objects
     //     */

@@ -27,6 +27,7 @@ class PointsService
         private readonly PointTransactionRepository $transactions,
         private readonly AdminSettingsProvider $settings,
         private readonly ?LevelProgressionService $progression = null,
+        private readonly ?LeaderboardService $leaderboard = null,
     ) {
     }
 
@@ -51,5 +52,6 @@ class PointsService
         $user->addPoints($amount);
         $this->progression?->synchronize($user, $previousPoints);
         $this->em->flush();
+        $this->leaderboard?->update($user);
     }
 }

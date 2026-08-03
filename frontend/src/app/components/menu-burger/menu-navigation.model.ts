@@ -20,6 +20,7 @@ export const NAVIGATION_MENUS: Record<MenuRole, MenuConfig> = {
     ],
     menuItems: [
       { label: 'Accueil',     route: '/',              iconClass: 'home' },
+      { label: 'Classement',  route: '/leaderboard',   iconClass: 'leaderboard' },
       { label: 'Connexion',   route: '/auth/login',    iconClass: 'login' },
       { label: 'Inscription', route: '/auth/register', iconClass: 'person_add' },
     ],
@@ -38,6 +39,8 @@ export const NAVIGATION_MENUS: Record<MenuRole, MenuConfig> = {
       { label: 'Identifier',  route: '/posts/new',  iconClass: 'center_focus_strong' },
       { label: 'Profil',      route: '/users/me',    iconClass: 'person' },
       { label: 'Galerie',     route: '/vitrine', iconClass: 'collections' },
+      { label: 'Notifications', route: '/notifications', iconClass: 'notifications' },
+      { label: 'Classement', route: '/leaderboard', iconClass: 'leaderboard' },
       { label: 'Faction',     route: '/factions',    iconClass: 'groups' },
       { label: 'Badge',       route: '/badges',      iconClass: 'military_tech' },
       { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },

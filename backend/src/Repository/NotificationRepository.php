@@ -29,6 +29,17 @@ class NotificationRepository extends ServiceEntityRepository
         ]) !== null;
     }
 
+    /** @return Notification[] */
+    public function findRecentForUser(User $user, int $limit = 50): array
+    {
+        return $this->findBy(['user' => $user], ['createdAt' => 'DESC'], max(1, min(100, $limit)));
+    }
+
+    public function countUnreadForUser(User $user): int
+    {
+        return $this->count(['user' => $user, 'isRead' => false]);
+    }
+
     //    /**
     //     * @return Notification[] Returns an array of Notification objects
     //     */

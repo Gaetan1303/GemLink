@@ -96,17 +96,15 @@ final class MediaValidatorServiceTest extends TestCase
         $validator->validate($file);
     }
 
-    public function testMissingFfprobeBinaryDegradesGracefullyWithoutBlockingUpload(): void
+    public function testMissingFfprobeBinaryRejectsUnverifiableVideo(): void
     {
         // CA-2 : environnement sans ffmpeg (ex. poste de dev) -> la vidéo est acceptée
         // sans vérification de durée plutôt que de bloquer toute publication vidéo.
         $validator = new MediaValidatorService(ffprobeBinary: '/path/does/not/exist/ffprobe');
         $file = $this->makeUploadedFile($this->createMp4Header(), 'pierre.mp4', 'video/mp4');
 
-        $result = $validator->validate($file);
-
-        $this->assertTrue($result->isVideo());
-        $this->assertNull($result->durationSeconds);
+        $this->expectException(InvalidMediaException::class);
+        $validator->validate($file);
     }
 
     // ── Helpers ──────────────────────────────────────────────────
@@ -150,9 +148,12 @@ final class MediaValidatorServiceTest extends TestCase
 
     private function createFfprobeStub(float $durationSeconds): string
     {
-        $path = $this->tmpDir . '/ffprobe_stub.sh';
-        file_put_contents($path, "#!/bin/sh\necho {$durationSeconds}\n");
-        chmod($path, 0755);
+        $isWindows = DIRECTORY_SEPARATOR === '\\';
+        $path = $this->tmpDir . ($isWindows ? '/ffprobe_stub.bat' : '/ffprobe_stub.sh');
+        file_put_contents($path, $isWindows
+            ? "@echo off\r\necho {$durationSeconds}\r\n"
+            : "#!/bin/sh\necho {$durationSeconds}\n");
+        if (!$isWindows) chmod($path, 0755);
 
         return $path;
     }

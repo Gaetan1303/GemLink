@@ -14,6 +14,7 @@ use App\Repository\PublicationLikeRepository;
 use App\Repository\PublicationRepository;
 use App\Service\LikeService;
 use App\Service\PostService;
+use App\Service\SimilarPublicationService;
 use App\Service\FeedCacheService;
 use App\Service\AdminSettingsProvider;
 use DateTimeImmutable;
@@ -53,6 +54,7 @@ final class PublicationController extends AbstractController
         private readonly PublicationLikeRepository $likes,
         private readonly LikeService $likeService,
         private readonly AdminSettingsProvider $settings,
+        private readonly SimilarPublicationService $similarPublications,
     ) {
     }
 
@@ -109,6 +111,21 @@ final class PublicationController extends AbstractController
         $this->postService->recordView($publication);
 
         return $this->json($this->serializePost($publication));
+    }
+
+    #[Route('/{id}/similar', name: 'publication_similar', methods: ['GET'])]
+    public function similar(string $id, Request $request): JsonResponse
+    {
+        $publication = $this->findActiveOrFail($id);
+        if ($publication instanceof JsonResponse) return $publication;
+
+        $items = [];
+        foreach ($this->similarPublications->find($publication, $request->query->getInt('limit', 5)) as $match) {
+            $similar = $this->publications->findOneActiveById(Uuid::fromString($match['id']));
+            if ($similar === null) continue;
+            $items[] = $this->serializePost($similar) + ['similarity' => $match['similarity']];
+        }
+        return $this->json(['items' => $items]);
     }
 
     /**

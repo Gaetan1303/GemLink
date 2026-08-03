@@ -46,6 +46,10 @@ export interface Publication {
   createdAt:      string;
 }
 
+export interface SimilarPublication extends Publication {
+  similarity: number;
+}
+
 /** Réponse du toggle `POST /api/publications/{id}/like`. */
 export interface LikeToggleResponse {
   liked: boolean;
@@ -140,6 +144,10 @@ export class PostService {
    */
   getPost(postId: string): Observable<Publication> {
     return this.#http.get<Publication>(`${this.#apiUrl}/${postId}`);
+  }
+
+  getSimilarPosts(postId: string): Observable<{ items: SimilarPublication[] }> {
+    return this.#http.get<{ items: SimilarPublication[] }>(`${this.#apiUrl}/${postId}/similar`);
   }
 
   /** US 2.3 CA-1 : le serveur ajoute ou retire le like selon son état actuel. */

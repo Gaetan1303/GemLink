@@ -21,7 +21,7 @@ services:
       REDIS_PORT: 6379
 
       AI_SERVICE_URL: http://gl-ai-brain:3000
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-changeme-en-production}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
 
     ports:
       - "8000:8080"
@@ -143,7 +143,8 @@ services:
       OLLAMA_URL: http://gl-ai-llm:11434
       VIT_MODEL_PATH: checkpoints/vit_stones.pth
       YOLO_MODEL_PATH: runs/detect/runs/stone_detector/weights/best.pt
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-changeme-en-production}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
+      MEDIA_INTERNAL_BASE_URL: http://gemlink-php:8080
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]

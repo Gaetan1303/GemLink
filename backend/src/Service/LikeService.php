@@ -61,6 +61,7 @@ class LikeService
         $notification = new Notification($postAuthor, Notification::TYPE_NEW_LIKE);
         $notification->setTarget($publication->getId(), Notification::TARGET_TYPE_PUBLICATION);
         $notification->setActor($liker);
+        $notification->setContent(sprintf('%s aime votre publication.', $liker->getUsername()));
         $this->em->persist($notification);
     }
 }

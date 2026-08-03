@@ -26,3 +26,11 @@ framework:
             'App\Message\RecalculateConsensusMessage': async
             'App\Message\RunFineTuningMessage': async
             'App\Message\AwardPointsMessage': async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                async: 'in-memory://'
+                failed: 'in-memory://'
+                low_priority: 'in-memory://'

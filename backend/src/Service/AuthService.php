@@ -241,7 +241,7 @@ public function __construct(
             $payload = $this->decodeJwtPayloadUnsafe($rawJwt);
             $jti = isset($payload['jti']) && is_string($payload['jti']) ? $payload['jti'] : '';
             $exp = isset($payload['exp']) && is_int($payload['exp']) ? $payload['exp'] : 0;
-            $ttl = $exp - time();
+            $ttl = min(self::JWT_TTL_SECONDS, $exp - time());
 
             if ($jti !== '' && $ttl > 0) {
                 $item = $this->cachePool->getItem(JwtBlocklistListener::blocklistKey($jti));

@@ -41,6 +41,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     deletePost: ReturnType<typeof vi.fn>;
     pollAnalysis: ReturnType<typeof vi.fn>;
     toggleLike: ReturnType<typeof vi.fn>;
+    getSimilarPosts: ReturnType<typeof vi.fn>;
   };
 
   function configure(userValue: User | null | undefined, postId = 'post-1'): void {
@@ -75,6 +76,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
       // comportement de polling non testé dans ces specs-ci.
       pollAnalysis: vi.fn().mockReturnValue(of()),
       toggleLike: vi.fn(),
+      getSimilarPosts: vi.fn().mockReturnValue(of({ items: [] })),
     };
   });
 
@@ -205,6 +207,7 @@ describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', ()
     deletePost: ReturnType<typeof vi.fn>;
     pollAnalysis: ReturnType<typeof vi.fn>;
     toggleLike: ReturnType<typeof vi.fn>;
+    getSimilarPosts: ReturnType<typeof vi.fn>;
   };
 
   function configure(post: Publication): void {
@@ -213,6 +216,7 @@ describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', ()
       deletePost: vi.fn(),
       pollAnalysis: vi.fn().mockReturnValue(of()),
       toggleLike: vi.fn(),
+      getSimilarPosts: vi.fn().mockReturnValue(of({ items: [] })),
     };
 
     TestBed.configureTestingModule({

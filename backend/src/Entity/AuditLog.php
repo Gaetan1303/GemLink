@@ -20,8 +20,11 @@ use Symfony\Component\Uid\Uuid;
 class AuditLog
 {
     public const ACTION_COMMENT_DELETED = 'COMMENT_DELETED';
+    public const ACTION_REPORT_ACCEPTED = 'REPORT_ACCEPTED';
+    public const ACTION_REPORT_REJECTED = 'REPORT_REJECTED';
 
     public const TARGET_TYPE_COMMENTAIRE = 'COMMENTAIRE';
+    public const TARGET_TYPE_REPORT = 'REPORT';
 
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]

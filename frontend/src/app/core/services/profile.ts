@@ -19,7 +19,7 @@ export interface LevelProgression {
 }
 export interface PublicProfile {
   id: string; username: string; avatarUrl: string | null; bio: string | null;
-  level: number; progression: LevelProgression; badges: ProfileBadge[]; posts: ProfilePost[];
+  trustScore: number; level: number; progression: LevelProgression; badges: ProfileBadge[]; posts: ProfilePost[];
 }
 
 export type PointsAction =

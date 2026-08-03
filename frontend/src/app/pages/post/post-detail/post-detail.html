@@ -139,6 +139,34 @@
 
       <!-- US 2.4 — Commentaires MVP -->
       <app-comment-section [postId]="p.id" />
+
+      @if (similarPosts().length > 0) {
+        <section class="similar-posts" aria-labelledby="similar-posts-title">
+          <h2 id="similar-posts-title">Pierres similaires</h2>
+          <div class="similar-posts__grid">
+            @for (similar of similarPosts(); track similar.id) {
+              <a class="similar-post" [routerLink]="['/posts', similar.id]">
+                <img [src]="similar.mediaUrl" [alt]="similar.title || 'Pierre similaire'" />
+                <span>{{ similar.title || similar.identification?.nom || 'Sans titre' }}</span>
+                <small>{{ similar.similarity | percent:'1.0-0' }} similaire</small>
+              </a>
+            }
+          </div>
+
+          @if (canReport()) {
+            <button type="button" class="btn-secondary" (click)="showReport.set(!showReport())">Signaler</button>
+            @if (showReport()) {
+              <div class="report-reasons">
+                <button type="button" (click)="submitReport('INAPPROPRIATE_CONTENT')">Contenu inapproprié</button>
+                <button type="button" (click)="submitReport('WRONG_IDENTIFICATION')">Mauvaise identification</button>
+                <button type="button" (click)="submitReport('SPAM')">Spam</button>
+                <button type="button" (click)="submitReport('HARASSMENT')">Harcèlement</button>
+              </div>
+            }
+            @if (reportMessage()) { <p role="status">{{ reportMessage() }}</p> }
+          }
+        </section>
+      }
     }
 
   </div>
