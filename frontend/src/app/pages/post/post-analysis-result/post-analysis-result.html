@@ -17,9 +17,6 @@
     @if (isUncertain()) {
       <p class="identification-warning" role="status"><mat-icon aria-hidden="true">warning_amber</mat-icon><span><strong>Identification incertaine</strong> — confiance modérée, le résultat doit être interprété avec prudence.</span></p>
     }
-    @if (result.catalogueUrl) {
-      <a class="catalogue-link" [href]="result.catalogueUrl">Voir la fiche du catalogue Stone <mat-icon aria-hidden="true">arrow_forward</mat-icon></a>
-    }
     <dl class="identification-properties">
       @if (result.categorie) { <div><dt>Catégorie</dt><dd>{{ result.categorie }}</dd></div> }
       @if (result.durete !== null) { <div><dt>Dureté (Mohs)</dt><dd>{{ result.durete }}</dd></div> }

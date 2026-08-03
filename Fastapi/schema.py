@@ -1,4 +1,7 @@
 # schema.py
+import json
+import re
+import unicodedata
 from typing import Any, Optional
 from pydantic import BaseModel, Field, model_validator
 
@@ -14,14 +17,24 @@ from pydantic import BaseModel, Field, model_validator
 _NOT_DETERMINED = "Non déterminé"
 
 _KEY_ALIASES = {
-    "dureté": "durete",
-    "densité": "densite",
-    "système_cristallin": "systeme_cristallin",
-    "système cristallin": "systeme_cristallin",
-    "éclat": "eclat",
+    "durete": "durete",
+    "densite": "densite",
+    "systeme_cristallin": "systeme_cristallin",
+    "eclat": "eclat",
+    "indice_refraction": "indice_refraction",
     "indice_de_refraction": "indice_refraction",
-    "indice_réfraction": "indice_refraction",
 }
+
+
+def _key_signature(key: Any) -> Any:
+    if not isinstance(key, str):
+        return key
+    without_accents = "".join(
+        character
+        for character in unicodedata.normalize("NFKD", key)
+        if not unicodedata.combining(character)
+    )
+    return re.sub(r"[^a-z0-9]+", "_", without_accents.casefold()).strip("_")
 
 
 def _normalize_keys(data: Any) -> Any:
@@ -30,7 +43,8 @@ def _normalize_keys(data: Any) -> Any:
     if isinstance(data, dict):
         normalized = {}
         for key, value in data.items():
-            clean_key = _KEY_ALIASES.get(key, key)
+            signature = _key_signature(key)
+            clean_key = _KEY_ALIASES.get(signature, signature)
             normalized[clean_key] = _normalize_keys(value)
         return normalized
     if isinstance(data, list):
@@ -38,13 +52,28 @@ def _normalize_keys(data: Any) -> Any:
     return data
 
 
-def _coerce_to_string(value: Any) -> Any:
+def _coerce_to_string(value: Any) -> Optional[str]:
     """Les champs physiques/optiques sont déclarés comme str : un LLM renvoie
     parfois un nombre brut (3.06 au lieu de "3.06"). On caste plutôt que de
     rejeter — la donnée reste correcte, seul le type change."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value.strip()
     if isinstance(value, (int, float)):
         return str(value)
-    return value
+    if isinstance(value, list):
+        values = [_coerce_to_string(item) for item in value]
+        return " - ".join(item for item in values if item not in (None, ""))
+    if isinstance(value, dict):
+        normalized = _normalize_keys(value)
+        minimum = normalized.get("min", normalized.get("minimum"))
+        maximum = normalized.get("max", normalized.get("maximum"))
+        if minimum is not None or maximum is not None:
+            bounds = [_coerce_to_string(item) for item in (minimum, maximum)]
+            return " - ".join(item for item in bounds if item not in (None, ""))
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value)
 
 
 class PhysicalProperties(BaseModel):
@@ -69,7 +98,7 @@ class OpticalProperties(BaseModel):
     couleur: str = Field(..., description="Couleurs principales et variantes")
     eclat: str = Field(..., description="Ex: Vitreux, Gras, Métallique")
     transparence: str = Field(..., description="Ex: Transparent, Translucide, Opaque")
-    indice_refraction: Optional[str] = None
+    indice_refraction: str = _NOT_DETERMINED
 
     @model_validator(mode="before")
     @classmethod
@@ -80,8 +109,8 @@ class OpticalProperties(BaseModel):
         for field in ("couleur", "eclat", "transparence"):
             value = _coerce_to_string(data.get(field))
             data[field] = value if value not in (None, "") else _NOT_DETERMINED
-        if "indice_refraction" in data:
-            data["indice_refraction"] = _coerce_to_string(data["indice_refraction"])
+        indice = _coerce_to_string(data.get("indice_refraction"))
+        data["indice_refraction"] = indice if indice not in (None, "") else _NOT_DETERMINED
         return data
 
 

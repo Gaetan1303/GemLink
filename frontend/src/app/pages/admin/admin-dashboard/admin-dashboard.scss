@@ -105,22 +105,99 @@ h2 {
 }
 .job {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.65rem;
-  margin-bottom: 1.2rem;
+  gap: 0.7rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
-.job span,
+.job:last-child {
+  border-bottom: 0;
+}
+.job__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.65rem;
+  align-items: start;
+}
+.job__header > div {
+  min-width: 0;
+}
+.job__header > b {
+  min-width: 3rem;
+  color: theme.$gold;
+  font-family: theme.$font-display;
+  font-size: 1.15rem;
+  text-align: right;
+}
+.job__header span,
 .version span {
   display: block;
   margin-top: 0.25rem;
   color: theme.$text-dim;
   font-size: 0.78rem;
 }
-.job b {
+.job__header .status {
+  margin-top: 0;
+}
+.job__samples,
+.job__error {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  color: theme.$text-dim;
+  font-size: 0.78rem;
+}
+.job__samples mat-icon,
+.job__error mat-icon {
+  width: 17px;
+  height: 17px;
+  font-size: 17px;
+}
+.job__error {
+  color: theme.$coral;
+}
+.job-logs {
+  padding: 0.65rem 0.75rem;
+  background: rgba(4, 10, 32, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 0.45rem;
+}
+.job-logs summary {
+  cursor: pointer;
+  color: theme.$text-dim;
+  font-size: 0.78rem;
+}
+.job-logs summary span {
+  float: right;
+  margin: 0;
+  color: theme.$violet;
+}
+.job-logs ol {
+  display: grid;
+  gap: 0.4rem;
+  max-height: 150px;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.job-logs li {
+  color: theme.$text-dim;
+  font-family: theme.$font-mono;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+.job-logs li > span {
+  display: inline-block;
+  min-width: 4.2rem;
+  margin: 0 0.4rem 0 0;
+  color: theme.$emerald;
+}
+.job-logs li[data-level='WARNING'] > span {
   color: theme.$gold;
 }
-.job mat-progress-bar {
-  grid-column: 1 / -1;
+.job-logs li[data-level='ERROR'] > span {
+  color: theme.$coral;
 }
 .admin-section {
   margin-top: 3.5rem;
@@ -132,10 +209,98 @@ h2 {
   gap: 1rem;
   margin-bottom: 1rem;
 }
+.live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: theme.$emerald;
+  font-size: 0.8rem;
+}
+.live-indicator i {
+  width: 0.55rem;
+  height: 0.55rem;
+  background: theme.$emerald;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px rgba(123, 201, 154, 0.12);
+}
+.training-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.training-stat {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.15rem 0.7rem;
+  padding: 1.15rem;
+  border: 1px solid theme.$line;
+  background: linear-gradient(145deg, rgba(22, 36, 77, 0.9), rgba(10, 19, 47, 0.85));
+  @include theme.facet-corner-sm;
+}
+.training-stat mat-icon {
+  grid-row: 1 / 4;
+  color: theme.$gold;
+}
+.training-stat > span,
+.training-stat small {
+  color: theme.$text-dim;
+  font-size: 0.75rem;
+}
+.training-stat strong {
+  color: theme.$text;
+  font-family: theme.$font-display;
+  font-size: 1.55rem;
+}
+.training-stat__date {
+  font-size: 1rem !important;
+  line-height: 1.5;
+}
 .training-form {
   display: grid;
   gap: 0.75rem;
   min-width: 0;
+}
+.training-form__intro,
+.versions__heading {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.35rem;
+}
+.training-form__intro > mat-icon,
+.versions__heading > mat-icon {
+  color: theme.$gold;
+}
+.training-form__intro strong,
+.versions__heading strong {
+  color: theme.$text;
+  font-family: theme.$font-display;
+  font-size: 1.05rem;
+}
+.training-form__intro p,
+.versions__heading span {
+  margin: 0.2rem 0 0;
+  color: theme.$text-dim;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.training-form__quality {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.7rem 0.8rem;
+  color: theme.$emerald;
+  background: rgba(123, 201, 154, 0.08);
+  border-left: 2px solid theme.$emerald;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.training-form__quality mat-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
 }
 .training-form mat-form-field {
   min-width: 0;
@@ -158,6 +323,11 @@ h2 {
   display: grid;
   gap: 0.2rem;
 }
+.versions__heading {
+  justify-content: space-between;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
 .version {
   display: flex;
   align-items: center;
@@ -165,8 +335,25 @@ h2 {
   padding: 0.8rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
+.version--active {
+  margin-inline: -0.75rem;
+  padding-inline: 0.75rem;
+  background: rgba(123, 201, 154, 0.06);
+}
 .version > div {
   flex: 1;
+}
+.version small {
+  display: block;
+  margin-top: 0.2rem;
+  color: rgba(240, 240, 240, 0.48);
+  font-size: 0.68rem;
+}
+.version button mat-icon {
+  width: 17px;
+  height: 17px;
+  margin-right: 0.25rem;
+  font-size: 17px;
 }
 .status {
   display: inline-block;
@@ -464,6 +651,9 @@ td mat-form-field {
   .level-admin-layout {
     grid-template-columns: 1fr;
   }
+  .training-overview {
+    grid-template-columns: 1fr;
+  }
   .points-settings form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -490,6 +680,12 @@ td mat-form-field {
   }
   .model-layout {
     gap: 1rem;
+  }
+  .job__header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .job__header > b {
+    grid-column: 2;
   }
   .training-form button,
   .points-settings form button,

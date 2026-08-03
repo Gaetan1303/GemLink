@@ -60,3 +60,54 @@ describe('Admin level management', () => {
     request.flush(null);
   });
 });
+
+describe('Admin fine-tuning management', () => {
+  let service: Admin;
+  let http: HttpTestingController;
+  const adminUrl = `${environment.apiUrl}/api/admin`;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(Admin);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  it('starts a versioned ViT fine-tuning cycle with the configured threshold', () => {
+    service.startFineTuning(75, 'vit-v1.2.0').subscribe();
+
+    const request = http.expectOne(`${adminUrl}/models/fine-tuning`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ minTrustScore: 75, versionName: 'vit-v1.2.0' });
+    request.flush({ id: 'job-1', status: 'pending', progress: 0, minTrustScore: 75 });
+  });
+
+  it('polls the detailed job status including logs', () => {
+    service.getFineTuningJob('job-1').subscribe((job) => {
+      expect(job.progress).toBe(42);
+      expect(job.logs?.[0]).toEqual({ level: 'INFO', message: 'Epoch 2/5' });
+    });
+
+    const request = http.expectOne(`${adminUrl}/models/fine-tuning/job-1`);
+    expect(request.request.method).toBe('GET');
+    request.flush({
+      id: 'job-1',
+      status: 'running',
+      progress: 42,
+      minTrustScore: 75,
+      logs: [{ level: 'INFO', message: 'Epoch 2/5' }],
+    });
+  });
+
+  it('activates an earlier ViT version for rollback', () => {
+    service.activateVit('model-1').subscribe();
+
+    const request = http.expectOne(`${adminUrl}/models/vit/model-1/activate`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush({ id: 'model-1', name: 'vit-v1.1.0', status: 'active', accuracy: .9, f1Score: .89 });
+  });
+});

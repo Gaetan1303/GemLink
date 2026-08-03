@@ -57,18 +57,51 @@
     <mat-card class="panel training"
       ><mat-card-header
         ><mat-card-title>Fine-tuning en cours</mat-card-title
-        ><mat-card-subtitle>Mise à jour toutes les 10 secondes</mat-card-subtitle></mat-card-header
+        ><mat-card-subtitle>Mise à jour automatique toutes les 5 secondes</mat-card-subtitle></mat-card-header
       ><mat-card-content>
         @for (job of data.fineTuningJobs; track job.id) {
-        <div class="job">
-          <div>
-            <strong>{{ job.model.name }}</strong
-            ><span>{{ job.minTrustScore }}+ Trust Score · {{ job.status }}</span>
+        <article class="job" [attr.aria-label]="'Cycle ' + jobModelName(job)">
+          <div class="job__header">
+            <div>
+              <strong>{{ jobModelName(job) }}</strong>
+              <span>Trust Score strictement supérieur à {{ job.minTrustScore }}</span>
+            </div>
+            <span class="status" [class.status--active]="job.status === 'running'">
+              {{ job.status }}
+            </span>
+            <b>{{ job.progress }}%</b>
           </div>
-          <b>{{ job.progress }}%</b><mat-progress-bar mode="determinate" [value]="job.progress" />
-        </div>
+          <mat-progress-bar
+            mode="determinate"
+            [value]="job.progress"
+            [attr.aria-label]="'Progression de ' + jobModelName(job)"
+          />
+          @if (job.sampleCount !== undefined) {
+          <p class="job__samples">
+            <mat-icon>dataset</mat-icon>{{ job.sampleCount }} validations retenues
+            @if (job.excludedCandidateCount !== undefined) {
+            <span>· {{ job.excludedCandidateCount }} écartées</span>
+            }
+          </p>
+          }
+          @if (job.error) {
+          <p class="job__error" role="alert"><mat-icon>error_outline</mat-icon>{{ job.error }}</p>
+          }
+          @if (job.logs?.length) {
+          <details class="job-logs" open>
+            <summary>Journal du cycle <span>{{ job.logs?.length }} entrées</span></summary>
+            <ol aria-live="polite" aria-relevant="additions">
+              @for (log of job.logs?.slice(-6); track $index) {
+              <li [attr.data-level]="logLevel(log)">
+                <span>{{ logLevel(log) }}</span>{{ logMessage(log) }}
+              </li>
+              }
+            </ol>
+          </details>
+          }
+        </article>
         } @empty {
-        <p class="empty">Aucun entraînement actif.</p>
+        <p class="empty">Aucun cycle actif. Le prochain entraînement peut être préparé ci-dessous.</p>
         }
       </mat-card-content></mat-card
     >
@@ -342,55 +375,119 @@
     </div>
   </section>
 
-  <section class="admin-section">
+  <section class="admin-section" aria-labelledby="fine-tuning-title">
     <div class="section-heading">
       <div>
         <p class="eyebrow">Modèle de reconnaissance</p>
-        <h2>Fine-tuning ViT</h2>
+        <h2 id="fine-tuning-title">Fine-tuning ViT</h2>
       </div>
+      @if (hasRunningFineTuning()) {
+      <span class="live-indicator"><i></i>Cycle en direct</span>
+      }
     </div>
+    @if (fineTuningOverview(); as overview) {
+    <div class="training-overview" aria-label="Préparation du prochain cycle">
+      <article class="training-stat">
+        <mat-icon>fact_check</mat-icon>
+        <span>Nouvelles validations</span>
+        <strong>{{ overview.availableValidations ?? '—' }}</strong>
+        <small>Disponibles pour le dataset candidat</small>
+      </article>
+      <article class="training-stat">
+        <mat-icon>verified_user</mat-icon>
+        <span>Seuil de qualité</span>
+        <strong>> {{ overview.trustScoreThreshold ?? '—' }}</strong>
+        <small>Trust Score strictement supérieur</small>
+      </article>
+      <article class="training-stat">
+        <mat-icon>history</mat-icon>
+        <span>Dernier cycle exécuté</span>
+        @if (overview.lastCycleAt) {
+        <strong class="training-stat__date">{{ overview.lastCycleAt | date: 'medium' }}</strong>
+        } @else {
+        <strong class="training-stat__date">Aucun cycle enregistré</strong>
+        }
+        <small>Historique des entraînements ViT</small>
+      </article>
+    </div>
+    }
     <div class="model-layout">
-      <mat-card class="panel"
+      <mat-card class="panel training-launcher"
         ><mat-card-content
           ><form [formGroup]="fineTuningForm" (ngSubmit)="startFineTuning()" class="training-form">
+            <div class="training-form__intro">
+              <mat-icon>model_training</mat-icon>
+              <div>
+                <strong>Préparer un nouveau modèle</strong>
+                <p>Le dataset est composé uniquement des validations communautaires qualifiées.</p>
+              </div>
+            </div>
             <mat-form-field appearance="outline"
               ><mat-label>Nom de version</mat-label
               ><input matInput class="version-name-input" formControlName="versionName"
-            /></mat-form-field>
+              />@if (fineTuningForm.controls.versionName.hasError('pattern')) {
+              <mat-error>Format attendu : vit-v1.2.0</mat-error>
+              }</mat-form-field>
             <mat-form-field appearance="outline" class="trust-score-field"
-              ><mat-label>Trust Score minimum</mat-label
+              ><mat-label>Seuil de Trust Score configuré</mat-label
               ><input
                 matInput
                 type="number"
                 formControlName="minTrustScore"
                 min="0"
                 max="100"
+                readonly
               /><mat-hint class="training-form__hint"
-                >Seules les validations fiables alimentent le dataset.</mat-hint
+                >Inclusion si Trust Score > {{ fineTuningForm.controls.minTrustScore.value }}.</mat-hint
               ></mat-form-field
             >
-            <button mat-flat-button type="submit" [disabled]="working()">
-              Lancer le fine-tuning
+            <div class="training-form__quality">
+              <mat-icon>shield</mat-icon>
+              Les contributions sous le seuil sont exclues avant l'entraînement.
+            </div>
+            <button
+              mat-flat-button
+              type="submit"
+              [disabled]="fineTuningForm.invalid || working() || hasRunningFineTuning()"
+            >
+              <mat-icon>play_arrow</mat-icon>
+              {{ hasRunningFineTuning() ? 'Un cycle est déjà en cours' : 'Lancer le fine-tuning' }}
             </button>
           </form></mat-card-content
         ></mat-card
       >
-      <mat-card class="panel"
+      <mat-card class="panel version-history"
         ><mat-card-content class="versions">
+          <div class="versions__heading">
+            <div>
+              <strong>Versions du modèle</strong>
+              <span>Restaurez une version stable en cas de régression.</span>
+            </div>
+            <mat-icon>history</mat-icon>
+          </div>
           @for (model of versions(); track model.id) {
-          <div class="version">
+          <article class="version" [class.version--active]="model.status === 'active'">
             <div>
               <strong>{{ model.name }}</strong
               ><span>Accuracy {{ model.accuracy ?? '—' }} · F1 {{ model.f1Score ?? '—' }}</span>
+              @if (model.createdAt) {
+              <small>Créée le {{ model.createdAt | date: 'short' }}</small>
+              }
             </div>
             <span class="status" [class.status--active]="model.status === 'active'"
               >{{ model.status }}</span
             >@if (model.status !== 'active' && model.status !== 'training') {
-            <button mat-stroked-button (click)="activate(model)" [disabled]="working()">
-              Activer
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="activate(model)"
+              [disabled]="working()"
+              [attr.aria-label]="'Restaurer la version ' + model.name"
+            >
+              <mat-icon>settings_backup_restore</mat-icon>Restaurer
             </button>
             }
-          </div>
+          </article>
           } @empty {
           <p class="empty">Aucune version ViT disponible.</p>
           }

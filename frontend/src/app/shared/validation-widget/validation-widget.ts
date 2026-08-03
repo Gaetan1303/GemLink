@@ -10,8 +10,8 @@ import { PierreSummary, Validation, ValidationAction, ValidationService } from '
 /**
  * US 2.7 CA-1 — Sous chaque post analysé : Confirmer / Corriger / Invalider
  * l'identification IA. Corriger ouvre un champ texte avec autocomplétion
- * sur le catalogue Stone (le champ accepte du texte libre : la valeur
- * proposée n'est pas contrainte à une entrée existante du catalogue,
+ * sur les minéraux connus (le champ accepte du texte libre : la valeur
+ * proposée n'est pas contrainte à une suggestion existante,
  * l'autocomplétion n'est qu'une aide de saisie).
  *
  * Une seule validation par (post, utilisateur) côté serveur : ce composant
