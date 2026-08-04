@@ -7,7 +7,7 @@ use App\Repository\UserRepository;
 use Redis;
 use Symfony\Component\Uid\Uuid;
 
-final class LeaderboardService
+class LeaderboardService
 {
     private const KEY = 'leaderboard:global';
 
@@ -30,16 +30,21 @@ final class LeaderboardService
         return count($users);
     }
 
-    public function ranking(int $offset = 0, int $limit = 50): array
+    /** @return array{items: array<int, array<string, mixed>>, total: int, currentUser: ?array<string, mixed>} */
+    public function ranking(?User $currentUser = null): array
     {
-        if ($this->redis->zCard(self::KEY) === 0) $this->rebuild();
-        $scores = $this->redis->zRevRange(self::KEY, $offset, $offset + $limit - 1, true);
+        $total = $this->redis->zCard(self::KEY);
+        if ($total === 0) {
+            $this->rebuild();
+            $total = $this->redis->zCard(self::KEY);
+        }
+        $scores = $this->redis->zRevRange(self::KEY, 0, 49, true);
         $items = [];
         foreach ($scores as $id => $score) {
             $user = $this->users->find(Uuid::fromString((string) $id));
             if (!$user instanceof User) continue;
             $items[] = [
-                'rank' => $offset + count($items) + 1,
+                'rank' => $this->rankFor($user),
                 'id' => $id,
                 'username' => $user->getUsername(),
                 'avatarUrl' => $user->getAvatarUrl(),
@@ -48,6 +53,36 @@ final class LeaderboardService
                 'trustScore' => $user->getTrustScore(),
             ];
         }
-        return ['items' => $items, 'total' => $this->redis->zCard(self::KEY)];
+
+        return [
+            'items' => $items,
+            'total' => $total,
+            'currentUser' => $currentUser === null ? null : $this->entryFor($currentUser),
+        ];
+    }
+
+    /** @return array<string, int|string>|null */
+    private function entryFor(User $user): ?array
+    {
+        $rank = $this->rankFor($user);
+        // Un membre actif sans attribution récente peut ne pas encore être
+        // présent dans Redis : l'ajouter ici garantit son rang hors Top 50.
+        if ($rank === null) {
+            $this->update($user);
+            $rank = $this->rankFor($user);
+        }
+        if ($rank === null) return null;
+
+        return [
+            'rank' => $rank,
+            'id' => $user->getId()->toRfc4122(),
+            'points' => $user->getPoints(),
+        ];
+    }
+
+    private function rankFor(User $user): ?int
+    {
+        $rank = $this->redis->zRevRank(self::KEY, $user->getId()->toRfc4122());
+        return $rank === false ? null : $rank + 1;
     }
 }

@@ -24,6 +24,7 @@ if (!class_exists('Redis')) {
         public function zRem(string $key, string $member): int { unset($this->sorted[$key][$member]); return 1; }
         public function zCard(string $key): int { return count($this->sorted[$key] ?? []); }
         public function zRevRange(string $key, int $start, int $end, bool $withScores = false): array { $items = $this->sorted[$key] ?? []; arsort($items); $items = array_slice($items, $start, $end - $start + 1, true); return $withScores ? $items : array_keys($items); }
+        public function zRevRank(string $key, string $member): int|false { $items = $this->zRevRange($key, 0, -1, true); $rank = array_search($member, array_keys($items), true); return $rank === false ? false : $rank; }
     }
 }
 

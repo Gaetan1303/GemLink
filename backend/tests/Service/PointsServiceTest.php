@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Repository\PointTransactionRepository;
 use App\Service\AdminSettingsProvider;
 use App\Service\LevelProgressionService;
+use App\Service\LeaderboardService;
 use App\Service\PointsService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -73,6 +74,27 @@ final class PointsServiceTest extends TestCase
         );
 
         self::assertSame(105, $user->getPoints());
+    }
+
+    public function testAwardUpdatesTheRedisLeaderboardAfterPersistingTheNewBalance(): void
+    {
+        $user = $this->user();
+        $em = $this->createMock(EntityManagerInterface::class);
+        $transactions = $this->createMock(PointTransactionRepository::class);
+        $settings = $this->createMock(AdminSettingsProvider::class);
+        $leaderboard = $this->createMock(LeaderboardService::class);
+        $transactions->method('hasSource')->willReturn(false);
+        $settings->method('getPointsForAction')->willReturn(10);
+        $em->expects($this->once())->method('flush');
+        $leaderboard->expects($this->once())->method('update')->with($user);
+
+        (new PointsService($em, $transactions, $settings, null, $leaderboard))->award(
+            $user,
+            PointsService::ACTION_POST_CREATED,
+            Uuid::v7()->toRfc4122(),
+        );
+
+        self::assertSame(10, $user->getPoints());
     }
 
     private function user(): User
