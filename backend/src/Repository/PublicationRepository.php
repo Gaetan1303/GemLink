@@ -45,6 +45,8 @@ class PublicationRepository extends ServiceEntityRepository
 
         return $this->createQueryBuilder('p')
             ->andWhere('p.deletedAt IS NULL')
+            ->andWhere('p.status != :hiddenStatus')
+            ->setParameter('hiddenStatus', Publication::STATUS_AUTO_HIDDEN)
             ->orderBy('p.createdAt', 'DESC')
             ->setFirstResult($offset)
             ->setMaxResults($limit)
@@ -57,6 +59,8 @@ class PublicationRepository extends ServiceEntityRepository
         return (int) $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
             ->andWhere('p.deletedAt IS NULL')
+            ->andWhere('p.status != :hiddenStatus')
+            ->setParameter('hiddenStatus', Publication::STATUS_AUTO_HIDDEN)
             ->getQuery()
             ->getSingleScalarResult();
     }
@@ -73,7 +77,9 @@ class PublicationRepository extends ServiceEntityRepository
             ->leftJoin('p.tags', 'tag')
             ->leftJoin('App\\Entity\\PublicationPierre', 'pp', 'WITH', 'pp.publication = p')
             ->leftJoin('pp.pierre', 'mineral')
-            ->andWhere('p.deletedAt IS NULL');
+            ->andWhere('p.deletedAt IS NULL')
+            ->andWhere('p.status != :hiddenStatus')
+            ->setParameter('hiddenStatus', Publication::STATUS_AUTO_HIDDEN);
 
         if ($beforeDate !== null && $beforeId !== null) {
             $qb->andWhere('(p.createdAt < :beforeDate OR (p.createdAt = :beforeDate AND p.id < :beforeId))')
@@ -101,6 +107,7 @@ class PublicationRepository extends ServiceEntityRepository
     {
         if ($ids === []) return [];
         $posts = $this->createQueryBuilder('p')->andWhere('p.id IN (:ids)')->andWhere('p.deletedAt IS NULL')
+            ->andWhere('p.status != :hiddenStatus')->setParameter('hiddenStatus', Publication::STATUS_AUTO_HIDDEN)
             ->setParameter('ids', $ids)->getQuery()->getResult();
         $byId = [];
         foreach ($posts as $post) $byId[$post->getId()->toRfc4122()] = $post;
@@ -111,7 +118,8 @@ class PublicationRepository extends ServiceEntityRepository
     public function findRecentActiveIds(int $limit): array
     {
         return array_map(static fn (Publication $post) => $post->getId()->toRfc4122(), $this->createQueryBuilder('p')
-            ->select('p')->andWhere('p.deletedAt IS NULL')->orderBy('p.createdAt', 'DESC')->addOrderBy('p.id', 'DESC')
+            ->select('p')->andWhere('p.deletedAt IS NULL')->andWhere('p.status != :hiddenStatus')
+            ->setParameter('hiddenStatus', Publication::STATUS_AUTO_HIDDEN)->orderBy('p.createdAt', 'DESC')->addOrderBy('p.id', 'DESC')
             ->setMaxResults($limit)->getQuery()->getResult());
     }
 

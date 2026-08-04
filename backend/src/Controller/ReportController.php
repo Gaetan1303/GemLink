@@ -4,9 +4,10 @@ namespace App\Controller;
 
 use App\Entity\Report;
 use App\Entity\User;
+use App\Exception\DuplicateReportException;
 use App\Repository\PublicationRepository;
 use App\Repository\ReportRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\ReportService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,7 +21,7 @@ final class ReportController extends AbstractController
     public function __construct(
         private readonly PublicationRepository $publications,
         private readonly ReportRepository $reports,
-        private readonly EntityManagerInterface $em,
+        private readonly ReportService $reportService,
     ) {}
 
     #[Route('/api/publications/{id}/reports', methods: ['POST'])]
@@ -52,9 +53,13 @@ final class ReportController extends AbstractController
             return $this->json(['message' => 'La description est limitée à 1000 caractères.'], 422);
         }
 
-        $report = (new Report($user, $publication))->setReasonType($reason)->setDescription($description);
-        $this->em->persist($report);
-        $this->em->flush();
+        try {
+            $report = $this->reportService->create($user, $publication, $reason, $description);
+        } catch (DuplicateReportException) {
+            // La contrainte SQL protège aussi le cas de deux requêtes simultanées.
+            return $this->json(['message' => 'Cette publication a déjà été signalée.'], Response::HTTP_CONFLICT);
+        }
+
         return $this->json(['id' => $report->getId()->toRfc4122(), 'status' => $report->getStatus()], Response::HTTP_CREATED);
     }
 }
