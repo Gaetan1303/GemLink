@@ -1,54 +1,85 @@
+@use '../post/post-theme' as theme;
+
 .leaderboard-page {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 1rem;
+  min-height: 100vh;
+  padding: 3rem 1.5rem 4rem;
+  background: theme.$ink;
+  color: theme.$text;
+  @include theme.mobile-nav-clearance;
+
+  > * { max-width: 860px; margin-inline: auto; }
 }
 
-.eyebrow {
-  margin-bottom: 0;
-  text-transform: uppercase;
-  letter-spacing: .08em;
+.leaderboard-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid theme.$line;
+  background: linear-gradient(130deg, theme.$surface-raised, theme.$surface);
+  @include theme.facet-corner;
+
+  &::after { content: ''; position: absolute; inset: auto -10% -70% 40%; height: 210px; background: radial-gradient(ellipse, rgba(123, 201, 154, .15), transparent 68%); pointer-events: none; }
+  h1 { position: relative; z-index: 1; margin: .3rem 0; color: theme.$gold; font-family: theme.$font-display; font-size: clamp(2rem, 5vw, 3.1rem); }
+  p { position: relative; z-index: 1; max-width: 540px; margin: 0; color: theme.$text-dim; line-height: 1.6; }
 }
 
-ol {
-  display: grid;
-  gap: .6rem;
-  padding: 0;
-  list-style: none;
+.eyebrow { @include theme.catalog-label; color: theme.$violet; }
+.leaderboard-total { position: relative; z-index: 1; display: inline-block; margin-top: 1.1rem; color: theme.$emerald; font-family: theme.$font-mono; font-size: .78rem; }
+
+.my-ranking {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid rgba(197, 160, 89, .48);
+  background: theme.$gold-dim;
+  @include theme.facet-corner-sm;
+
+  div { display: flex; align-items: baseline; gap: .65rem; }
+  span { @include theme.catalog-label; color: theme.$text-dim; }
+  strong { color: theme.$gold; font-family: theme.$font-display; font-size: 1.8rem; }
+  p { margin: 0; color: theme.$text; } b { color: theme.$gold; }
 }
+
+ol { display: grid; gap: .65rem; padding: 0; list-style: none; }
 
 li {
   display: grid;
-  grid-template-columns: 3rem 3rem minmax(8rem, 1fr) auto auto;
+  grid-template-columns: 3.25rem 3rem minmax(8rem, 1fr) auto auto;
   align-items: center;
-  gap: .75rem;
+  gap: .8rem;
   padding: .85rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: .75rem;
+  border: 1px solid theme.$line;
+  background: theme.$surface;
+  @include theme.facet-corner-sm;
+
+  &.podium { border-color: rgba(197, 160, 89, .42); background: linear-gradient(110deg, theme.$surface-raised, theme.$surface); }
+  &.rank-one { border-color: theme.$gold; }
+  a { color: theme.$text; font-family: theme.$font-display; font-weight: 700; text-decoration: none; &:hover { color: theme.$gold; } }
+  > b { color: theme.$gold; font-family: theme.$font-mono; font-size: .85rem; }
 }
 
-li.podium { background: #faf7ef; }
+.rank { color: theme.$text-faint; font-family: theme.$font-mono; }
+.podium .rank { color: theme.$gold; }
+.member-level { color: theme.$text-dim; font-size: .85rem; }
 
-img,
-.avatar-placeholder {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-}
-
+img, .avatar-placeholder { width: 2.5rem; height: 2.5rem; border-radius: 50%; }
 img { object-fit: cover; }
+.avatar-placeholder { display: grid; place-items: center; background: theme.$violet; color: theme.$text; font-family: theme.$font-display; font-weight: 700; }
 
-.avatar-placeholder {
-  display: grid;
-  place-items: center;
-  background: #6f4aa8;
-  color: white;
-}
+.leaderboard-loading { display: grid; gap: .65rem; .leaderboard-page & div { height: 4.3rem; border: 1px solid theme.$line; background: linear-gradient(100deg, theme.$surface 30%, theme.$surface-raised 50%, theme.$surface 70%); background-size: 200% 100%; animation: shimmer 1.5s infinite; } }
+.error { padding: .85rem 1rem; border: 1px solid rgba(224, 122, 95, .4); background: rgba(224, 122, 95, .12); color: theme.$coral; }
+.empty { display: block; padding: 2rem; border: 1px dashed theme.$line; color: theme.$text-dim; text-align: center; }
 
-.error { color: #a40000; }
-.empty { display: block; text-align: center; }
+@keyframes shimmer { from { background-position: 140% 0; } to { background-position: -40% 0; } }
 
 @media (max-width: 620px) {
-  li { grid-template-columns: 2.5rem 2.5rem 1fr; }
-  li > span:not(.avatar-placeholder), li > b { grid-column: 3; }
+  .leaderboard-page { padding-inline: 1rem; }
+  .leaderboard-hero { padding: 1.4rem; }
+  .my-ranking { align-items: start; flex-direction: column; }
+  li { grid-template-columns: 2.5rem 2.5rem minmax(0, 1fr); gap: .6rem; }
+  li > .member-level, li > b { grid-column: 3; }
 }
