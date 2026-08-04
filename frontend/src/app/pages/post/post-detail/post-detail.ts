@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 import { animate, style, transition, trigger } from '@angular/animations';
@@ -16,7 +17,7 @@ import { PostAnalysisResult } from '../post-analysis-result/post-analysis-result
 // US 3.1 — Suivi en direct de l'analyse IA (polling) + transitions animées.
 @Component({
   selector: 'app-post-detail',
-  imports: [CommonModule, RouterLink, SharedModule, CommentSection, ValidationWidget, PostAnalysisResult],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, SharedModule, CommentSection, ValidationWidget, PostAnalysisResult],
   templateUrl: './post-detail.html',
   styleUrls: ['./post-detail.scss'],
   animations: [
@@ -35,6 +36,7 @@ export class PostDetail implements OnInit, OnDestroy {
   protected readonly authService = inject(AuthService);
   private readonly postService = inject(PostService);
   private readonly reportService = inject(ReportService);
+  private readonly formBuilder = inject(FormBuilder);
 
   protected readonly currentRole = computed<MenuRole>(
     () => this.authService.currentUser()?.role ?? 'VISITEUR'
@@ -53,6 +55,11 @@ export class PostDetail implements OnInit, OnDestroy {
   protected readonly likeError = signal<string | null>(null);
   protected readonly showReport = signal(false);
   protected readonly reportMessage = signal<string | null>(null);
+  protected readonly isReporting = signal(false);
+  protected readonly reportForm = this.formBuilder.nonNullable.group({
+    reasonType: ['', Validators.required],
+    description: ['', Validators.maxLength(1000)],
+  });
 
   // CA-4 : l'autorisation finale est toujours vérifiée côté serveur ; ceci
   // ne fait que masquer/afficher le bouton pour l'UX (modérateur non
@@ -89,12 +96,35 @@ export class PostDetail implements OnInit, OnDestroy {
     return !!user && !!currentPost && String(user.id) !== currentPost.author.id;
   });
 
-  protected submitReport(reasonType: ReportReason): void {
+  protected openReportForm(): void {
+    this.reportMessage.set(null);
+    this.showReport.set(true);
+  }
+
+  protected cancelReport(): void {
+    this.showReport.set(false);
+    this.reportForm.reset({ reasonType: '', description: '' });
+  }
+
+  protected submitReport(): void {
     const currentPost = this.post();
-    if (!currentPost) return;
-    this.reportService.create(currentPost.id, reasonType).subscribe({
-      next: () => { this.reportMessage.set('Signalement transmis à la modération.'); this.showReport.set(false); },
-      error: (error) => this.reportMessage.set(error?.error?.message ?? 'Impossible de transmettre le signalement.'),
+    if (!currentPost || this.reportForm.invalid || this.isReporting()) return;
+
+    const { reasonType, description } = this.reportForm.getRawValue();
+    this.isReporting.set(true);
+    this.reportService.create(currentPost.id, reasonType as ReportReason, description).pipe(
+      finalize(() => this.isReporting.set(false)),
+    ).subscribe({
+      next: () => {
+        this.reportMessage.set('Signalement transmis à la modération.');
+        this.showReport.set(false);
+        this.reportForm.reset({ reasonType: '', description: '' });
+      },
+      error: (error) => this.reportMessage.set(
+        error?.status === 409
+          ? 'Votre signalement a déjà été pris en compte.'
+          : (error?.error?.message ?? 'Impossible de transmettre le signalement.')
+      ),
     });
   }
 
