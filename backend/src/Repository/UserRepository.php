@@ -22,15 +22,19 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     public function findOneByUsername(string $username): ?User { return $this->findOneBy(['username' => $username]); }
 
     /** @return User[] */
-    public function findActiveLeaderboard(int $limit = 1000): array
+    public function findActiveLeaderboard(?int $limit = null): array
     {
-        return $this->createQueryBuilder('user')
+        $query = $this->createQueryBuilder('user')
             ->andWhere('user.status = :status')
             ->setParameter('status', 'ACTIVE')
             ->orderBy('user.points', 'DESC')
-            ->addOrderBy('user.createdAt', 'ASC')
-            ->setMaxResults($limit)
-            ->getQuery()->getResult();
+            ->addOrderBy('user.createdAt', 'ASC');
+
+        if ($limit !== null) {
+            $query->setMaxResults($limit);
+        }
+
+        return $query->getQuery()->getResult();
     }
 
     /**
