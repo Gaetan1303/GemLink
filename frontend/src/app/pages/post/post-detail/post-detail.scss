@@ -431,6 +431,72 @@
   font-size: 0.85rem;
 }
 
+// US 6.1 — le signalement reste discret, mais le formulaire fournit aux
+// modérateurs le contexte nécessaire sans quitter la fiche du spécimen.
+.report-section {
+  margin-top: .5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid theme.$line;
+
+  h2 {
+    margin: 0;
+    color: theme.$text;
+    font-family: theme.$font-display;
+    font-size: 1.1rem;
+  }
+
+  > p {
+    margin: .35rem 0 .85rem;
+    color: theme.$text-dim;
+    font-size: .9rem;
+  }
+
+  .btn-secondary { margin-left: 0; }
+
+  &__message {
+    padding: .65rem .8rem;
+    border: 1px solid rgba(123, 201, 154, .35);
+    background: rgba(123, 201, 154, .08);
+    color: theme.$emerald;
+  }
+}
+
+.report-form {
+  display: grid;
+  gap: .45rem;
+
+  label {
+    margin-top: .5rem;
+    color: theme.$text;
+    font-size: .9rem;
+    font-weight: 600;
+  }
+
+  select, textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid theme.$line;
+    border-radius: 5px;
+    background: theme.$surface;
+    color: theme.$text;
+    font: inherit;
+    padding: .65rem .75rem;
+
+    &:focus { outline: 2px solid theme.$gold; outline-offset: 2px; }
+  }
+
+  textarea { resize: vertical; }
+  .optional, &__count { color: theme.$text-faint; font-size: .8rem; font-weight: 400; }
+  &__count { justify-self: end; }
+
+  &__actions {
+    display: flex;
+    gap: .5rem;
+    margin-top: .65rem;
+    .btn-secondary { margin-left: 0; }
+  }
+}
+
 @keyframes scanSweep {
   0%   { top: -40%; }
   100% { top: 100%; }

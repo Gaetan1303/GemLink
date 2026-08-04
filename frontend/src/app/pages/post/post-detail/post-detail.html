@@ -94,6 +94,44 @@
               }
             </div>
           }
+
+          @if (canReport()) {
+            <section class="report-section" aria-labelledby="report-title">
+              <h2 id="report-title">Signaler ce contenu</h2>
+              <p>Votre signalement sera transmis à l’équipe de modération.</p>
+
+              @if (!showReport()) {
+                <button type="button" class="btn-secondary" (click)="openReportForm()">Signaler</button>
+              } @else {
+                <form class="report-form" [formGroup]="reportForm" (ngSubmit)="submitReport()">
+                  <label for="report-reason">Motif <span aria-hidden="true">*</span></label>
+                  <select id="report-reason" formControlName="reasonType" required>
+                    <option value="" disabled>Choisir un motif</option>
+                    <option value="INAPPROPRIATE_CONTENT">Contenu inapproprié</option>
+                    <option value="WRONG_IDENTIFICATION">Identification manifestement incorrecte</option>
+                    <option value="SPAM">Spam</option>
+                    <option value="HARASSMENT">Harcèlement</option>
+                  </select>
+                  @if (reportForm.controls.reasonType.touched && reportForm.controls.reasonType.invalid) {
+                    <p class="field-error" role="alert">Veuillez sélectionner un motif.</p>
+                  }
+
+                  <label for="report-description">Description <span class="optional">(facultative)</span></label>
+                  <textarea id="report-description" formControlName="description" maxlength="1000" rows="4" placeholder="Ajoutez un contexte utile à la modération."></textarea>
+                  <span class="report-form__count">{{ reportForm.controls.description.value.length }}/1000</span>
+
+                  <div class="report-form__actions">
+                    <button type="submit" class="btn-delete" [disabled]="reportForm.invalid || isReporting()">
+                      @if (isReporting()) { Envoi... } @else { Envoyer le signalement }
+                    </button>
+                    <button type="button" class="btn-secondary" [disabled]="isReporting()" (click)="cancelReport()">Annuler</button>
+                  </div>
+                </form>
+              }
+
+              @if (reportMessage()) { <p class="report-section__message" role="status">{{ reportMessage() }}</p> }
+            </section>
+          }
         </div>
       </div>
 
@@ -120,19 +158,6 @@
                 </a>
               }
             </div>
-          }
-
-          @if (canReport()) {
-            <button type="button" class="btn-secondary" (click)="showReport.set(!showReport())">Signaler</button>
-            @if (showReport()) {
-              <div class="report-reasons">
-                <button type="button" (click)="submitReport('INAPPROPRIATE_CONTENT')">Contenu inapproprié</button>
-                <button type="button" (click)="submitReport('WRONG_IDENTIFICATION')">Mauvaise identification</button>
-                <button type="button" (click)="submitReport('SPAM')">Spam</button>
-                <button type="button" (click)="submitReport('HARASSMENT')">Harcèlement</button>
-              </div>
-            }
-            @if (reportMessage()) { <p role="status">{{ reportMessage() }}</p> }
           }
         </section>
       }

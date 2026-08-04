@@ -48,8 +48,11 @@ export class ReportService {
   private readonly http = inject(HttpClient);
   private readonly api = `${environment.apiUrl}/api`;
 
-  create(postId: string, reasonType: ReportReason): Observable<{ id: string; status: string }> {
-    return this.http.post<{ id: string; status: string }>(`${this.api}/publications/${postId}/reports`, { reasonType });
+  create(postId: string, reasonType: ReportReason, description?: string): Observable<{ id: string; status: string }> {
+    return this.http.post<{ id: string; status: string }>(`${this.api}/publications/${postId}/reports`, {
+      reasonType,
+      ...(description?.trim() ? { description: description.trim() } : {}),
+    });
   }
 
   list(status = 'PENDING'): Observable<{ items: ModerationReport[] }> {
