@@ -386,8 +386,25 @@ def compute_clip_embedding(crop_img: Image.Image) -> list[float]:
 
 
 # ==============================================================================
-# SECTION ROUTAGE : ORCHESTRATION COMPLÈTE (AGENT VISION + AGENT CONNAISSANCE)
+# SECTION ROUTAGE : ORCHESTRATION D'IDENTIFICATION
 # ==============================================================================
+
+def build_vision_analysis_response(vision_result: dict) -> dict:
+    """Construit la réponse contractuelle sans attendre le LLM.
+
+    L'identification (YOLO, ViT et embedding CLIP) est disponible dès que la
+    vision a terminé. Les informations encyclopédiques ne sont pas nécessaires
+    pour identifier le spécimen et ne doivent donc pas bloquer Messenger.
+    """
+    return {
+        "nom": vision_result["predicted_class"],
+        "confidence": vision_result["confidence"],
+        "detector_confidence": vision_result["detector_confidence"],
+        "bbox": vision_result["bbox"],
+        "embedding": vision_result["embedding"],
+        "detections": vision_result["detections"],
+        "model_version": vision_result["model_version"],
+    }
 
 # Prompt few-shot : les petits modèles (ex. gemma3:1b, contrainte RAM du
 # serveur de prod) respectent un schéma JSON strict beaucoup plus fiablement
@@ -477,9 +494,9 @@ async def analyze(
     file: UploadFile | None = File(None),
 ):
     """
-    Pipeline complet : Agent Vision (YOLO + ViT) -> Agent Connaissance (Ollama)
-    -> validation stricte via StoneAnalysisResponse.
-    C'est l'endpoint que Symfony doit appeler (POST /analyze dans votre diagramme).
+    Identification immédiate par vision (YOLO + ViT + CLIP), validée par
+    StoneAnalysisResponse. L'enrichissement Ollama est volontairement hors du
+    chemin critique afin qu'une fiche lente ne bloque pas une identification.
 
     Accepte le champ multipart sous le nom 'media' ou 'file' : le worker
     Symfony (AnalyzeMediaMessageHandler) envoie actuellement 'file'.
@@ -497,14 +514,7 @@ async def analyze(
             logger.error('Erreur durant le traitement vidéo : %s', error, exc_info=True)
             raise HTTPException(status_code=500, detail='Erreur interne de traitement vidéo.')
 
-        knowledge_data = await ask_knowledge_agent(vision_result['predicted_class'])
-        knowledge_data['confidence'] = vision_result['confidence']
-        knowledge_data['detector_confidence'] = vision_result['detector_confidence']
-        knowledge_data['bbox'] = vision_result['bbox']
-        knowledge_data['embedding'] = vision_result['embedding']
-        knowledge_data['detections'] = vision_result['detections']
-        knowledge_data['model_version'] = vision_result['model_version']
-        return StoneAnalysisResponse(**knowledge_data)
+        return StoneAnalysisResponse(**build_vision_analysis_response(vision_result))
 
     if upload is None:
         raise HTTPException(status_code=422, detail="Champ fichier manquant : utilisez 'media' ou 'file'.")
@@ -524,21 +534,8 @@ async def analyze(
         logger.error(f" Erreur durant l'inférence Vision : {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Erreur interne de traitement d'image.")
 
-    knowledge_data = await ask_knowledge_agent(vision_result["predicted_class"])
-
-    # Fusion : les champs de vision priment toujours sur ce que l'agent connaissance pourrait halluciner
-    knowledge_data["confidence"] = vision_result["confidence"]
-    knowledge_data["detector_confidence"] = vision_result["detector_confidence"]
-    knowledge_data["bbox"] = vision_result["bbox"]
-    # L'embedding ne passe jamais par Ollama : il vient uniquement de CLIP
-    # (calculé dans run_vision_pipeline), persisté ensuite par Symfony dans
-    # pgvector pour la recherche par similarité.
-    knowledge_data["embedding"] = vision_result["embedding"]
-    knowledge_data["detections"] = vision_result["detections"]
-    knowledge_data["model_version"] = vision_result["model_version"]
-
     try:
-        return StoneAnalysisResponse(**knowledge_data)
+        return StoneAnalysisResponse(**build_vision_analysis_response(vision_result))
     except Exception as e:
         logger.error(f" Réponse de l'agent connaissance non conforme au schéma : {str(e)}")
         raise HTTPException(status_code=502, detail="L'agent de connaissance a renvoyé une structure invalide.")

@@ -65,3 +65,20 @@ class ClassificationPipelineTest(unittest.TestCase):
 
         self.assertEqual(512, len(embedding))
         self.assertAlmostEqual(1.0, torch.linalg.vector_norm(torch.tensor(embedding)).item())
+
+    def test_vision_response_does_not_require_knowledge_agent(self):
+        vision_result = {
+            "predicted_class": "quartz",
+            "confidence": 0.91,
+            "detector_confidence": 0.87,
+            "bbox": [1, 2, 30, 40],
+            "embedding": [1.0] + [0.0] * 511,
+            "detections": [],
+            "model_version": {"yolo": "yolo-v1"},
+        }
+
+        response = main.StoneAnalysisResponse(**main.build_vision_analysis_response(vision_result))
+
+        self.assertEqual("quartz", response.nom)
+        self.assertEqual("Non déterminé", response.categorie_geologique)
+        self.assertEqual([1, 2, 30, 40], response.bbox)

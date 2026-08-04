@@ -25,6 +25,9 @@ services:
 
       AI_SERVICE_URL: http://gl-ai-brain:3000
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
+      # En développement, les uploads sont lus directement par le worker.
+      # Cette valeur doit rester identique pour l'API et le consommateur.
+      MEDIA_STORAGE_MODE: ${MEDIA_STORAGE_MODE:-local}
 
     ports:
       - "8000:8080"
@@ -34,6 +37,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+    volumes:
+      - media_uploads:/app/public/uploads
 
 
     networks:
@@ -65,6 +71,9 @@ services:
       REDIS_URL: redis://gemlink_redis:6379
       MESSENGER_TRANSPORT_DSN: redis://gemlink_redis:6379/messages
       MESSENGER_FAILED_TRANSPORT_DSN: redis://gemlink_redis:6379/messages_failed
+      # Le worker partage le répertoire avec gemlink-php ; il ne doit pas
+      # tenter un GET sur localhost (qui désigne son propre conteneur).
+      MEDIA_STORAGE_MODE: ${MEDIA_STORAGE_MODE:-local}
     depends_on:
       database:
         condition: service_healthy
@@ -72,6 +81,8 @@ services:
         condition: service_healthy
       gl-ai-brain:
         condition: service_started
+    volumes:
+      - media_uploads:/app/public/uploads
     networks:
       - gl-core-net
 
@@ -200,6 +211,10 @@ services:
       gl-ai-llm:
         condition: service_started
 
+    volumes:
+      # Évite les téléchargements PyTorch/Hugging Face à chaque recréation.
+      - gl_ai_torch_cache:/root/.cache/torch
+      - gl_ai_huggingface_cache:/root/.cache/huggingface
 
     networks:
       - gl-core-net
@@ -222,7 +237,11 @@ services:
 volumes:
   database_data:
   redis_data:
+  # Fichiers d'upload communs à l'API (écriture) et au worker (lecture).
+  media_uploads:
   gl_ai_checkpoints:
+  gl_ai_torch_cache:
+  gl_ai_huggingface_cache:
   gl_ollama_storage:
   gl_ai_brain:
   # Pas de volume pour gl-db-test : elle utilise tmpfs (RAM), jetable par design
