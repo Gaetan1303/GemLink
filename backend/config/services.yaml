@@ -37,6 +37,9 @@ services:
     App\:
         resource: '../src/'
 
+    App\Service\ChatEventPublisherInterface:
+        alias: App\Service\NullChatEventPublisher
+
     # JWT blocklist listener
     App\EventListener\JwtBlocklistListener:
         arguments:

@@ -1,0 +1,10 @@
+<?php
+namespace App\Entity;
+use App\Repository\ConversationRepository;use DateTimeImmutable;use Doctrine\ORM\Mapping as ORM;use InvalidArgumentException;use Symfony\Component\Uid\Uuid;
+#[ORM\Entity(repositoryClass:ConversationRepository::class)] #[ORM\Table(name:'conversation')]
+class Conversation{
+ public const DIRECT='DIRECT'; public const FACTION='FACTION';
+ #[ORM\Id,ORM\Column(type:'uuid')]private Uuid $id;#[ORM\Column(length:20)]private string $type;#[ORM\ManyToOne(targetEntity:Groupe::class),ORM\JoinColumn(name:'groupe_id',nullable:true,onDelete:'CASCADE')]private ?Groupe $group;#[ORM\ManyToOne(targetEntity:User::class),ORM\JoinColumn(name:'created_by',nullable:true,onDelete:'SET NULL')]private ?User $createdBy;#[ORM\Column(name:'direct_key',length:100,nullable:true,unique:true)]private ?string $directKey;#[ORM\Column(name:'created_at',type:'datetimetz_immutable')]private DateTimeImmutable $createdAt;#[ORM\Column(name:'updated_at',type:'datetimetz_immutable')]private DateTimeImmutable $updatedAt;#[ORM\Column(name:'last_message_at',type:'datetimetz_immutable',nullable:true)]private ?DateTimeImmutable $lastMessageAt=null;
+ public function __construct(string $type,?User $creator=null,?Groupe $group=null,?string $key=null){if(!in_array($type,[self::DIRECT,self::FACTION],true)||($type===self::DIRECT&&$group!==null)||($type===self::FACTION&&$group===null))throw new InvalidArgumentException('Conversation invalide.');$this->id=Uuid::v7();$this->type=$type;$this->createdBy=$creator;$this->group=$group;$this->directKey=$key;$this->createdAt=$this->updatedAt=new DateTimeImmutable();}
+ public function getId():Uuid{return $this->id;}public function getType():string{return $this->type;}public function getGroup():?Groupe{return $this->group;}public function getCreatedBy():?User{return $this->createdBy;}public function getCreatedAt():DateTimeImmutable{return $this->createdAt;}public function getUpdatedAt():DateTimeImmutable{return $this->updatedAt;}public function getLastMessageAt():?DateTimeImmutable{return $this->lastMessageAt;}public function touchMessage():self{$this->lastMessageAt=$this->updatedAt=new DateTimeImmutable();return $this;}
+}

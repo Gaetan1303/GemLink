@@ -4,3 +4,7 @@ framework:
             policy: fixed_window
             limit: 2
             interval: '1 day'
+        chat_message:
+            policy: token_bucket
+            limit: 20
+            rate: { interval: '1 minute', amount: 20 }
