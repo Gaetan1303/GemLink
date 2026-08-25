@@ -9,7 +9,8 @@ import { vi } from 'vitest';
 
 import { PostDetail } from './post-detail';
 import { AuthService, User } from '../../../core/services/auth';
-import { PostService, Publication } from '../../../core/services/post';
+import { PostService, Publication, SimilarPublication } from '../../../core/services/post';
+import { ReportService } from '../../../core/services/report';
 
 function makePublication(overrides: Partial<Publication> = {}): Publication {
   return {
@@ -43,6 +44,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     toggleLike: ReturnType<typeof vi.fn>;
     getSimilarPosts: ReturnType<typeof vi.fn>;
   };
+  let reportServiceMock: { create: ReturnType<typeof vi.fn> };
 
   function configure(userValue: User | null | undefined, postId = 'post-1'): void {
     currentUser = signal<User | null | undefined>(userValue);
@@ -56,9 +58,13 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
         provideNoopAnimations(),
         { provide: AuthService, useValue: { currentUser, isAuthenticated: () => !!currentUser() } },
         { provide: PostService, useValue: postServiceMock },
+        { provide: ReportService, useValue: reportServiceMock },
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({ id: postId }) } },
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ id: postId }) },
+            paramMap: of(convertToParamMap({ id: postId })),
+          },
         },
       ],
     });
@@ -78,6 +84,7 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
       toggleLike: vi.fn(),
       getSimilarPosts: vi.fn().mockReturnValue(of({ items: [] })),
     };
+    reportServiceMock = { create: vi.fn() };
   });
 
   it('charge le post correspondant à l\'id de la route, accessible sans authentification', () => {
@@ -116,6 +123,55 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     fixture.detectChanges();
 
     expect(postServiceMock.pollAnalysis).not.toHaveBeenCalled();
+  });
+
+  it('US 2.6 CA-1 : charge au maximum cinq posts similaires pour un post analysé', () => {
+    postServiceMock.getPost.mockReturnValue(of(makePublication({ status: 'ANALYZED' })));
+    configure(undefined);
+
+    fixture.detectChanges();
+
+    expect(postServiceMock.getSimilarPosts).toHaveBeenCalledWith('post-1', 5);
+  });
+
+  it('US 2.6 CA-1 : affiche au plus cinq cartes sous le titre Posts similaires', () => {
+    const items = Array.from({ length: 6 }, (_, index): SimilarPublication => ({
+      ...makePublication({ id: `similar-${index}`, status: 'ANALYZED', title: `Quartz ${index}` }),
+      similarity: .95 - index / 100,
+    }));
+    postServiceMock.getPost.mockReturnValue(of(makePublication({ status: 'ANALYZED' })));
+    postServiceMock.getSimilarPosts.mockReturnValue(of({ items }));
+    configure(undefined);
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#similar-posts-title')?.textContent).toContain('Posts similaires');
+    expect(fixture.nativeElement.querySelectorAll('.similar-post')).toHaveLength(5);
+  });
+
+  it.each(['PENDING_ANALYSIS', 'ANALYSIS_FAILED'] as const)(
+    'US 2.6 CA-3 : ne charge ni n’affiche les similaires pour le statut %s',
+    status => {
+      postServiceMock.getPost.mockReturnValue(of(makePublication({ status })));
+      configure(undefined);
+
+      fixture.detectChanges();
+
+      expect(postServiceMock.getSimilarPosts).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('.similar-posts')).toBeNull();
+    }
+  );
+
+  it('US 2.6 : charge les similaires lorsque le polling termine l’analyse', () => {
+    const pending = makePublication({ status: 'PENDING_ANALYSIS' });
+    const analyzed = makePublication({ status: 'ANALYZED' });
+    postServiceMock.getPost.mockReturnValue(of(pending));
+    postServiceMock.pollAnalysis.mockReturnValue(of(pending, analyzed));
+    configure(undefined);
+
+    fixture.detectChanges();
+
+    expect(postServiceMock.getSimilarPosts).toHaveBeenCalledWith('post-1', 5);
   });
 
   it('CA-4 : l\'auteur du post peut le supprimer', () => {
@@ -198,6 +254,45 @@ describe('PostDetail — US 2.2 Consultation des posts (détail)', () => {
     expect(component['post']()?.likeCount).toBe(4);
     expect(component['likeError']()).toContain('annulée');
   });
+
+  it('US 6.1 CA-1 : affiche un formulaire avec les quatre motifs et une description facultative', () => {
+    postServiceMock.getPost.mockReturnValue(of(makePublication()));
+    configure({ id: '99', username: 'reporter', role: 'ROLE_USER' });
+    fixture.detectChanges();
+
+    component['openReportForm']();
+    fixture.detectChanges();
+
+    const select = fixture.nativeElement.querySelector('#report-reason') as HTMLSelectElement;
+    const options = Array.from(select.options).map(option => option.value);
+    expect(options).toEqual(['', 'INAPPROPRIATE_CONTENT', 'WRONG_IDENTIFICATION', 'SPAM', 'HARASSMENT']);
+    expect(fixture.nativeElement.querySelector('#report-description')).not.toBeNull();
+  });
+
+  it('US 6.1 CA-1 : transmet le motif et la description saisis', () => {
+    postServiceMock.getPost.mockReturnValue(of(makePublication()));
+    reportServiceMock.create.mockReturnValue(of({ id: 'report-1', status: 'PENDING' }));
+    configure({ id: '99', username: 'reporter', role: 'ROLE_USER' });
+    fixture.detectChanges();
+    component['reportForm'].setValue({ reasonType: 'HARASSMENT', description: 'Propos insultants.' });
+
+    component['submitReport']();
+
+    expect(reportServiceMock.create).toHaveBeenCalledWith('post-1', 'HARASSMENT', 'Propos insultants.');
+    expect(component['reportMessage']()).toContain('transmis');
+  });
+
+  it('US 6.1 CA-2 : explique qu’un doublon a déjà été pris en compte', () => {
+    postServiceMock.getPost.mockReturnValue(of(makePublication()));
+    reportServiceMock.create.mockReturnValue(throwError(() => ({ status: 409, error: { message: 'Cette publication a déjà été signalée.' } })));
+    configure({ id: '99', username: 'reporter', role: 'ROLE_USER' });
+    fixture.detectChanges();
+    component['reportForm'].setValue({ reasonType: 'SPAM', description: '' });
+
+    component['submitReport']();
+
+    expect(component['reportMessage']()).toBe('Votre signalement a déjà été pris en compte.');
+  });
 });
 
 describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', () => {
@@ -230,7 +325,10 @@ describe('PostDetail — US 3.1 Affichage du résultat d\'identification IA', ()
         { provide: PostService, useValue: postServiceMock },
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({ id: post.id }) } },
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ id: post.id }) },
+            paramMap: of(convertToParamMap({ id: post.id })),
+          },
         },
       ],
     });

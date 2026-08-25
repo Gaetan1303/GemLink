@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Repository;
+
+use App\Entity\ChatMessage; use App\Entity\Conversation; use App\Entity\User; use DateTimeImmutable;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository; use Doctrine\Persistence\ManagerRegistry;
+
+/** @extends ServiceEntityRepository<ChatMessage> */
+final class ChatMessageRepository extends ServiceEntityRepository
+{
+    public function __construct(ManagerRegistry $r) { parent::__construct($r, ChatMessage::class); }
+    /** @return ChatMessage[] */
+    public function page(Conversation $c, ?ChatMessage $cursor, int $limit): array
+    {
+        $qb=$this->createQueryBuilder('m')->addSelect('a')->join('m.author','a')->andWhere('m.conversation=:c')->setParameter('c',$c)->orderBy('m.createdAt','DESC')->addOrderBy('m.id','DESC')->setMaxResults($limit + 1);
+        if($cursor)$qb->andWhere('(m.createdAt < :date OR (m.createdAt = :date AND m.id < :id))')->setParameter('date',$cursor->getCreatedAt())->setParameter('id',$cursor->getId());
+        return $qb->getQuery()->getResult();
+    }
+    public function latest(Conversation $c): ?ChatMessage { return $this->findOneBy(['conversation'=>$c],['createdAt'=>'DESC','id'=>'DESC']); }
+    public function countUnread(Conversation $c, ?DateTimeImmutable $since, User $reader): int
+    {
+        $qb=$this->createQueryBuilder('m')->select('COUNT(m.id)')->andWhere('m.conversation=:c')->andWhere('m.author != :reader')->setParameter('c',$c)->setParameter('reader',$reader);
+        if($since)$qb->andWhere('m.createdAt > :since')->setParameter('since',$since);
+        return (int)$qb->getQuery()->getSingleScalarResult();
+    }
+}

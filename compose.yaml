@@ -19,9 +19,15 @@ services:
 
       REDIS_HOST: gl-cache-redis
       REDIS_PORT: 6379
+      REDIS_URL: redis://gemlink_redis:6379
+      MESSENGER_TRANSPORT_DSN: redis://gemlink_redis:6379/messages
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://gemlink_redis:6379/messages_failed
 
       AI_SERVICE_URL: http://gl-ai-brain:3000
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
+      # En développement, les uploads sont lus directement par le worker.
+      # Cette valeur doit rester identique pour l'API et le consommateur.
+      MEDIA_STORAGE_MODE: ${MEDIA_STORAGE_MODE:-local}
 
     ports:
       - "8000:8080"
@@ -32,6 +38,9 @@ services:
       redis:
         condition: service_healthy
 
+    volumes:
+      - media_uploads:/app/public/uploads
+
 
     networks:
       - gl-core-net
@@ -40,6 +49,43 @@ services:
   # ══════════════════════════════════════════════════════════════════════
   # BASE DE DONNÉES PRINCIPALE (dev/prod)
   # ══════════════════════════════════════════════════════════════════════
+  gemlink-worker:
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile
+    container_name: gemlink_worker
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+    command:
+      - php
+      - bin/console
+      - messenger:consume
+      - async
+      - --time-limit=3600
+      - --memory-limit=256M
+      - --sleep=1
+    environment:
+      AI_SERVICE_URL: http://gl-ai-brain:3000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
+      REDIS_URL: redis://gemlink_redis:6379
+      MESSENGER_TRANSPORT_DSN: redis://gemlink_redis:6379/messages
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://gemlink_redis:6379/messages_failed
+      # Le worker partage le répertoire avec gemlink-php ; il ne doit pas
+      # tenter un GET sur localhost (qui désigne son propre conteneur).
+      MEDIA_STORAGE_MODE: ${MEDIA_STORAGE_MODE:-local}
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gl-ai-brain:
+        condition: service_started
+    volumes:
+      - media_uploads:/app/public/uploads
+    networks:
+      - gl-core-net
+
   database:
     image: pgvector/pgvector:pg16
     container_name: gemlink_postgres
@@ -143,11 +189,19 @@ services:
       OLLAMA_URL: http://gl-ai-llm:11434
       VIT_MODEL_PATH: checkpoints/vit_stones.pth
       YOLO_MODEL_PATH: runs/detect/runs/stone_detector/weights/best.pt
+      YOLO_INFERENCE_SIZE: ${YOLO_INFERENCE_SIZE:-960}
+      YOLO_MODEL_VERSION: ${YOLO_MODEL_VERSION:-yolov8-stone-detector-v1}
+      VIT_MODEL_VERSION: ${VIT_MODEL_VERSION:-vit-stones-v1}
+      CLIP_MODEL_VERSION: ${CLIP_MODEL_VERSION:-clip-vit-b-32-openai}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
       MEDIA_INTERNAL_BASE_URL: http://gemlink-php:8080
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:3000/health', timeout=4)"
       interval: 15s
       timeout: 5s
       retries: 5
@@ -157,6 +211,10 @@ services:
       gl-ai-llm:
         condition: service_started
 
+    volumes:
+      # Évite les téléchargements PyTorch/Hugging Face à chaque recréation.
+      - gl_ai_torch_cache:/root/.cache/torch
+      - gl_ai_huggingface_cache:/root/.cache/huggingface
 
     networks:
       - gl-core-net
@@ -179,7 +237,11 @@ services:
 volumes:
   database_data:
   redis_data:
+  # Fichiers d'upload communs à l'API (écriture) et au worker (lecture).
+  media_uploads:
   gl_ai_checkpoints:
+  gl_ai_torch_cache:
+  gl_ai_huggingface_cache:
   gl_ollama_storage:
   gl_ai_brain:
   # Pas de volume pour gl-db-test : elle utilise tmpfs (RAM), jetable par design

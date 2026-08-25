@@ -61,47 +61,7 @@
             <p class="post-description">{{ p.description }}</p>
           }
 
-          @if (p.status === 'ANALYZED' && p.identification; as id) {
-            <div class="identification-card" @identificationReveal>
-              <span class="identification-card__eyebrow">Fiche d'identification</span>
-              <h2>{{ id.nom }}</h2>
-
-              @if (!id.isHighConfidence) {
-                <p class="identification-warning">
-                  Identification à confiance modérée ({{ id.confidence | percent }}) — à vérifier.
-                </p>
-              }
-
-              <dl class="identification-properties">
-                @if (id.categorie) {
-                  <div><dt>Catégorie</dt><dd>{{ id.categorie }}</dd></div>
-                }
-                @if (id.durete) {
-                  <div><dt>Dureté (Mohs)</dt><dd>{{ id.durete }}</dd></div>
-                }
-                @if (id.systemeCristallin) {
-                  <div><dt>Système cristallin</dt><dd>{{ id.systemeCristallin }}</dd></div>
-                }
-                @if (id.composition) {
-                  <div><dt>Composition</dt><dd>{{ id.composition }}</dd></div>
-                }
-              </dl>
-
-              @if (id.description) {
-                <div class="identification-description-wrapper">
-                  <p class="identification-description" #identificationDescriptionEl>{{ id.description }}</p>
-                  <button
-                    type="button"
-                    class="btn-scroll-description"
-                    (click)="scrollIdentificationText()"
-                    [attr.aria-label]="isDescriptionScrolledToEnd() ? 'Remonter au début de la description' : 'Faire défiler la description'"
-                  >
-                    <mat-icon>{{ isDescriptionScrolledToEnd() ? 'expand_less' : 'expand_more' }}</mat-icon>
-                  </button>
-                </div>
-              }
-            </div>
-          }
+          <app-post-analysis-result [status]="p.status" [identification]="p.identification" />
 
           @if ((p.status === 'ANALYZED' || p.status === 'COMMUNITY_VALIDATED') && p.identification && canValidate()) {
             <app-validation-widget [postId]="p.id" />
@@ -134,36 +94,70 @@
               }
             </div>
           }
+
+          @if (canReport()) {
+            <section class="report-section" aria-labelledby="report-title">
+              <h2 id="report-title">Signaler ce contenu</h2>
+              <p>Votre signalement sera transmis à l’équipe de modération.</p>
+
+              @if (!showReport()) {
+                <button type="button" class="btn-secondary" (click)="openReportForm()">Signaler</button>
+              } @else {
+                <form class="report-form" [formGroup]="reportForm" (ngSubmit)="submitReport()">
+                  <label for="report-reason">Motif <span aria-hidden="true">*</span></label>
+                  <select id="report-reason" formControlName="reasonType" required>
+                    <option value="" disabled>Choisir un motif</option>
+                    <option value="INAPPROPRIATE_CONTENT">Contenu inapproprié</option>
+                    <option value="WRONG_IDENTIFICATION">Identification manifestement incorrecte</option>
+                    <option value="SPAM">Spam</option>
+                    <option value="HARASSMENT">Harcèlement</option>
+                  </select>
+                  @if (reportForm.controls.reasonType.touched && reportForm.controls.reasonType.invalid) {
+                    <p class="field-error" role="alert">Veuillez sélectionner un motif.</p>
+                  }
+
+                  <label for="report-description">Description <span class="optional">(facultative)</span></label>
+                  <textarea id="report-description" formControlName="description" maxlength="1000" rows="4" placeholder="Ajoutez un contexte utile à la modération."></textarea>
+                  <span class="report-form__count">{{ reportForm.controls.description.value.length }}/1000</span>
+
+                  <div class="report-form__actions">
+                    <button type="submit" class="btn-delete" [disabled]="reportForm.invalid || isReporting()">
+                      @if (isReporting()) { Envoi... } @else { Envoyer le signalement }
+                    </button>
+                    <button type="button" class="btn-secondary" [disabled]="isReporting()" (click)="cancelReport()">Annuler</button>
+                  </div>
+                </form>
+              }
+
+              @if (reportMessage()) { <p class="report-section__message" role="status">{{ reportMessage() }}</p> }
+            </section>
+          }
         </div>
       </div>
 
       <!-- US 2.4 — Commentaires MVP -->
       <app-comment-section [postId]="p.id" />
 
-      @if (similarPosts().length > 0) {
+      @if (isSimilarLoading() || similarPosts().length > 0) {
         <section class="similar-posts" aria-labelledby="similar-posts-title">
-          <h2 id="similar-posts-title">Pierres similaires</h2>
-          <div class="similar-posts__grid">
-            @for (similar of similarPosts(); track similar.id) {
-              <a class="similar-post" [routerLink]="['/posts', similar.id]">
-                <img [src]="similar.mediaUrl" [alt]="similar.title || 'Pierre similaire'" />
-                <span>{{ similar.title || similar.identification?.nom || 'Sans titre' }}</span>
-                <small>{{ similar.similarity | percent:'1.0-0' }} similaire</small>
-              </a>
-            }
-          </div>
-
-          @if (canReport()) {
-            <button type="button" class="btn-secondary" (click)="showReport.set(!showReport())">Signaler</button>
-            @if (showReport()) {
-              <div class="report-reasons">
-                <button type="button" (click)="submitReport('INAPPROPRIATE_CONTENT')">Contenu inapproprié</button>
-                <button type="button" (click)="submitReport('WRONG_IDENTIFICATION')">Mauvaise identification</button>
-                <button type="button" (click)="submitReport('SPAM')">Spam</button>
-                <button type="button" (click)="submitReport('HARASSMENT')">Harcèlement</button>
-              </div>
-            }
-            @if (reportMessage()) { <p role="status">{{ reportMessage() }}</p> }
+          <div class="similar-posts__heading"><div><span class="similar-posts__eyebrow">Exploration minéralogique</span><h2 id="similar-posts-title">Posts similaires</h2></div><p>Les spécimens visuellement les plus proches de cette pierre.</p></div>
+          @if (isSimilarLoading()) {
+            <div class="similar-posts__grid similar-posts__grid--loading" aria-label="Chargement des posts similaires">
+              @for (placeholder of [1, 2, 3]; track placeholder) { <div class="similar-post-skeleton"></div> }
+            </div>
+          } @else {
+            <div class="similar-posts__grid">
+              @for (similar of similarPosts(); track similar.id) {
+                <a class="similar-post" [routerLink]="['/posts', similar.id]" [attr.aria-label]="'Consulter le post similaire ' + (similar.title || similar.identification?.nom || similar.id)">
+                  <div class="similar-post__media">
+                    @if (similar.mediaType === 'IMAGE') { <img [src]="similar.mediaUrl" [alt]="similar.title || similar.identification?.nom || 'Pierre similaire'" /> }
+                    @else { <span class="similar-post__video"><mat-icon>videocam</mat-icon></span> }
+                    <strong>{{ similar.similarity | percent:'1.0-0' }}</strong>
+                  </div>
+                  <div class="similar-post__body"><small>N° {{ similar.id.slice(0, 8) | uppercase }}</small><span>{{ similar.title || similar.identification?.nom || 'Sans titre' }}</span><em>Découvrir <mat-icon>arrow_forward</mat-icon></em></div>
+                </a>
+              }
+            </div>
           }
         </section>
       }

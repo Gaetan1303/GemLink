@@ -1,8 +1,15 @@
 import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
 import { adminGuard } from './core/guards/admin-guard';
+import { moderationGuard } from './core/guards/moderation-guard';
 export const routes: Routes = [
   { path: '', component: Home },
+  { path: 'factions', loadComponent: () => import('./pages/factions/faction-list/faction-list').then(m => m.FactionList) },
+  { path: 'factions/new', loadComponent: () => import('./pages/factions/faction-new/faction-new').then(m => m.FactionNew) },
+  { path: 'factions/:id/manage', loadComponent: () => import('./pages/factions/faction-manage/faction-manage').then(m => m.FactionManage) },
+  { path: 'factions/:id', loadComponent: () => import('./pages/factions/faction-detail/faction-detail').then(m => m.FactionDetail) },
+  { path: 'messages', loadComponent: () => import('./pages/messages/conversation-list/conversation-list').then(m => m.ConversationList) },
+  { path: 'messages/:conversationId', loadComponent: () => import('./pages/messages/conversation-detail/conversation-detail').then(m => m.ConversationDetail) },
   {
     path: 'leaderboard',
     loadComponent: () => import('./pages/leaderboard/leaderboard').then(m => m.Leaderboard),
@@ -14,7 +21,7 @@ export const routes: Routes = [
   },
   {
     path: 'admin/moderation',
-    canActivate: [adminGuard],
+    canActivate: [moderationGuard],
     loadComponent: () => import('./pages/admin/moderation/moderation').then(m => m.Moderation),
   },
   

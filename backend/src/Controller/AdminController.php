@@ -11,6 +11,7 @@ use App\Repository\RefreshTokenRepository;
 use App\Repository\UserRepository;
 use App\Repository\VersionModeleIaRepository;
 use App\Service\AdminDashboardService;
+use App\Service\AdminSettingsProvider;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -34,6 +35,7 @@ final class AdminController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly MessageBusInterface $bus,
         private readonly AdminDashboardService $dashboard,
+        private readonly AdminSettingsProvider $adminSettings,
     ) {}
 
     #[Route('/dashboard', methods: ['GET'])]
@@ -96,11 +98,11 @@ final class AdminController extends AbstractController
     public function startFineTuning(Request $request): JsonResponse
     {
         $payload = $this->payload($request); if ($payload instanceof JsonResponse) return $payload;
-        $threshold = $payload['minTrustScore'] ?? null; $name = trim((string) ($payload['versionName'] ?? ''));
-        if (!is_int($threshold) || $threshold < 0 || $threshold > 100 || $name === '') return $this->json(['message' => 'minTrustScore (0-100) et versionName sont requis.'], 422);
+        $name = trim((string) ($payload['versionName'] ?? ''));
+        if ($name === '') return $this->json(['message' => 'versionName est requis.'], 422);
         if ($this->models->findOneBy(['name' => $name]) !== null) return $this->json(['message' => 'Ce nom de version existe déjà.'], 409);
         $model = new VersionModeleIa($name, VersionModeleIa::TYPE_VIT);
-        $job = new JobFineTuning($model, $threshold);
+        $job = new JobFineTuning($model, $this->adminSettings->getDatasetCandidateTrustThreshold());
         $this->em->persist($model); $this->em->persist($job); $this->em->flush();
         $this->bus->dispatch(new RunFineTuningMessage($job->getId()->toRfc4122()));
         return $this->json($this->jobData($job), Response::HTTP_ACCEPTED);

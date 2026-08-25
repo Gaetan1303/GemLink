@@ -1,0 +1,8 @@
+<app-header />
+<main class="faction-list-page community-page" id="main-content">
+  <section class="hero"><span class="eyebrow">Communautés</span><h1>Factions</h1><p>Rejoignez des passionnés et partagez vos découvertes.</p><a routerLink="/factions/new" class="btn">Créer une faction</a></section>
+  <form class="filters" (ngSubmit)="load()" role="search"><label>Rechercher<input name="search" [(ngModel)]="search" maxlength="100" /></label><label><input type="checkbox" name="mine" [(ngModel)]="mine" /> Mes factions</label><button class="btn" type="submit">Filtrer</button></form>
+  @if(loading()){<p>Chargement des factions…</p>}@else if(error()){<p role="alert">{{error()}}</p>}@else if(!factions().length){<p>Aucune faction ne correspond à votre recherche.</p>}@else{
+  <section class="faction-grid" aria-label="Liste des factions">@for(faction of factions();track faction.id){<article class="faction-card">@if(faction.avatarUrl){<img [src]="faction.avatarUrl" [alt]="'Avatar de '+faction.name" />}<h2>{{faction.name}}</h2><p>{{faction.description||'Aucune description.'}}</p><span>{{faction.visibility==='PRIVATE'?'Privée':'Publique'}} · {{faction.memberCount}} membres</span><a [routerLink]="['/factions',faction.id]" class="btn">Voir</a></article>}</section>
+  @if(nextCursor()){<button class="btn" type="button" (click)="load(nextCursor()!)">Charger plus</button>}}
+</main><app-footer />

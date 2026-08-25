@@ -74,6 +74,20 @@ final class AdminValidationSettingsControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
+    public function testDatasetTrustThresholdMustBeAnInteger(): void
+    {
+        $client = static::createClient();
+        $client->loginUser($this->makeUser('ADMIN'), 'api');
+
+        $client->request(
+            'PATCH', '/api/admin/validation-settings',
+            [], [], ['CONTENT_TYPE' => 'application/json'],
+            json_encode(['datasetCandidateTrustThreshold' => 70.5]),
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
     private function makeUser(string $role): User
     {
         $user = new User();

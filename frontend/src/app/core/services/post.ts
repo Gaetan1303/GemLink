@@ -20,6 +20,7 @@ export interface PostAuthor {
 // n'est pas ANALYZED, ou si aucun match n'a été persisté (cas rare mais
 // possible si l'analyse a échoué en base sans mettre à jour le statut).
 export interface PublicationIdentification {
+  id?:                string;
   nom:               string;
   categorie:         string | null;
   durete:            number | null;
@@ -28,6 +29,26 @@ export interface PublicationIdentification {
   description:       string | null;
   confidence:        number;
   isHighConfidence:  boolean;
+  confidencePercent?: number;
+  confidenceThreshold?: number;
+  isUncertain?:       boolean;
+  communityValidated?: boolean;
+  detectorConfidence?: number;
+  detections?: PipelineDetection[];
+  modelVersion?: PipelineModelVersion;
+}
+
+export interface PipelineDetection {
+  nom:                string;
+  confidence:         number;
+  detectorConfidence: number | null;
+  bbox:                [number, number, number, number];
+}
+
+export interface PipelineModelVersion {
+  yolo: string;
+  vit:  string;
+  clip: string;
 }
 
 export interface Publication {
@@ -146,8 +167,10 @@ export class PostService {
     return this.#http.get<Publication>(`${this.#apiUrl}/${postId}`);
   }
 
-  getSimilarPosts(postId: string): Observable<{ items: SimilarPublication[] }> {
-    return this.#http.get<{ items: SimilarPublication[] }>(`${this.#apiUrl}/${postId}/similar`);
+  getSimilarPosts(postId: string, limit = 5): Observable<{ items: SimilarPublication[] }> {
+    return this.#http.get<{ items: SimilarPublication[] }>(`${this.#apiUrl}/${postId}/similar`, {
+      params: { limit: Math.min(5, Math.max(1, limit)) },
+    });
   }
 
   /** US 2.3 CA-1 : le serveur ajoute ou retire le like selon son état actuel. */

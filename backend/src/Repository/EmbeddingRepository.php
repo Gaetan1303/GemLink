@@ -29,7 +29,8 @@ class EmbeddingRepository extends ServiceEntityRepository
                 WHERE source.publication_id = :publicationId
                   AND publication.deleted_at IS NULL
                   AND publication.status IN ('ANALYZED', 'COMMUNITY_VALIDATED')
-                ORDER BY other.vector_data <=> source.vector_data
+                ORDER BY other.vector_data <=> source.vector_data,
+                         other.publication_id ASC
                 LIMIT :limit
                 SQL,
             ['publicationId' => $publicationId, 'limit' => $limit],

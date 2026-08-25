@@ -62,7 +62,7 @@ export const authInterceptor: HttpInterceptorFn = (
     return next(req);
   }
 
-  const token = localStorage.getItem('token');
+  const token = authService.getUsableAccessToken();
   const authedReq = token ? attachToken(req, token) : req;
 
   return next(authedReq).pipe(

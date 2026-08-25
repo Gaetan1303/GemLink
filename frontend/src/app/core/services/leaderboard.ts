@@ -13,11 +13,23 @@ export interface LeaderboardEntry {
   trustScore: number;
 }
 
+export interface CurrentLeaderboardUser {
+  rank: number;
+  id: string;
+  points: number;
+}
+
+export interface LeaderboardResponse {
+  items: LeaderboardEntry[];
+  total: number;
+  currentUser: CurrentLeaderboardUser | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class LeaderboardService {
   private readonly http = inject(HttpClient);
 
-  list(): Observable<{ items: LeaderboardEntry[]; total: number }> {
-    return this.http.get<{ items: LeaderboardEntry[]; total: number }>(`${environment.apiUrl}/api/leaderboard`);
+  list(): Observable<LeaderboardResponse> {
+    return this.http.get<LeaderboardResponse>(`${environment.apiUrl}/api/leaderboard`);
   }
 }

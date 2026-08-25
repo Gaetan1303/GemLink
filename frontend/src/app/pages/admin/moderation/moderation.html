@@ -1,43 +1,122 @@
+<app-header />
+
 <main class="moderation-page">
-  <p class="eyebrow">Administration</p>
-  <h1>Signalements à modérer</h1>
+  <header class="moderation-hero">
+    <p class="eyebrow">Espace modérateur · File de traitement</p>
+    <h1>Signalements en attente</h1>
+    <p>Examinez les motifs, consultez l’historique du post et consignez chaque décision.</p>
+  </header>
 
   @if (error()) {
-    <p class="error" role="alert">{{ error() }}</p>
+    <div class="feedback feedback--error" role="alert">{{ error() }}</div>
+  }
+  @if (success()) {
+    <p class="feedback feedback--success" role="status">{{ success() }}</p>
   }
 
   @if (loading()) {
-    <p>Chargement…</p>
+    <div class="loading" role="status" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      Chargement des signalements…
+    </div>
   } @else {
-    <div class="report-list">
+    <section class="queue" aria-label="Signalements à traiter">
       @for (report of reports(); track report.id) {
-        <article>
-          <img [src]="report.publication.mediaUrl" alt="Publication signalée" />
+        <article class="report-card">
+          <div class="media-frame">
+            <img [src]="report.publication.mediaUrl" alt="Publication signalée : {{ report.publication.title || 'sans titre' }}" />
+            <span class="report-count">
+              {{ report.reportCount }} signalement{{ report.reportCount > 1 ? 's' : '' }}
+            </span>
+          </div>
+
           <div class="report-content">
-            <h2>{{ report.publication.title || 'Sans titre' }}</h2>
-            <p><strong>{{ report.reasonType }}</strong> · signalé par {{ report.reporter.username }}</p>
-            @if (report.description) {
-              <p>{{ report.description }}</p>
-            }
-            <a [routerLink]="['/posts', report.publication.id]">Voir la publication</a>
-            <div class="actions">
-              <button
-                type="button"
+            <div class="report-heading">
+              <div>
+                <p class="catalog-id">POST #{{ report.publication.id.slice(0, 8) }}</p>
+                <h2>{{ report.publication.title || 'Publication sans titre' }}</h2>
+                <p>Publié par <strong>{{ report.publication.author }}</strong></p>
+              </div>
+              <a class="post-link" [routerLink]="['/posts', report.publication.id]">Voir le post</a>
+            </div>
+
+            <section class="current-reason" aria-label="Signalement sélectionné">
+              <span class="reason-badge">{{ reasonLabel(report.reasonType) }}</span>
+              <p>Signalé par <strong>{{ report.reporter.username }}</strong> le {{ report.createdAt | date:'dd/MM/yyyy à HH:mm' }}</p>
+              @if (report.description) {
+                <blockquote>{{ report.description }}</blockquote>
+              }
+            </section>
+
+            <div class="details-grid">
+              <details open>
+                <summary>Tous les motifs <span>{{ report.reasonDetails.length }}</span></summary>
+                <ol class="reason-list">
+                  @for (reason of report.reasonDetails; track reason.reportId) {
+                    <li>
+                      <div>
+                        <strong>{{ reasonLabel(reason.reasonType) }}</strong>
+                        <span>{{ reason.reporter.username }} · {{ reason.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                      </div>
+                      @if (reason.description) { <p>{{ reason.description }}</p> }
+                    </li>
+                  }
+                </ol>
+              </details>
+
+              <details>
+                <summary>Historique de modération <span>{{ report.moderationHistory.length }}</span></summary>
+                @if (report.moderationHistory.length) {
+                  <ol class="history-list">
+                    @for (entry of report.moderationHistory; track entry.id) {
+                      <li>
+                        <span class="history-marker" aria-hidden="true"></span>
+                        <div>
+                          <strong>{{ actionLabel(entry.action) }}</strong>
+                          <span>par {{ entry.moderator.username }} · {{ entry.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                          <p>{{ entry.reason || 'Aucun motif complémentaire.' }}</p>
+                        </div>
+                      </li>
+                    }
+                  </ol>
+                } @else {
+                  <p class="empty-detail">Aucune décision antérieure pour ce post.</p>
+                }
+              </details>
+            </div>
+
+            <div class="decision-panel">
+              <label [for]="'decision-reason-' + report.id">Motif de la décision <span>(optionnel)</span></label>
+              <textarea
+                [id]="'decision-reason-' + report.id"
+                rows="3"
+                maxlength="1000"
+                placeholder="Précisez le contexte de votre décision…"
+                [value]="decisionReason(report.id)"
                 [disabled]="processingId() === report.id"
-                (click)="decide(report, 'REJECTED')"
-              >Rejeter le signalement</button>
-              <button
-                type="button"
-                class="danger"
-                [disabled]="processingId() === report.id"
-                (click)="decide(report, 'ACCEPTED')"
-              >Masquer la publication</button>
+                (input)="updateDecisionReason(report.id, $event)"
+              ></textarea>
+              <div class="decision-footer">
+                <span>{{ decisionReason(report.id).length }}/1000</span>
+                <div class="actions">
+                  <button type="button" class="button button--reject" [disabled]="processingId() !== null" (click)="decide(report, 'REJECTED')">
+                    Rejeter et restaurer
+                  </button>
+                  <button type="button" class="button button--accept" [disabled]="processingId() !== null" (click)="decide(report, 'ACCEPTED')">
+                    {{ processingId() === report.id ? 'Traitement…' : 'Accepter et retirer' }}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </article>
       } @empty {
-        <p>Aucun signalement en attente.</p>
+        <div class="empty-state">
+          <span aria-hidden="true">✓</span>
+          <h2>Aucun signalement en attente</h2>
+          <p>La file de modération est à jour.</p>
+        </div>
       }
-    </div>
+    </section>
   }
 </main>

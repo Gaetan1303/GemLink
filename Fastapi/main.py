@@ -1,3 +1,4 @@
+import asyncio
 import io
 import os
 import json
@@ -19,7 +20,14 @@ from vit import get_model
 from ultralytics import YOLO
 from utils import crop_with_padding
 from schema import StoneAnalysisResponse
-from fine_tuning import FineTuneRequest, jobs as fine_tuning_jobs, start_job
+from fine_tuning import (
+    FineTuneRequest,
+    jobs as fine_tuning_jobs,
+    model_versions as fine_tuned_versions,
+    register_active_version,
+    start_job,
+    versions as list_vit_versions,
+)
 import open_clip
 
 # Configuration des logs
@@ -40,6 +48,16 @@ OLLAMA_TEXT_MODEL = os.getenv("OLLAMA_TEXT_MODEL", "gemma3:1b")
 # dans pgvector (table embedding) pour la recherche par similarité entre publications.
 CLIP_MODEL_ARCH = os.getenv("CLIP_MODEL_ARCH", "ViT-B-32")
 CLIP_MODEL_PRETRAINED = os.getenv("CLIP_MODEL_PRETRAINED", "openai")
+DETECTION_CONFIDENCE_THRESHOLD = 0.5
+YOLO_INFERENCE_SIZE = int(os.getenv("YOLO_INFERENCE_SIZE", "960"))
+YOLO_MODEL_VERSION = os.getenv("YOLO_MODEL_VERSION", f"yolov8:{os.path.basename(YOLO_MODEL_PATH)}")
+VIT_MODEL_VERSION = os.getenv("VIT_MODEL_VERSION", f"vit:{os.path.basename(VIT_MODEL_PATH)}")
+CLIP_MODEL_VERSION = os.getenv("CLIP_MODEL_VERSION", f"clip:{CLIP_MODEL_ARCH}:{CLIP_MODEL_PRETRAINED}")
+MODEL_VERSIONS = {
+    "yolo": YOLO_MODEL_VERSION,
+    "vit": VIT_MODEL_VERSION,
+    "clip": CLIP_MODEL_VERSION,
+}
 
 # Clé partagée avec Symfony : ce service ne doit JAMAIS être appelable
 # directement par le frontend Angular, uniquement par le backend Symfony.
@@ -113,8 +131,18 @@ async def lifespan(app: FastAPI):
 
     try:
         # 1. Chargement du checkpoint ViT (format {"model": state_dict, "classes": [...]})
-        logger.info(f" Chargement des checkpoints depuis {VIT_MODEL_PATH}...")
-        checkpoint = torch.load(VIT_MODEL_PATH, map_location=device)
+        # Une activation/rollback survit au redemarrage si son checkpoint est
+        # encore disponible ; sinon la version configuree reste le fallback.
+        startup_vit_version = VIT_MODEL_VERSION
+        startup_vit_path = VIT_MODEL_PATH
+        for version, metadata in fine_tuned_versions.items():
+            registered_path = str(metadata.get('checkpoint', ''))
+            if metadata.get('status') == 'ACTIVE' and os.path.isfile(registered_path):
+                startup_vit_version = version
+                startup_vit_path = registered_path
+                break
+        logger.info(f" Chargement des checkpoints depuis {startup_vit_path}...")
+        checkpoint = torch.load(startup_vit_path, map_location=device)
         app.state.classes = checkpoint["classes"]
         logger.info(f" Classes détectées : {len(app.state.classes)} classes")
 
@@ -124,6 +152,9 @@ async def lifespan(app: FastAPI):
         app.state.classifier_model.load_state_dict(checkpoint["model"])
         app.state.classifier_model.to(device)
         app.state.classifier_model.eval()
+        app.state.model_versions = {**MODEL_VERSIONS, 'vit': startup_vit_version}
+        app.state.model_activation_lock = asyncio.Lock()
+        register_active_version(startup_vit_version, startup_vit_path)
 
         # 3. Chargement du détecteur YOLOv8
         logger.info(f" Chargement du détecteur YOLOv8 depuis {YOLO_MODEL_PATH}...")
@@ -170,7 +201,10 @@ app = FastAPI(title="GemLink AI Orchestrator API", version="1.1.0", lifespan=lif
 
 @app.post('/fine-tune', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)], status_code=202)
 async def fine_tune(request: FineTuneRequest):
-    return start_job(request, app.state.http_session)
+    try:
+        return start_job(request, app.state.http_session)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 @app.get('/fine-tune/{job_id}', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)])
@@ -179,6 +213,58 @@ async def fine_tune_status(job_id: str):
     if state is None:
         raise HTTPException(status_code=404, detail='Job de fine-tuning introuvable.')
     return state
+
+
+@app.get('/models/vit', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)])
+async def vit_versions():
+    """Liste les checkpoints ViT disponibles, dont la version active."""
+    return list_vit_versions()
+
+
+def _load_vit_checkpoint(checkpoint_path: str):
+    checkpoint = torch.load(checkpoint_path, map_location=app.state.device)
+    if not isinstance(checkpoint, dict) or 'model' not in checkpoint or 'classes' not in checkpoint:
+        raise ValueError('Le checkpoint ViT est invalide.')
+    classes = checkpoint['classes']
+    if not isinstance(classes, list) or not classes:
+        raise ValueError('Le checkpoint ViT ne contient aucune classe.')
+    model = get_model(num_classes=len(classes))
+    model.load_state_dict(checkpoint['model'])
+    model.to(app.state.device)
+    model.eval()
+    return model, classes
+
+
+@app.post('/models/vit/{version}/activate', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)])
+async def activate_vit_version(version: str):
+    """
+    Active atomiquement un checkpoint versionné. Le même endpoint permet le
+    rollback : il suffit de lui passer le nom d'une version antérieure.
+    """
+    metadata = fine_tuned_versions.get(version)
+    if metadata is None:
+        raise HTTPException(status_code=404, detail='Version ViT introuvable.')
+    checkpoint_path = str(metadata.get('checkpoint', ''))
+    if not checkpoint_path or not os.path.isfile(checkpoint_path):
+        raise HTTPException(status_code=409, detail='Le checkpoint de cette version est indisponible.')
+
+    async with app.state.model_activation_lock:
+        try:
+            model, classes = await asyncio.to_thread(_load_vit_checkpoint, checkpoint_path)
+        except Exception as error:
+            logger.error('Impossible de charger la version ViT %s : %s', version, error, exc_info=True)
+            raise HTTPException(status_code=422, detail='Le checkpoint ViT est invalide ou incompatible.') from error
+
+        # Le nouveau modèle est entièrement chargé avant l'échange des
+        # références : aucune requête d'inférence ne voit un état partiel.
+        previous_model = app.state.classifier_model
+        app.state.classifier_model = model
+        app.state.classes = classes
+        app.state.model_versions['vit'] = version
+        register_active_version(version, checkpoint_path)
+        del previous_model
+
+    return fine_tuned_versions[version]
 
 
 # ==============================================================================
@@ -224,39 +310,62 @@ def run_vision_pipeline(image: Image.Image) -> dict:
     Réutilisée par /predict (rapide, agent vision seul) et /analyze (agent vision + agent connaissance).
     Lève ValueError si aucun minéral n'est détecté.
     """
-    yolo_results = app.state.detector(image, verbose=False)
+    yolo_results = app.state.detector(
+        image,
+        conf=DETECTION_CONFIDENCE_THRESHOLD,
+        imgsz=YOLO_INFERENCE_SIZE,
+        verbose=False,
+    )
     if len(yolo_results) == 0 or len(yolo_results[0].boxes) == 0:
+        logger.warning(
+            "YOLO n'a localisé aucun minéral (seuil=%.2f, imgsz=%d).",
+            DETECTION_CONFIDENCE_THRESHOLD,
+            YOLO_INFERENCE_SIZE,
+        )
         raise ValueError("Aucun minéral localisé dans l'image.")
 
-    best_box = yolo_results[0].boxes[0]
-    bbox = best_box.xyxy[0].cpu().numpy().tolist()
-    det_conf = float(best_box.conf[0].cpu().item())
+    detections = []
+    for box in yolo_results[0].boxes:
+        det_conf = float(box.conf[0].detach().cpu().item())
+        if det_conf <= DETECTION_CONFIDENCE_THRESHOLD:
+            continue
 
-    # Crop avec marge pour ne pas couper un bord de la pierre (bbox YOLO souvent trop serrée)
-    crop_img = crop_with_padding(image, bbox)
+        bbox = box.xyxy[0].detach().cpu().tolist()
+        crop_img = crop_with_padding(image, bbox)
+        input_tensor = app.state.preprocess(crop_img).unsqueeze(0).to(app.state.device)
 
-    input_tensor = app.state.preprocess(crop_img).unsqueeze(0).to(app.state.device)
+        with torch.inference_mode():
+            outputs = app.state.classifier_model(input_tensor)
+            probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
+            top_prob, top_idx = torch.max(probabilities, dim=0)
 
-    with torch.no_grad():
-        outputs = app.state.classifier_model(input_tensor)
-        probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
-        top_prob, top_idx = torch.max(probabilities, dim=0)
+        detections.append({
+            "bbox": [int(round(v)) for v in bbox],
+            "detector_confidence": det_conf,
+            "label": app.state.classes[top_idx.item()],
+            "confidence": float(top_prob.item()),
+            "embedding": compute_clip_embedding(crop_img),
+            "all_probabilities": {
+                app.state.classes[i]: float(probabilities[i].item())
+                for i in range(len(app.state.classes))
+            },
+        })
 
-        class_name = app.state.classes[top_idx.item()]
-        class_conf = float(top_prob.item())
+    if not detections:
+        raise ValueError("Aucun minéral détecté avec une confiance supérieure à 0.5.")
 
-    embedding = compute_clip_embedding(crop_img)
+    detections.sort(key=lambda item: item["detector_confidence"], reverse=True)
+    primary = detections[0]
 
     return {
-        "bbox": [int(v) for v in bbox],
-        "detector_confidence": det_conf,
-        "predicted_class": class_name,
-        "confidence": class_conf,
-        "embedding": embedding,
-        "all_probabilities": {
-            app.state.classes[i]: float(probabilities[i].item())
-            for i in range(len(app.state.classes))
-        },
+        "bbox": primary["bbox"],
+        "detector_confidence": primary["detector_confidence"],
+        "predicted_class": primary["label"],
+        "confidence": primary["confidence"],
+        "embedding": primary["embedding"],
+        "all_probabilities": primary["all_probabilities"],
+        "detections": detections,
+        "model_version": getattr(app.state, "model_versions", MODEL_VERSIONS).copy(),
     }
 
 
@@ -269,16 +378,33 @@ def compute_clip_embedding(crop_img: Image.Image) -> list[float]:
     """
     image_input = app.state.clip_preprocess(crop_img).unsqueeze(0).to(app.state.device)
 
-    with torch.no_grad():
+    with torch.inference_mode():
         features = app.state.clip_model.encode_image(image_input)
-        features = features / features.norm(dim=-1, keepdim=True)
+        features = features / features.norm(dim=-1, keepdim=True).clamp_min(1e-12)
 
     return features.squeeze(0).cpu().tolist()
 
 
 # ==============================================================================
-# SECTION ROUTAGE : ORCHESTRATION COMPLÈTE (AGENT VISION + AGENT CONNAISSANCE)
+# SECTION ROUTAGE : ORCHESTRATION D'IDENTIFICATION
 # ==============================================================================
+
+def build_vision_analysis_response(vision_result: dict) -> dict:
+    """Construit la réponse contractuelle sans attendre le LLM.
+
+    L'identification (YOLO, ViT et embedding CLIP) est disponible dès que la
+    vision a terminé. Les informations encyclopédiques ne sont pas nécessaires
+    pour identifier le spécimen et ne doivent donc pas bloquer Messenger.
+    """
+    return {
+        "nom": vision_result["predicted_class"],
+        "confidence": vision_result["confidence"],
+        "detector_confidence": vision_result["detector_confidence"],
+        "bbox": vision_result["bbox"],
+        "embedding": vision_result["embedding"],
+        "detections": vision_result["detections"],
+        "model_version": vision_result["model_version"],
+    }
 
 # Prompt few-shot : les petits modèles (ex. gemma3:1b, contrainte RAM du
 # serveur de prod) respectent un schéma JSON strict beaucoup plus fiablement
@@ -333,6 +459,9 @@ async def ask_knowledge_agent(class_name: str) -> dict:
         "messages": [{"role": "user", "content": ANALYSIS_PROMPT_TEMPLATE.format(class_name=class_name)}],
         "stream": False,
         "format": "json",  # force Ollama à produire du JSON valide (modèles compatibles)
+        # Un petit modèle respecte mieux une structure fixe en mode
+        # déterministe. La diversité n'apporte rien pour ces fiches factuelles.
+        "options": {"temperature": 0},
     }
 
     try:
@@ -365,9 +494,9 @@ async def analyze(
     file: UploadFile | None = File(None),
 ):
     """
-    Pipeline complet : Agent Vision (YOLO + ViT) -> Agent Connaissance (Ollama)
-    -> validation stricte via StoneAnalysisResponse.
-    C'est l'endpoint que Symfony doit appeler (POST /analyze dans votre diagramme).
+    Identification immédiate par vision (YOLO + ViT + CLIP), validée par
+    StoneAnalysisResponse. L'enrichissement Ollama est volontairement hors du
+    chemin critique afin qu'une fiche lente ne bloque pas une identification.
 
     Accepte le champ multipart sous le nom 'media' ou 'file' : le worker
     Symfony (AnalyzeMediaMessageHandler) envoie actuellement 'file'.
@@ -385,12 +514,7 @@ async def analyze(
             logger.error('Erreur durant le traitement vidéo : %s', error, exc_info=True)
             raise HTTPException(status_code=500, detail='Erreur interne de traitement vidéo.')
 
-        knowledge_data = await ask_knowledge_agent(vision_result['predicted_class'])
-        knowledge_data['confidence'] = vision_result['confidence']
-        knowledge_data['detector_confidence'] = vision_result['detector_confidence']
-        knowledge_data['bbox'] = vision_result['bbox']
-        knowledge_data['embedding'] = vision_result['embedding']
-        return StoneAnalysisResponse(**knowledge_data)
+        return StoneAnalysisResponse(**build_vision_analysis_response(vision_result))
 
     if upload is None:
         raise HTTPException(status_code=422, detail="Champ fichier manquant : utilisez 'media' ou 'file'.")
@@ -410,19 +534,8 @@ async def analyze(
         logger.error(f" Erreur durant l'inférence Vision : {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Erreur interne de traitement d'image.")
 
-    knowledge_data = await ask_knowledge_agent(vision_result["predicted_class"])
-
-    # Fusion : les champs de vision priment toujours sur ce que l'agent connaissance pourrait halluciner
-    knowledge_data["confidence"] = vision_result["confidence"]
-    knowledge_data["detector_confidence"] = vision_result["detector_confidence"]
-    knowledge_data["bbox"] = vision_result["bbox"]
-    # L'embedding ne passe jamais par Ollama : il vient uniquement de CLIP
-    # (calculé dans run_vision_pipeline), persisté ensuite par Symfony dans
-    # pgvector pour la recherche par similarité.
-    knowledge_data["embedding"] = vision_result["embedding"]
-
     try:
-        return StoneAnalysisResponse(**knowledge_data)
+        return StoneAnalysisResponse(**build_vision_analysis_response(vision_result))
     except Exception as e:
         logger.error(f" Réponse de l'agent connaissance non conforme au schéma : {str(e)}")
         raise HTTPException(status_code=502, detail="L'agent de connaissance a renvoyé une structure invalide.")

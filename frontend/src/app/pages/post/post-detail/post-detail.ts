@@ -1,5 +1,6 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 import { animate, style, transition, trigger } from '@angular/animations';
@@ -10,26 +11,16 @@ import { PostService, Publication, SimilarPublication } from '../../../core/serv
 import { CommentSection } from '../../../shared/comment-section/comment-section';
 import { ValidationWidget } from '../../../shared/validation-widget/validation-widget';
 import { ReportReason, ReportService } from '../../../core/services/report';
+import { PostAnalysisResult } from '../post-analysis-result/post-analysis-result';
 
 // US 2.2 — Consultation des posts : détail public d'un post.
 // US 3.1 — Suivi en direct de l'analyse IA (polling) + transitions animées.
 @Component({
   selector: 'app-post-detail',
-  imports: [CommonModule, RouterLink, SharedModule, CommentSection, ValidationWidget],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, SharedModule, CommentSection, ValidationWidget, PostAnalysisResult],
   templateUrl: './post-detail.html',
   styleUrls: ['./post-detail.scss'],
   animations: [
-    // Révélation de la fiche minéralogique une fois l'analyse aboutie :
-    // hauteur + fondu, pour ne pas faire "sauter" le layout brutalement.
-    trigger('identificationReveal', [
-      transition(':enter', [
-        style({ height: 0, opacity: 0, transform: 'translateY(-6px)' }),
-        animate(
-          '420ms 100ms cubic-bezier(0.22, 1, 0.36, 1)',
-          style({ height: '*', opacity: 1, transform: 'translateY(0)' }),
-        ),
-      ]),
-    ]),
     // Disparition en fondu de l'overlay de scan dès que l'analyse se termine.
     trigger('scanFade', [
       transition(':leave', [
@@ -45,6 +36,7 @@ export class PostDetail implements OnInit, OnDestroy {
   protected readonly authService = inject(AuthService);
   private readonly postService = inject(PostService);
   private readonly reportService = inject(ReportService);
+  private readonly formBuilder = inject(FormBuilder);
 
   protected readonly currentRole = computed<MenuRole>(
     () => this.authService.currentUser()?.role ?? 'VISITEUR'
@@ -54,6 +46,7 @@ export class PostDetail implements OnInit, OnDestroy {
   protected readonly isLoading  = signal(true);
   protected readonly loadError  = signal<string | null>(null);
   protected readonly similarPosts = signal<SimilarPublication[]>([]);
+  protected readonly isSimilarLoading = signal(false);
 
   protected readonly isDeleting = signal(false);
   protected readonly deleteError = signal<string | null>(null);
@@ -62,6 +55,11 @@ export class PostDetail implements OnInit, OnDestroy {
   protected readonly likeError = signal<string | null>(null);
   protected readonly showReport = signal(false);
   protected readonly reportMessage = signal<string | null>(null);
+  protected readonly isReporting = signal(false);
+  protected readonly reportForm = this.formBuilder.nonNullable.group({
+    reasonType: ['', Validators.required],
+    description: ['', Validators.maxLength(1000)],
+  });
 
   // CA-4 : l'autorisation finale est toujours vérifiée côté serveur ; ceci
   // ne fait que masquer/afficher le bouton pour l'UX (modérateur non
@@ -98,33 +96,56 @@ export class PostDetail implements OnInit, OnDestroy {
     return !!user && !!currentPost && String(user.id) !== currentPost.author.id;
   });
 
-  protected submitReport(reasonType: ReportReason): void {
-    const currentPost = this.post();
-    if (!currentPost) return;
-    this.reportService.create(currentPost.id, reasonType).subscribe({
-      next: () => { this.reportMessage.set('Signalement transmis à la modération.'); this.showReport.set(false); },
-      error: (error) => this.reportMessage.set(error?.error?.message ?? 'Impossible de transmettre le signalement.'),
-    });
+  protected openReportForm(): void {
+    this.reportMessage.set(null);
+    this.showReport.set(true);
   }
 
-  // US 3.1 : bouton dans la fiche d'identification qui fait défiler le
-  // texte de la description (souvent longue — générée par l'agent
-  // connaissance IA) sans que l'utilisateur ait à scroller manuellement
-  // dans le petit encart. `{ static: false }` car l'élément est sous un
-  // @if conditionnel (n'existe qu'une fois le post ANALYZED).
-  @ViewChild('identificationDescriptionEl', { static: false })
-  private identificationDescriptionEl?: ElementRef<HTMLElement>;
+  protected cancelReport(): void {
+    this.showReport.set(false);
+    this.reportForm.reset({ reasonType: '', description: '' });
+  }
 
-  protected readonly isDescriptionScrolledToEnd = signal(false);
+  protected submitReport(): void {
+    const currentPost = this.post();
+    if (!currentPost || this.reportForm.invalid || this.isReporting()) return;
+
+    const { reasonType, description } = this.reportForm.getRawValue();
+    this.isReporting.set(true);
+    this.reportService.create(currentPost.id, reasonType as ReportReason, description).pipe(
+      finalize(() => this.isReporting.set(false)),
+    ).subscribe({
+      next: () => {
+        this.reportMessage.set('Signalement transmis à la modération.');
+        this.showReport.set(false);
+        this.reportForm.reset({ reasonType: '', description: '' });
+      },
+      error: (error) => this.reportMessage.set(
+        error?.status === 409
+          ? 'Votre signalement a déjà été pris en compte.'
+          : (error?.error?.message ?? 'Impossible de transmettre le signalement.')
+      ),
+    });
+  }
 
   // US 3.1 : l'analyse IA est asynchrone côté serveur (CA-1/CA-2/CA-3). Tant
   // que le post arrive en PENDING_ANALYSIS, on ré-interroge l'API pour
   // révéler le résultat dès qu'il est prêt, sans que l'utilisateur ait à
   // recharger la page.
   private pollSubscription: Subscription | null = null;
+  private routeSubscription: Subscription | null = null;
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
+    this.routeSubscription = this.route.paramMap.subscribe(params => this.loadPost(params.get('id')));
+  }
+
+  private loadPost(id: string | null): void {
+    this.pollSubscription?.unsubscribe();
+    this.post.set(null);
+    this.similarPosts.set([]);
+    this.loadError.set(null);
+    this.isLoading.set(true);
+    this.isSimilarLoading.set(false);
 
     if (!id) {
       this.loadError.set('Post introuvable.');
@@ -139,11 +160,9 @@ export class PostDetail implements OnInit, OnDestroy {
 
         if (post.status === 'PENDING_ANALYSIS') {
           this.watchAnalysis(id);
+        } else {
+          this.loadSimilarPosts(post);
         }
-        this.postService.getSimilarPosts(id).subscribe({
-          next: ({ items }) => this.similarPosts.set(items),
-          error: () => this.similarPosts.set([]),
-        });
       },
       error: (err) => {
         this.loadError.set(
@@ -158,6 +177,7 @@ export class PostDetail implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.pollSubscription?.unsubscribe();
+    this.routeSubscription?.unsubscribe();
   }
 
   confirmDelete(): void {
@@ -234,31 +254,30 @@ export class PostDetail implements OnInit, OnDestroy {
    */
   private watchAnalysis(id: string): void {
     this.pollSubscription = this.postService.pollAnalysis(id).subscribe({
-      next: (post) => this.post.set(post),
+      next: (post) => {
+        this.post.set(post);
+        if (post.status !== 'PENDING_ANALYSIS') this.loadSimilarPosts(post);
+      },
       error: () => this.pollSubscription?.unsubscribe(),
     });
   }
 
-  /**
-   * US 3.1 : fait défiler en douceur le texte de la description dans la
-   * fiche d'identification (encart à hauteur limitée, cf. post-detail.scss).
-   * Bascule : si on est déjà en bas, on remonte en haut plutôt que de
-   * rester bloqué en fin de texte — un seul bouton fait l'aller-retour.
-   */
-  protected scrollIdentificationText(): void {
-    const el = this.identificationDescriptionEl?.nativeElement;
-
-    if (!el) {
+  private loadSimilarPosts(post: Publication): void {
+    if (post.status !== 'ANALYZED' && post.status !== 'COMMUNITY_VALIDATED') {
+      this.similarPosts.set([]);
+      this.isSimilarLoading.set(false);
       return;
     }
 
-    const isNearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
-
-    el.scrollTo({
-      top: isNearBottom ? 0 : el.scrollHeight,
-      behavior: 'smooth',
+    this.isSimilarLoading.set(true);
+    this.postService.getSimilarPosts(post.id, 5).pipe(
+      finalize(() => this.isSimilarLoading.set(false)),
+    ).subscribe({
+      next: ({ items }) => {
+        if (this.post()?.id === post.id) this.similarPosts.set(items.slice(0, 5));
+      },
+      error: () => this.similarPosts.set([]),
     });
-
-    this.isDescriptionScrolledToEnd.set(!isNearBottom);
   }
+
 }

@@ -28,27 +28,82 @@
 }
 
 .similar-posts {
-  margin-top: 2rem;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid theme.$line;
+
+  &__heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.25rem;
+
+    h2 { margin: .2rem 0 0; color: theme.$gold; font-family: theme.$font-display; font-size: clamp(1.6rem, 3vw, 2.2rem); }
+    p { max-width: 420px; margin: 0; color: theme.$text-dim; line-height: 1.55; }
+  }
+
+  &__eyebrow { @include theme.catalog-label; color: theme.$violet; }
 
   &__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
     gap: 1rem;
   }
 }
 
 .similar-post {
-  display: grid;
-  gap: .4rem;
-  color: inherit;
+  overflow: hidden;
+  color: theme.$text;
   text-decoration: none;
+  background: linear-gradient(150deg, theme.$surface-raised, theme.$surface);
+  border: 1px solid theme.$line;
+  transition: transform .2s ease, border-color .2s ease;
+  @include theme.facet-corner-sm;
 
-  img {
-    width: 100%;
-    aspect-ratio: 1;
-    object-fit: cover;
-    border-radius: .75rem;
+  &:hover { border-color: theme.$gold; transform: translateY(-4px); }
+
+  &__media {
+    position: relative;
+    height: 165px;
+
+    img, .similar-post__video { display: grid; place-items: center; width: 100%; height: 100%; object-fit: cover; color: theme.$gold; background: theme.$surface-raised; }
+    > strong { position: absolute; top: .65rem; right: .65rem; padding: .3rem .45rem; color: theme.$ink; background: rgba(197, 160, 89, .94); font-family: theme.$font-mono; font-size: .72rem; }
   }
+
+  &__body {
+    display: grid;
+    gap: .35rem;
+    padding: .85rem;
+
+    small { @include theme.meta-mono; }
+    > span { overflow: hidden; color: theme.$text; font-family: theme.$font-display; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    em { display: flex; align-items: center; gap: .25rem; margin-top: .35rem; color: theme.$violet; font-size: .76rem; font-style: normal; }
+    mat-icon { width: 15px; height: 15px; font-size: 15px; }
+  }
+}
+
+.similar-post-skeleton {
+  height: 245px;
+  background: linear-gradient(100deg, theme.$surface 30%, theme.$surface-raised 50%, theme.$surface 70%);
+  background-size: 200% 100%;
+  animation: similarShimmer 1.5s ease-in-out infinite;
+  @include theme.facet-corner-sm;
+}
+
+@keyframes similarShimmer {
+  from { background-position: 140% 0; }
+  to { background-position: -40% 0; }
+}
+
+@media (max-width: 620px) {
+  .similar-posts__heading { align-items: start; flex-direction: column; gap: .5rem; }
+  .similar-posts__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .similar-post__media { height: 140px; }
+}
+
+@media (max-width: 400px) {
+  .similar-posts__grid { grid-template-columns: 1fr; }
 }
 
 // ── Fiche de spécimen : deux colonnes sur desktop ──────────────────
@@ -374,6 +429,72 @@
 .field-error {
   color: theme.$coral;
   font-size: 0.85rem;
+}
+
+// US 6.1 — le signalement reste discret, mais le formulaire fournit aux
+// modérateurs le contexte nécessaire sans quitter la fiche du spécimen.
+.report-section {
+  margin-top: .5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid theme.$line;
+
+  h2 {
+    margin: 0;
+    color: theme.$text;
+    font-family: theme.$font-display;
+    font-size: 1.1rem;
+  }
+
+  > p {
+    margin: .35rem 0 .85rem;
+    color: theme.$text-dim;
+    font-size: .9rem;
+  }
+
+  .btn-secondary { margin-left: 0; }
+
+  &__message {
+    padding: .65rem .8rem;
+    border: 1px solid rgba(123, 201, 154, .35);
+    background: rgba(123, 201, 154, .08);
+    color: theme.$emerald;
+  }
+}
+
+.report-form {
+  display: grid;
+  gap: .45rem;
+
+  label {
+    margin-top: .5rem;
+    color: theme.$text;
+    font-size: .9rem;
+    font-weight: 600;
+  }
+
+  select, textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid theme.$line;
+    border-radius: 5px;
+    background: theme.$surface;
+    color: theme.$text;
+    font: inherit;
+    padding: .65rem .75rem;
+
+    &:focus { outline: 2px solid theme.$gold; outline-offset: 2px; }
+  }
+
+  textarea { resize: vertical; }
+  .optional, &__count { color: theme.$text-faint; font-size: .8rem; font-weight: 400; }
+  &__count { justify-self: end; }
+
+  &__actions {
+    display: flex;
+    gap: .5rem;
+    margin-top: .65rem;
+    .btn-secondary { margin-left: 0; }
+  }
 }
 
 @keyframes scanSweep {

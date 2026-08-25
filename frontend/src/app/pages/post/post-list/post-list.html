@@ -6,24 +6,6 @@
 <main class="post-list-page" id="main-content">
 
   <div class="post-list-hero">
-    <svg class="hero-facet" viewBox="0 0 480 480" aria-hidden="true">
-      <defs>
-        <linearGradient id="heroFacetGradient" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#C5A059" />
-          <stop offset="55%" stop-color="#8D7FE0" />
-          <stop offset="100%" stop-color="#7BC99A" />
-        </linearGradient>
-      </defs>
-      <g fill="url(#heroFacetGradient)" stroke="#C5A059" stroke-width="1">
-        <polygon points="240,40 340,120 300,240 180,240 140,120" />
-        <polygon points="340,120 420,200 380,320 300,240" />
-        <polygon points="180,240 300,240 260,380 140,340" />
-        <polygon points="60,180 140,120 180,240 90,280" />
-        <polygon points="300,240 380,320 320,420 260,380" />
-        <polygon points="90,280 180,240 140,340 60,340" />
-      </g>
-    </svg>
-
     <div class="post-list-hero__content">
       <span class="eyebrow">Collection communautaire</span>
       <h1>Spécimens partagés</h1>
@@ -39,6 +21,20 @@
         Cataloguer une pierre
       </a>
     </div>
+
+    @if (heroPost(); as featured) {
+      <a class="hero-specimen-card" [routerLink]="['/posts', featured.id]" [attr.aria-label]="'Découvrir les pierres similaires à ' + (featured.title || featured.identification?.nom || 'ce spécimen')">
+        <div class="hero-specimen-card__media">
+          <img [src]="featured.mediaUrl" [alt]="featured.title || featured.identification?.nom || 'Spécimen minéralogique analysé'" />
+          <span><mat-icon>auto_awesome</mat-icon>Analyse terminée</span>
+        </div>
+        <div class="hero-specimen-card__body">
+          <small>Inspiration minérale</small>
+          <strong>{{ featured.title || featured.identification?.nom || 'Spécimen analysé' }}</strong>
+          <span>Voir sa fiche et les posts similaires <mat-icon>arrow_forward</mat-icon></span>
+        </div>
+      </a>
+    }
   </div>
 
   <div class="post-list-container">
