@@ -7,7 +7,7 @@ import { PostStatus, PublicationIdentification } from '../../../core/services/po
   selector: 'app-post-analysis-result',
   imports: [MatIcon, PercentPipe],
   templateUrl: './post-analysis-result.html',
-  styleUrl: './post-analysis-result.scss',
+  styleUrls: ['./post-analysis-result.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PostAnalysisResult {

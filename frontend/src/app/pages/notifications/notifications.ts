@@ -7,7 +7,7 @@ import { AppNotification, NotificationService } from '../../core/services/notifi
   selector: 'app-notifications',
   imports: [CommonModule, RouterLink],
   templateUrl: './notifications.html',
-  styleUrl: './notifications.scss',
+  styleUrls: ['./notifications.scss'],
 })
 export class Notifications implements OnInit {
   private readonly service = inject(NotificationService);

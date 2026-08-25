@@ -6,7 +6,7 @@ import { PipelineDetection, PublicationIdentification } from '../../core/service
   selector: 'app-pipeline-result',
   imports: [PercentPipe],
   templateUrl: './pipeline-result.html',
-  styleUrl: './pipeline-result.scss',
+  styleUrls: ['./pipeline-result.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PipelineResult {

@@ -40,6 +40,7 @@ export const NAVIGATION_MENUS: Record<MenuRole, MenuConfig> = {
       { label: 'Profil',      route: '/users/me',    iconClass: 'person' },
       { label: 'Galerie',     route: '/vitrine', iconClass: 'collections' },
       { label: 'Notifications', route: '/notifications', iconClass: 'notifications' },
+      { label: 'Messages', route: '/messages', iconClass: 'chat' },
       { label: 'Classement', route: '/leaderboard', iconClass: 'leaderboard' },
       { label: 'Faction',     route: '/factions',    iconClass: 'groups' },
       { label: 'Badge',       route: '/badges',      iconClass: 'military_tech' },

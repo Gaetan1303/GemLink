@@ -10,7 +10,7 @@ import { CurrentLeaderboardUser, LeaderboardEntry, LeaderboardService } from '..
   selector: 'app-leaderboard',
   imports: [CommonModule, RouterLink, SharedModule,],
   templateUrl: './leaderboard.html',
-  styleUrl: './leaderboard.scss',
+  styleUrls: ['./leaderboard.scss'],
 })
 export class Leaderboard implements OnInit {
   private readonly service = inject(LeaderboardService);

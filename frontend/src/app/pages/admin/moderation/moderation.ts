@@ -13,7 +13,7 @@ import { SharedModule } from '../../../shared/shared-module';
   selector: 'app-moderation',
   imports: [CommonModule, RouterLink, SharedModule],
   templateUrl: './moderation.html',
-  styleUrl: './moderation.scss',
+  styleUrls: ['./moderation.scss'],
 })
 export class Moderation implements OnInit {
   private readonly service = inject(ReportService);
