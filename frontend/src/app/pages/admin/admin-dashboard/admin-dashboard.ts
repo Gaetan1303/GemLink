@@ -58,7 +58,7 @@ import { PierreSummary, ValidationService } from '../../../core/services/validat
     MatTableModule,
   ],
   templateUrl: './admin-dashboard.html',
-  styleUrl: './admin-dashboard.scss',
+  styleUrls: ['./admin-dashboard.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDashboardComponent implements OnInit {

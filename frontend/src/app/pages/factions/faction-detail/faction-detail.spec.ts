@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RouterTestingModule } from '@angular/router/testing';
 
 import { FactionDetail } from './faction-detail';
 
@@ -8,7 +9,7 @@ describe('FactionDetail', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FactionDetail],
+      imports: [FactionDetail, RouterTestingModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(FactionDetail);

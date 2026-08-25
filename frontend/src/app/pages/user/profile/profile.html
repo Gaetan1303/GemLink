@@ -27,6 +27,11 @@
       <p class="profile-hero__eyebrow">Profil GemLink</p>
       <h1>{{ user.username }}</h1>
       <p>{{ user.bio || 'Ce membre n’a pas encore renseigné de bio.' }}</p>
+      @if (canMessage()) {
+      <button mat-flat-button type="button" [disabled]="isOpeningConversation()" (click)="openConversation()">
+        <mat-icon>chat</mat-icon>{{ isOpeningConversation() ? 'Ouverture…' : 'Envoyer un message' }}
+      </button>
+      }
     </div>
     <div class="profile-scores" aria-label="Progression communautaire">
       <span><strong>Niveau {{ user.progression.level }}</strong>{{ user.progression.name }}</span>

@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RouterTestingModule } from '@angular/router/testing';
 
 import { FactionManage } from './faction-manage';
 
@@ -8,7 +9,7 @@ describe('FactionManage', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FactionManage],
+      imports: [FactionManage, RouterTestingModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(FactionManage);

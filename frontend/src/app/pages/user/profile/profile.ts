@@ -1,7 +1,7 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -16,6 +16,7 @@ import { Button } from '../../../shared/button/button';
 import { AuthService } from '../../../core/services/auth';
 import { ProfileBadge, ProfilePoints, ProfileService, PublicProfile, PointsAction } from '../../../core/services/profile';
 import { HeaderImage } from '../../../shared/header-image/header-image';
+import { ChatService } from '../../../core/services/chat';
 
 
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -33,17 +34,21 @@ export class Profile implements OnInit {
   readonly #profiles = inject(ProfileService);
   readonly #destroyRef = inject(DestroyRef);
   readonly #formBuilder = inject(FormBuilder);
+  readonly #chat = inject(ChatService);
+  readonly #router = inject(Router);
 
   protected readonly profile = signal<PublicProfile | null>(null);
   protected readonly points = signal<ProfilePoints | null>(null);
   protected readonly isPointsLoading = signal(false);
   protected readonly isLoading = signal(true);
   protected readonly isSaving = signal(false);
+  protected readonly isOpeningConversation = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly selectedAvatar = signal<File | null>(null);
   protected readonly avatarPreview = signal<string | null>(null);
   protected readonly selectedBadge = signal<ProfileBadge | null>(null);
   protected readonly isOwnProfile = computed(() => this.profile()?.id === this.#auth.currentUser()?.id);
+  protected readonly canMessage = computed(() => !!this.#auth.currentUser() && !this.isOwnProfile());
   protected readonly form = this.#formBuilder.nonNullable.group({
     username: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9]{3,30}$/)]],
     bio: ['', [Validators.maxLength(500)]],
@@ -107,6 +112,20 @@ export class Profile implements OnInit {
         next: (profile) => { this.applyProfile(profile); this.selectedAvatar.set(null); this.isSaving.set(false); },
         error: (error) => { this.errorMessage.set(error.error?.message ?? 'Impossible d’enregistrer le profil.'); this.isSaving.set(false); },
       });
+  }
+
+  protected openConversation(): void {
+    const target = this.profile();
+    if (!target || !this.canMessage() || this.isOpeningConversation()) return;
+    this.isOpeningConversation.set(true);
+    this.errorMessage.set(null);
+    this.#chat.direct(target.id).pipe(takeUntilDestroyed(this.#destroyRef)).subscribe({
+      next: conversation => this.#router.navigate(['/messages', conversation.id]),
+      error: error => {
+        this.errorMessage.set(error.error?.message ?? 'Impossible d’ouvrir la conversation.');
+        this.isOpeningConversation.set(false);
+      },
+    });
   }
 
   private loadProfile(userId: string): void {

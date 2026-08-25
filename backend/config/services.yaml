@@ -98,3 +98,7 @@ services:
     App\Controller\PublicIdentificationController:
         arguments:
             $publicIdentificationLimiter: '@limiter.public_identification'
+
+    App\Controller\ConversationController:
+        arguments:
+            $chatMessageLimiter: '@limiter.chat_message'

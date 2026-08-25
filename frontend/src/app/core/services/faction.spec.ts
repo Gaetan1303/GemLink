@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { Faction } from './faction';
+import { FactionService } from './faction';
 
 describe('Faction', () => {
-  let service: Faction;
+  let service: FactionService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(Faction);
+    service = TestBed.inject(FactionService);
   });
 
   it('should be created', () => {

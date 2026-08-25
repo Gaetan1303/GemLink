@@ -1,0 +1,4 @@
+<?php
+namespace App\Controller;
+use App\Entity\Groupe;use App\Entity\User;use App\Repository\GroupeRepository;use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;use Symfony\Component\HttpFoundation\JsonResponse;use Symfony\Component\Routing\Attribute\Route;use Symfony\Component\Security\Http\Attribute\IsGranted;
+final class MyFactionController extends AbstractController{#[Route('/api/users/me/factions',methods:['GET'])]#[IsGranted('IS_AUTHENTICATED_FULLY')]public function __invoke(GroupeRepository $groups):JsonResponse{/** @var User $user */$user=$this->getUser();$items=$groups->page(null,100,null,null,$user);return $this->json(['items'=>array_map(static fn(Groupe $g)=>['id'=>$g->getId()->toRfc4122(),'name'=>$g->getName(),'slug'=>$g->getSlug(),'avatarUrl'=>$g->getAvatarUrl(),'visibility'=>$g->getVisibility()],$items)]);}}
