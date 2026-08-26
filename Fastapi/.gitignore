@@ -46,4 +46,4 @@ archive.zip
 /raw_data
 /docs
 /docs_src
-/requirements.txt
+!/requirements.txt
