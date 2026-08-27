@@ -1,1 +1,75 @@
-<app-header /><main class="faction-manage-page community-page" id="main-content"><h1>Gérer la faction</h1>@if(loading()){<p>Chargement…</p>}@if(error()){<p role="alert">{{error()}}</p>}@if(faction();as f){<section><h2>Demandes en attente</h2>@for(request of requests();track request.id){<article><strong>{{request.requester.username}}</strong><p>{{request.message||'Sans message.'}}</p><button class="btn" type="button" (click)="review(request.id,'accept')">Accepter</button><button class="btn" type="button" (click)="review(request.id,'reject')">Refuser</button></article>}@empty{<p>Aucune demande.</p>}</section><section><h2>Membres</h2>@for(member of members();track member.id){<article><strong>{{member.user.username}}</strong> — {{member.role}} @if(member.role==='MEMBER'){<button type="button" (click)="role(member,'ADMIN')">Promouvoir ADMIN</button>}@if(member.role==='ADMIN'&&f.membership?.role==='OWNER'){<button type="button" (click)="role(member,'MEMBER')">Rétrograder</button>}@if(member.role!=='OWNER'){<button type="button" (click)="remove(member)">Exclure</button>}@if(f.membership?.role==='OWNER'&&member.role!=='OWNER'){<button type="button" (click)="transfer(member)">Transférer la propriété</button>}</article>}</section>@if(f.permissions.includes('FACTION_ARCHIVE')){<button class="btn btn--danger" type="button" (click)="archive()">Archiver la faction</button>}}</main><app-footer />
+<app-header />
+<main class="faction-manage-page community-page" id="main-content">
+  <section class="hero">
+    <span class="eyebrow">Administration</span>
+    <h1>Gérer la faction</h1>
+    <div class="engraved-rule"><span class="diamond"></span></div>
+  </section>
+
+  @if(loading()){<p class="state state--loading"><mat-icon>hourglass_top</mat-icon>Chargement…</p>}
+  @if(error()){<p class="state state--error" role="alert"><mat-icon>error_outline</mat-icon>{{error()}}</p>}
+
+  @if(faction();as f){
+    <section class="faction-section">
+      <h2>Demandes en attente</h2>
+      <div class="request-list">
+        @for(request of requests(); track request.id){
+          <article class="request-card">
+            <div class="request-card__body">
+              <strong>{{request.requester.username}}</strong>
+              <p>{{request.message||'Sans message.'}}</p>
+            </div>
+            <div class="request-card__actions">
+              <button class="btn btn--sm" type="button" (click)="review(request.id,'accept')"><mat-icon>check</mat-icon>Accepter</button>
+              <button class="btn btn--sm btn--danger" type="button" (click)="review(request.id,'reject')"><mat-icon>close</mat-icon>Refuser</button>
+            </div>
+          </article>
+        } @empty {
+          <div class="empty-state"><mat-icon class="empty-state__icon">mark_email_read</mat-icon><p>Aucune demande.</p></div>
+        }
+      </div>
+    </section>
+
+    <section class="faction-section">
+      <h2>Membres</h2>
+      <ul class="member-list">
+        @for(member of members(); track member.id){
+          <li class="member-row">
+            <div class="member-row__avatar">
+              @if(member.user.avatarUrl){
+                <img [src]="member.user.avatarUrl" [alt]="'Avatar de '+member.user.username" />
+              } @else {
+                <mat-icon>person</mat-icon>
+              }
+            </div>
+            <span class="member-row__name">{{member.user.username}}</span>
+            <span class="status-badge" [class.status-badge--owner]="member.role==='OWNER'">{{member.role}}</span>
+            <div class="member-row__actions">
+              @if(member.role==='MEMBER'){
+                <button class="btn btn--sm" type="button" (click)="role(member,'ADMIN')"><mat-icon>arrow_upward</mat-icon>Promouvoir ADMIN</button>
+              }
+              @if(member.role==='ADMIN'&&f.membership?.role==='OWNER'){
+                <button class="btn btn--sm" type="button" (click)="role(member,'MEMBER')"><mat-icon>arrow_downward</mat-icon>Rétrograder</button>
+              }
+              @if(member.role!=='OWNER'){
+                <button class="btn btn--sm btn--danger" type="button" (click)="remove(member)"><mat-icon>person_remove</mat-icon>Exclure</button>
+              }
+              @if(f.membership?.role==='OWNER'&&member.role!=='OWNER'){
+                <button class="btn btn--sm" type="button" (click)="transfer(member)"><mat-icon>swap_horiz</mat-icon>Transférer la propriété</button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+
+    @if(f.permissions.includes('FACTION_ARCHIVE')){
+      <section class="danger-zone">
+        <h2>Zone de danger</h2>
+        <p>Cette action est irréversible : la faction sera définitivement archivée.</p>
+        <button class="btn btn--danger" type="button" (click)="archive()"><mat-icon>archive</mat-icon>Archiver la faction</button>
+      </section>
+    }
+  }
+</main>
+<app-footer />
