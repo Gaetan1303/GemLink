@@ -4,9 +4,6 @@ on:
   push:
   pull_request:
 
-permissions:
-  contents: read
-
 jobs:
   phpunit:
     runs-on: ubuntu-latest
@@ -25,6 +22,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
       redis:
         image: redis:7-alpine
         ports:
@@ -43,33 +41,61 @@ jobs:
       APP_ENV: test
       APP_DEBUG: 1
       APP_SECRET: test-app-secret
-      DATABASE_URL: postgresql://gemlink:MimineForEver@127.0.0.1:5432/gemlink?serverVersion=16&charset=utf8
+
+      DATABASE_URL: postgresql://gemlink:MimineForEver@127.0.0.1:5432/gemlink_test?serverVersion=16&charset=utf8
+
       REDIS_URL: redis://127.0.0.1:6379
       MESSENGER_TRANSPORT_DSN: redis://127.0.0.1:6379/messages
       MESSENGER_FAILED_TRANSPORT_DSN: doctrine://default?queue_name=failed
+
       MAILER_DSN: 'null://null'
       MAILER_FROM_EMAIL: noreply@example.test
       MAILER_FROM_NAME: GemLink Tests
+
       FRONTEND_URL: http://localhost:4200
       APP_URL: http://localhost:8000
       DEFAULT_URI: http://localhost
+
       MEDIA_STORAGE_MODE: local
       AI_SERVICE_URL: http://ai.invalid
       INTERNAL_API_KEY: test-internal-key
+
       INFOMANIAK_NEWSLETTER_TOKEN: test-token
       INFOMANIAK_NEWSLETTER_DOMAIN_ID: '1'
+
       JWT_SECRET_KEY: config/jwt/private.pem
       JWT_PUBLIC_KEY: config/jwt/public.pem
       JWT_PASSPHRASE: ''
 
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: shivammathur/setup-php@fcafdd6392932010c2bd5094439b8e33be2a8a09 # 2.37.0
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
           extensions: intl, pdo_pgsql, redis, gd
           coverage: none
-      - run: composer install --no-interaction --prefer-dist --no-progress
-      - run: php bin/console doctrine:migrations:migrate --no-interaction
-      - run: php bin/console lint:container --env=test
-      - run: php bin/phpunit
+
+      - name: Prepare Symfony test environment
+        run: |
+          cp .env.example .env
+          mkdir -p config/jwt
+          openssl genrsa -out config/jwt/private.pem 2048
+          openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run Doctrine migrations
+        run: php bin/console doctrine:migrations:migrate --no-interaction
+
+      - name: Validate Doctrine schema
+        run: php bin/console doctrine:schema:validate
+
+      - name: Validate Symfony container
+        run: php bin/console lint:container --env=test
+
+      - name: Run PHPUnit
+        run: php bin/phpunit
