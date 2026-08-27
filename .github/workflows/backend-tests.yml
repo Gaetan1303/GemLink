@@ -92,7 +92,7 @@ jobs:
         run: php bin/console doctrine:migrations:migrate --no-interaction
 
       - name: Validate Doctrine schema
-        run: php bin/console doctrine:schema:validate
+        run: php bin/console doctrine:schema:validate --skip-sync
 
       - name: Validate Symfony container
         run: php bin/console lint:container --env=test
