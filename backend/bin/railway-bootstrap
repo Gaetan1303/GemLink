@@ -1,0 +1,32 @@
+#!/bin/sh
+set -eu
+
+# Railway production stores the JWT keypair as sealed Base64 variables.
+# LexikJWTAuthenticationBundle still expects filesystem paths, so materialize
+# the files into /tmp on every container start. Nothing is written to Git or a
+# persistent Railway volume.
+if [ "${APP_ENV:-dev}" = "prod" ]; then
+    : "${JWT_PRIVATE_KEY_B64:?JWT_PRIVATE_KEY_B64 is required in production}"
+    : "${JWT_PUBLIC_KEY_B64:?JWT_PUBLIC_KEY_B64 is required in production}"
+
+    private_path="${JWT_SECRET_KEY:-/tmp/gemlink-jwt/private.pem}"
+    public_path="${JWT_PUBLIC_KEY:-/tmp/gemlink-jwt/public.pem}"
+
+    umask 077
+    mkdir -p "$(dirname "$private_path")" "$(dirname "$public_path")"
+
+    printf '%s' "$JWT_PRIVATE_KEY_B64" | base64 -d > "$private_path"
+    printf '%s' "$JWT_PUBLIC_KEY_B64" | base64 -d > "$public_path"
+
+    if ! grep -q 'PRIVATE KEY' "$private_path"; then
+        echo 'JWT_PRIVATE_KEY_B64 does not decode to a PEM private key.' >&2
+        exit 78
+    fi
+
+    if ! grep -q 'BEGIN PUBLIC KEY' "$public_path"; then
+        echo 'JWT_PUBLIC_KEY_B64 does not decode to a PEM public key.' >&2
+        exit 78
+    fi
+fi
+
+exec "$@"

@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+exec /app/bin/railway-bootstrap \
+  php bin/console messenger:consume async low_priority \
+  --time-limit=3600 --memory-limit=256M --sleep=1

@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+# The migration is intentionally executed before the new API starts accepting
+# traffic. Keep the API at one replica until migrations are fully designed for
+# zero-downtime multi-replica rollouts.
+exec /app/bin/railway-bootstrap /bin/sh -c \
+  'php bin/console doctrine:migrations:migrate --no-interaction --env=prod && exec frankenphp run'
