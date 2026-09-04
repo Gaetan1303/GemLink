@@ -1,11 +1,10 @@
 # engines/remote_vision.py
-import os
 import httpx
 from fastapi import HTTPException
+from app.config import get_settings
 from schema import StoneAnalysisResponse
 
-# On récupère l'URL du conteneur Ollama définie dans le docker-compose
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+settings = get_settings()
 
 async def analyze_with_llm_vision(image_bytes: bytes) -> StoneAnalysisResponse:
     """
@@ -21,7 +20,7 @@ async def analyze_with_llm_vision(image_bytes: bytes) -> StoneAnalysisResponse:
     )
 
     payload = {
-        "model": "moondream",  # Modèle de vision léger de référence pour CPU
+        "model": settings.ollama_vision_model,
         "messages": [
             {
                 "role": "user",
@@ -39,7 +38,7 @@ async def analyze_with_llm_vision(image_bytes: bytes) -> StoneAnalysisResponse:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{OLLAMA_HOST}/api/chat", 
+                f"{settings.ollama_url.rstrip('/')}/api/chat",
                 json=payload,
                 timeout=60.0 # On laisse du temps au CPU pour calculer l'inférence LLM
             )

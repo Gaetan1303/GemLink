@@ -1,7 +1,10 @@
 nelmio_cors:
     defaults:
         allow_credentials: true
-        allow_origin: ['http://localhost:4200']
+        # Anchored regex supplied by the environment. Production must match only
+        # GemLink's Cloudflare domains and never use ".*" with credentials.
+        origin_regex: true
+        allow_origin: ['%env(CORS_ALLOW_ORIGIN)%']
         allow_headers: ['Content-Type', 'Authorization']
         # Les endpoints d'administration (rôle, bannissement, paramètres)
         # utilisent PATCH : le préflight doit l'autoriser aussi hors Caddy.

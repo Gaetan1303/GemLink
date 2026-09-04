@@ -41,7 +41,8 @@ export class Moderation implements OnInit {
       next: () => {
         this.reports.update(items => items.filter(item => item.id !== report.id));
         this.decisionReasons.update(reasons => {
-          const { [report.id]: _removed, ...remaining } = reasons;
+          const remaining = { ...reasons };
+          delete remaining[report.id];
           return remaining;
         });
         this.success.set(decision === 'ACCEPTED'

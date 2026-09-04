@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   HttpTestingController,
@@ -13,6 +14,9 @@ import { environment } from '../../../environments/environment';
 // ── Constantes ───────────────────────────────────────────────
 
 const LOGOUT_URL = `${environment.apiUrl}/auth/logout`;
+
+@Component({ template: '' })
+class EmptyRouteComponent {}
 
 const JWT_VALIDE = [
   btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
@@ -34,7 +38,7 @@ describe('AuthService — US 1.5 Déconnexion', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: '', component: {} as any }]),
+        provideRouter([{ path: '', component: EmptyRouteComponent }]),
         AuthService,
       ],
     });

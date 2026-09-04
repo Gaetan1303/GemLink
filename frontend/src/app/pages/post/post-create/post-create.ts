@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidatorFn } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SharedModule } from '../../../shared/shared-module';
-import { NavBarMobile } from '../../../components/nav-bar-mobile/nav-bar-mobile';
 import { AuthService } from '../../../core/services/auth';
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
 import { PostService } from '../../../core/services/post';

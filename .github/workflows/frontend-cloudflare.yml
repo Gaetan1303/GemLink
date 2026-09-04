@@ -3,8 +3,6 @@ name: Frontend - Deploy to Cloudflare Workers
 on:
   push:
     branches:
-      - master
-      - staging
       - prod
   workflow_dispatch:
 
@@ -19,6 +17,7 @@ jobs:
   build-and-deploy:
     name: Build & Deploy Angular
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout
@@ -37,18 +36,11 @@ jobs:
 
       - name: Build Angular
         working-directory: frontend
-        run: |
-          BRANCH=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
-          case $BRANCH in
-            master|prod) CONFIG=production ;;
-            staging)     CONFIG=staging ;;
-            *)           CONFIG=development ;;
-          esac
-          npm run build -- --configuration=$CONFIG
+        run: npm run build -- --configuration=production
 
       - name: Deploy to Cloudflare Workers
         working-directory: frontend
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler@latest deploy
+        run: npx wrangler deploy --config frontend-wrangler.toml

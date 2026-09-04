@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CookieConsentService } from '../../core/services/cookie-consent.service';
 
 @Component({
@@ -8,7 +8,7 @@ import { CookieConsentService } from '../../core/services/cookie-consent.service
   styleUrls: ['./cookie-consent-banner.scss'],
 })
 export class CookieConsentBanner {
-  constructor(private cookieConsentService: CookieConsentService) {}
+  private readonly cookieConsentService = inject(CookieConsentService);
 
   accept(): void {
     this.cookieConsentService.accept();

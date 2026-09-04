@@ -6,7 +6,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field, model_validator
 
 # ==============================================================================
-# NORMALISATION — les petits modèles LLM (ex: gemma3:1b) ne respectent pas
+# NORMALISATION — certains petits modèles LLM ne respectent pas
 # toujours strictement le schéma demandé dans le prompt : clés accentuées
 # ("dureté" au lieu de "durete"), nombres au lieu de chaînes (3.06 au lieu de
 # "3.06"), champs parfois absents. Plutôt que de faire planter la requête
@@ -115,7 +115,7 @@ class OpticalProperties(BaseModel):
 
 
 class CropAnalysis(BaseModel):
-    """Vision result for one area detected by YOLO."""
+    """Vision result for one area detected by the configured detector."""
 
     bbox: list[int] = Field(..., min_length=4, max_length=4)
     detector_confidence: float = Field(..., ge=0.0, le=1.0)
@@ -141,7 +141,7 @@ class StoneAnalysisResponse(BaseModel):
     description: str = "Description indisponible pour cette identification."
     histoire_symbolique: Optional[str] = Field(None, description="Anecdotes historiques ou vertus associées")
 
-    # Métadonnées de Vision (pour ton pipeline YOLO + ViT)
+    # Métadonnées de Vision (détecteur Torchvision + ViT)
     confidence: float = Field(..., ge=0.0, le=1.0)
     detector_confidence: float = Field(..., ge=0.0, le=1.0)
     bbox: Optional[list[int]] = None

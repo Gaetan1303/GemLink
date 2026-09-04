@@ -107,7 +107,7 @@ def main():
     base_classes = []
     base_weights = None
     if BASE_MODEL_PATH.is_file():
-        loaded_checkpoint = torch.load(BASE_MODEL_PATH, map_location='cpu')
+        loaded_checkpoint = torch.load(BASE_MODEL_PATH, map_location='cpu', weights_only=True)
         if isinstance(loaded_checkpoint, dict):
             loaded_classes = loaded_checkpoint.get('classes')
             loaded_weights = loaded_checkpoint.get('model')
@@ -146,7 +146,8 @@ def main():
     num_classes = len(class_names)
     print(f" Nombre de classes détectées : {num_classes}")
 
-    # ── Construction du modèle : ViT pré-entraîné, tête remplacée pour vos classes ──
+    # Architecture sans téléchargement implicite : le point de départ autorisé
+    # est exclusivement le checkpoint GemLink monté et audité.
     print(" Initialisation du Vision Transformer (ViT-B/16)...")
     model = get_model(num_classes=num_classes)
     if base_checkpoint is not None and base_weights is not None:

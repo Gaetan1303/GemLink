@@ -28,7 +28,7 @@ export class PipelineResult {
     const versions = this.result().modelVersion;
     const count = this.detections().length;
     return [
-      { name: 'Détection', model: 'YOLO v8', version: versions?.yolo, detail: `${count} zone${count > 1 ? 's' : ''} localisée${count > 1 ? 's' : ''}` },
+      { name: 'Détection', model: 'Torchvision SSDLite', version: versions?.yolo, detail: `${count} zone${count > 1 ? 's' : ''} localisée${count > 1 ? 's' : ''}` },
       { name: 'Classification', model: 'Vision Transformer', version: versions?.vit, detail: 'Scores softmax normalisés' },
       { name: 'Embedding', model: 'CLIP', version: versions?.clip, detail: 'Vecteur 512D · norme L2 = 1' },
     ];

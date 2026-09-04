@@ -265,6 +265,8 @@
     aria-modal="true"
     [attr.aria-labelledby]="'badge-title-' + badge.id"
     (click)="closeBadge()"
+    (keydown.escape)="closeBadge()"
+    tabindex="-1"
   >
     <mat-card class="badge-showcase" (click)="$event.stopPropagation()">
       <button

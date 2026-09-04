@@ -18,7 +18,7 @@ const RESULT: PublicationIdentification = {
     { nom: 'Améthyste', confidence: 0.81, detectorConfidence: 0.84, bbox: [90, 20, 160, 110] },
   ],
   modelVersion: {
-    yolo: 'yolov8-stone-v2',
+    yolo: 'stone-detector-v2',
     vit: 'vit-stones-v4',
     clip: 'clip-vit-b-32-openai',
   },
@@ -44,7 +44,7 @@ describe('PipelineResult', () => {
     expect(component).toBeTruthy();
   });
 
-  it('affiche chaque crop avec les confiances YOLO et ViT', () => {
+  it('affiche chaque crop avec les confiances SSDLite et ViT', () => {
     const element: HTMLElement = fixture.nativeElement;
     const detections = element.querySelectorAll('.detection');
 
@@ -60,6 +60,6 @@ describe('PipelineResult', () => {
     const versions = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.stage code'))
       .map((element) => element.textContent?.trim());
 
-    expect(versions).toEqual(['yolov8-stone-v2', 'vit-stones-v4', 'clip-vit-b-32-openai']);
+    expect(versions).toEqual(['stone-detector-v2', 'vit-stones-v4', 'clip-vit-b-32-openai']);
   });
 });

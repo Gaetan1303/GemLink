@@ -12,5 +12,7 @@
   </div>
   <app-footer></app-footer>
 
-  <app-cookie-consent-banner *ngIf="showCookieBanner$ | async"></app-cookie-consent-banner>
+  @if (showCookieBanner$ | async) {
+    <app-cookie-consent-banner></app-cookie-consent-banner>
+  }
 </div>

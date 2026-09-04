@@ -3,7 +3,6 @@ import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SharedModule } from '../../shared/shared-module';
 import { KeyFigure } from '../../shared/key-figures/key-figures';
-import { NavBarMobile } from '../../components/nav-bar-mobile/nav-bar-mobile';
 import { AuthService } from '../../core/services/auth';
 import { MenuRole } from '../../components/menu-burger/menu-navigation.model';
 import { CookieConsentService } from '../../core/services/cookie-consent.service';

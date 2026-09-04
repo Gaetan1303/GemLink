@@ -6,17 +6,6 @@
     root * /app/public
 
     encode gzip zstd
-    @cors_preflight method OPTIONS
-    handle @cors_preflight {
-        header Access-Control-Allow-Origin "http://localhost:4200"
-        header Access-Control-Allow-Credentials "true"
-        header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        header Access-Control-Allow-Headers "Content-Type, Authorization"
-        header Access-Control-Max-Age "3600"
-        header Vary "Origin"
-        respond "" 204
-    }
-
     php_server
 
     file_server

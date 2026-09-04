@@ -1,7 +1,6 @@
 import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth';
 import { Comment, CommentService, COMMENT_MAX_LENGTH } from '../../core/services/comment';
 

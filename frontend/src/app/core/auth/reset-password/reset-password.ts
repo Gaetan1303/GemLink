@@ -8,7 +8,6 @@ import { AuthService } from '../../services/auth';
 import { SharedModule } from '../../../shared/shared-module';
 import { HeaderImage } from '../../../shared/header-image/header-image';
 import { Header } from '../../../shared/header/header';
-import { Footer } from '../../../shared/footer/footer';
 
 @Component({
   selector: 'app-reset-password',

@@ -12,8 +12,8 @@ describe('LatestDiscoveries', () => {
 
   beforeEach(async () => {
     vi.stubGlobal('IntersectionObserver', class {
-      observe(): void {}
-      disconnect(): void {}
+      observe(): void { /* Test observer: no DOM intersection to simulate. */ }
+      disconnect(): void { /* Test observer: no allocated resource. */ }
     });
     await TestBed.configureTestingModule({
       imports: [LatestDiscoveries],

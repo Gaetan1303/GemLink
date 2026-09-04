@@ -15,11 +15,14 @@ from typing import Any
 import aiohttp
 from pydantic import BaseModel, Field, HttpUrl, model_validator
 
+from app.config import get_settings
+
 
 TERMINAL_STATUSES = {"FAILED", "COMPLETED"}
-MAX_LOG_LINES = max(20, int(os.getenv("FINE_TUNE_MAX_LOG_LINES", "500")))
-STATE_PATH = Path(os.getenv("FINE_TUNE_STATE_PATH", "checkpoints/fine_tuning_state.json"))
-VERSIONS_ROOT = Path(os.getenv("VIT_VERSIONS_ROOT", "checkpoints/versions"))
+settings = get_settings()
+MAX_LOG_LINES = max(20, settings.fine_tune_max_log_lines)
+STATE_PATH = settings.fine_tune_state_path
+VERSIONS_ROOT = settings.vit_versions_root
 VERSION_PATTERN = re.compile(r"^vit-v\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$")
 
 
@@ -137,11 +140,11 @@ def active_checkpoint_path() -> str:
     for metadata in model_versions.values():
         if metadata.get("status") == "ACTIVE" and metadata.get("checkpoint"):
             return str(metadata["checkpoint"])
-    return os.getenv("VIT_MODEL_PATH", "")
+    return str(settings.vit_model_path)
 
 
 async def _download(session: aiohttp.ClientSession, url: str, target: Path) -> None:
-    internal_base = os.getenv("MEDIA_INTERNAL_BASE_URL", "").rstrip("/")
+    internal_base = settings.media_internal_base_url.rstrip("/")
     if internal_base and "/uploads/" in url:
         url = internal_base + "/uploads/" + url.split("/uploads/", 1)[1]
     async with session.get(url, timeout=aiohttp.ClientTimeout(total=60)) as response:

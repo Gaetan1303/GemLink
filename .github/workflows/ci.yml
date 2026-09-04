@@ -1,0 +1,131 @@
+name: Full CI
+
+on:
+  push:
+    branches: [Dev, dev, master, prod]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: gemlink_test
+          POSTGRES_USER: gemlink
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U gemlink -d gemlink_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7.2-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      APP_ENV: test
+      APP_DEBUG: "1"
+      APP_SECRET: ci-app-secret-with-at-least-32-characters
+      ADMIN_FIXTURE_PASSWORD: ci-admin-fixture-password
+      APP_URL: http://localhost:8000
+      DEFAULT_URI: http://localhost:8000
+      FRONTEND_URL: http://localhost:4200
+      TRUSTED_PROXIES: 127.0.0.1,REMOTE_ADDR
+      TRUSTED_HOSTS: ^(localhost|127\.0\.0\.1)(:[0-9]+)?$
+      CORS_ALLOW_ORIGIN: ^http://localhost:4200$
+      # Doctrine appends `_test` in APP_ENV=test; the service database is
+      # therefore `gemlink_test` while the base URL must target `gemlink`.
+      DATABASE_URL: postgresql://gemlink:ci-only-password@127.0.0.1:5432/gemlink?serverVersion=16&charset=utf8
+      REDIS_URL: redis://127.0.0.1:6379
+      MESSENGER_TRANSPORT_DSN: redis://127.0.0.1:6379/messages
+      MESSENGER_LOW_PRIORITY_TRANSPORT_DSN: redis://127.0.0.1:6379/identification_low_priority
+      MESSENGER_FAILED_TRANSPORT_DSN: doctrine://default?queue_name=failed
+      MAILER_DSN: null://null
+      MAILER_FROM_EMAIL: noreply@example.test
+      MAILER_FROM_NAME: GemLink CI
+      AI_ENABLED: "true"
+      AI_SERVICE_URL: http://ai.invalid
+      INTERNAL_API_KEY: ci-internal-key-with-at-least-32-characters
+      MEDIA_STORAGE_MODE: local
+      R2_ACCOUNT_ID: ci-unused
+      R2_ACCESS_KEY_ID: ci-unused
+      R2_SECRET_ACCESS_KEY: ci-unused-secret-with-at-least-32-chars
+      R2_BUCKET: ci-unused
+      R2_ENDPOINT: https://r2.invalid
+      R2_PUBLIC_BASE_URL: https://media.invalid
+      INFOMANIAK_NEWSLETTER_TOKEN: ci-unused
+      INFOMANIAK_NEWSLETTER_CLIENT_API_URL: https://api.infomaniak.com/1/newsletter
+      INFOMANIAK_NEWSLETTER_DOMAIN_ID: "1"
+      JWT_SECRET_KEY: config/jwt/private.pem
+      JWT_PUBLIC_KEY: config/jwt/public.pem
+      JWT_PASSPHRASE: ci-jwt-passphrase
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: intl, pdo_pgsql, redis, gd
+          coverage: none
+      - run: composer validate --strict
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: composer audit
+      - name: Generate ephemeral CI JWT keys
+        run: |
+          mkdir -p config/jwt
+          openssl genrsa -aes256 -passout pass:ci-jwt-passphrase -out config/jwt/private.pem 2048
+          openssl rsa -passin pass:ci-jwt-passphrase -pubout -in config/jwt/private.pem -out config/jwt/public.pem
+      - run: php bin/console lint:container --env=test
+      - run: php bin/console lint:yaml config
+      - run: php bin/console doctrine:migrations:migrate --no-interaction
+      # Native PostgreSQL indexes, triggers, defaults and check constraints are
+      # migration-owned and intentionally exceed the portable ORM metadata.
+      - run: php bin/console doctrine:schema:validate --skip-sync
+      - run: php bin/console doctrine:migrations:status
+      - run: php bin/phpunit
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run lint
+      - run: npm test -- --watch=false
+      - run: npm run build -- --configuration=production
+      - run: npx wrangler deploy --dry-run --config frontend-wrangler.toml
+
+  fastapi:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Fastapi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: Fastapi/requirements*.txt
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.lock pytest pip-audit pip-licenses
+      - run: python -m pip_audit -r requirements.lock
+      - run: python tools/check_dependency_licenses.py
+      - run: python -m compileall .
+      - run: pytest -q tests_gemlink

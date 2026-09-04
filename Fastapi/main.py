@@ -15,9 +15,9 @@ from PIL import Image
 import aiohttp
 import cv2
 
-# Import de votre architecture, du détecteur et des utilitaires
+from app.config import get_settings
+from inference.detector import DetectorNotReadyError, TorchvisionDetector
 from vit import get_model
-from ultralytics import YOLO
 from utils import crop_with_padding
 from schema import StoneAnalysisResponse
 from fine_tuning import (
@@ -34,42 +34,26 @@ import open_clip
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("GemLinkAI")
 
-# ==============================================================================
-# VARIABLES D'ENVIRONNEMENT
-# ==============================================================================
-YOLO_MODEL_PATH = os.getenv(
-    "YOLO_MODEL_PATH",
-    "runs/detect/runs/stone_detector/weights/best.pt"  # corrigé : évite le doublon "runs/detect/runs/..."
-)
-VIT_MODEL_PATH = os.getenv("VIT_MODEL_PATH", "checkpoints/vit_stones.pth")
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
-OLLAMA_TEXT_MODEL = os.getenv("OLLAMA_TEXT_MODEL", "gemma3:1b")
-# CLIP ViT-B/32 (poids OpenAI) : génère l'embedding 512D persisté par Symfony
-# dans pgvector (table embedding) pour la recherche par similarité entre publications.
-CLIP_MODEL_ARCH = os.getenv("CLIP_MODEL_ARCH", "ViT-B-32")
-CLIP_MODEL_PRETRAINED = os.getenv("CLIP_MODEL_PRETRAINED", "openai")
-DETECTION_CONFIDENCE_THRESHOLD = 0.5
-YOLO_INFERENCE_SIZE = int(os.getenv("YOLO_INFERENCE_SIZE", "960"))
-YOLO_MODEL_VERSION = os.getenv("YOLO_MODEL_VERSION", f"yolov8:{os.path.basename(YOLO_MODEL_PATH)}")
-VIT_MODEL_VERSION = os.getenv("VIT_MODEL_VERSION", f"vit:{os.path.basename(VIT_MODEL_PATH)}")
-CLIP_MODEL_VERSION = os.getenv("CLIP_MODEL_VERSION", f"clip:{CLIP_MODEL_ARCH}:{CLIP_MODEL_PRETRAINED}")
+settings = get_settings()
+
+VIT_MODEL_PATH = str(settings.vit_model_path)
+VIT_MODEL_VERSION = settings.vit_model_version
+CLIP_MODEL_ARCH = settings.clip_model_arch
+CLIP_MODEL_PATH = str(settings.clip_model_path)
+CLIP_MODEL_PRETRAINED = settings.clip_model_pretrained
+CLIP_MODEL_VERSION = settings.clip_model_version
+DETECTION_CONFIDENCE_THRESHOLD = settings.detection_confidence_threshold
 MODEL_VERSIONS = {
-    "yolo": YOLO_MODEL_VERSION,
+    # The historical API key is retained to avoid changing the Symfony contract.
+    "yolo": settings.detector_model_version,
     "vit": VIT_MODEL_VERSION,
     "clip": CLIP_MODEL_VERSION,
 }
 
 # Clé partagée avec Symfony : ce service ne doit JAMAIS être appelable
 # directement par le frontend Angular, uniquement par le backend Symfony.
-INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', '')
-INSECURE_INTERNAL_API_KEYS = {
-    'changeme-en-production',
-    'replace-with-a-long-random-secret',
-}
-INTERNAL_API_KEY_CONFIGURED = (
-    len(INTERNAL_API_KEY) >= 16
-    and INTERNAL_API_KEY not in INSECURE_INTERNAL_API_KEYS
-)
+INTERNAL_API_KEY = settings.internal_api_key_value
+INTERNAL_API_KEY_CONFIGURED = settings.internal_api_key_configured
 if not INTERNAL_API_KEY_CONFIGURED:
     logger.critical(
         'INTERNAL_API_KEY absente ou trop faible : le service démarre en mode dégradé '
@@ -77,8 +61,8 @@ if not INTERNAL_API_KEY_CONFIGURED:
     )
 
 
-MAX_IMAGE_BYTES = 10 * 1024 * 1024
-MAX_VIDEO_BYTES = 100 * 1024 * 1024
+MAX_IMAGE_BYTES = settings.max_image_bytes
+MAX_VIDEO_BYTES = settings.max_video_bytes
 
 
 async def verify_internal_key(x_internal_key: str = Header(None)):
@@ -121,16 +105,23 @@ def decode_video_frame(contents: bytes) -> Image.Image:
 # ==============================================================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialisation des modèles Vision au démarrage de l'orchestrateur."""
-    logger.info(" Démarrage de GemLink AI - Initialisation de la pipeline globale...")
+    """Load optional AI components without taking the HTTP service down."""
+    logger.info("Démarrage de GemLink AI")
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    logger.info(f" Exécution configurée sur le matériel : {device.upper()}")
+    logger.info("Exécution configurée sur %s", device.upper())
 
     app.state.device = device
     app.state.http_session = aiohttp.ClientSession()
+    app.state.model_versions = MODEL_VERSIONS.copy()
+    app.state.model_activation_lock = asyncio.Lock()
+    app.state.readiness = {
+        "detector": False,
+        "classifier": False,
+        "embeddings": False,
+        "llm": False,
+    }
 
-    try:
-        # 1. Chargement du checkpoint ViT (format {"model": state_dict, "classes": [...]})
+    if settings.ai_enabled and settings.vision_enabled:
         # Une activation/rollback survit au redemarrage si son checkpoint est
         # encore disponible ; sinon la version configuree reste le fallback.
         startup_vit_version = VIT_MODEL_VERSION
@@ -141,48 +132,50 @@ async def lifespan(app: FastAPI):
                 startup_vit_version = version
                 startup_vit_path = registered_path
                 break
-        logger.info(f" Chargement des checkpoints depuis {startup_vit_path}...")
-        checkpoint = torch.load(startup_vit_path, map_location=device)
-        app.state.classes = checkpoint["classes"]
-        logger.info(f" Classes détectées : {len(app.state.classes)} classes")
+        try:
+            checkpoint = torch.load(startup_vit_path, map_location=device, weights_only=True)
+            if not isinstance(checkpoint, dict) or "model" not in checkpoint or "classes" not in checkpoint:
+                raise ValueError("checkpoint ViT incompatible")
+            app.state.classes = checkpoint["classes"]
+            app.state.classifier_model = get_model(num_classes=len(app.state.classes))
+            app.state.classifier_model.load_state_dict(checkpoint["model"], strict=True)
+            app.state.classifier_model.to(device)
+            app.state.classifier_model.eval()
+            app.state.model_versions["vit"] = startup_vit_version
+            app.state.preprocess = transforms.Compose([
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ])
+            app.state.readiness["classifier"] = True
+            register_active_version(startup_vit_version, startup_vit_path)
+        except Exception as error:
+            logger.error("Classifieur ViT indisponible: %s", type(error).__name__)
 
-        # 2. Reconstruction de l'architecture ViT
-        logger.info(" Reconstruction de l'architecture Vision Transformer (ViT)...")
-        app.state.classifier_model = get_model(num_classes=len(app.state.classes))
-        app.state.classifier_model.load_state_dict(checkpoint["model"])
-        app.state.classifier_model.to(device)
-        app.state.classifier_model.eval()
-        app.state.model_versions = {**MODEL_VERSIONS, 'vit': startup_vit_version}
-        app.state.model_activation_lock = asyncio.Lock()
-        register_active_version(startup_vit_version, startup_vit_path)
+        try:
+            app.state.detector = TorchvisionDetector(settings.detector_model_path, device)
+            app.state.readiness["detector"] = True
+        except DetectorNotReadyError:
+            logger.error("DETECTOR_NOT_READY")
+        except Exception as error:
+            logger.error("DETECTOR_NOT_READY: %s", type(error).__name__)
 
-        # 3. Chargement du détecteur YOLOv8
-        logger.info(f" Chargement du détecteur YOLOv8 depuis {YOLO_MODEL_PATH}...")
-        app.state.detector = YOLO(YOLO_MODEL_PATH)
-        app.state.detector.to(device)
-
-        # 4. Prétraitement des images (DOIT rester identique aux transforms utilisés à l'entraînement)
-        app.state.preprocess = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-
-        # 5. Chargement de CLIP ViT-B/32 (embedding 512D pour la recherche par similarité pgvector)
-        logger.info(f" Chargement de CLIP {CLIP_MODEL_ARCH} ({CLIP_MODEL_PRETRAINED})...")
-        clip_model, _, clip_preprocess = open_clip.create_model_and_transforms(
-            CLIP_MODEL_ARCH, pretrained=CLIP_MODEL_PRETRAINED
-        )
-        clip_model.to(device)
-        clip_model.eval()
-        app.state.clip_model = clip_model
-        app.state.clip_preprocess = clip_preprocess
-
-        logger.info(" Pipeline Vision et Client HTTP initialisés avec succès.")
-
-    except Exception as e:
-        logger.critical(f" Échec critique lors de l'initialisation de l'IA : {str(e)}")
-        raise e
+        try:
+            if not settings.clip_model_path.is_file():
+                raise FileNotFoundError("checkpoint CLIP absent")
+            clip_model, _, clip_preprocess = open_clip.create_model_and_transforms(
+                CLIP_MODEL_ARCH,
+                pretrained=None,
+                load_weights=False,
+            )
+            open_clip.load_checkpoint(clip_model, CLIP_MODEL_PATH, strict=True, weights_only=True)
+            clip_model.to(device)
+            clip_model.eval()
+            app.state.clip_model = clip_model
+            app.state.clip_preprocess = clip_preprocess
+            app.state.readiness["embeddings"] = True
+        except Exception as error:
+            logger.error("Modèle d'embeddings indisponible: %s", type(error).__name__)
 
     yield
     # Nettoyage à l'arrêt du conteneur
@@ -201,6 +194,11 @@ app = FastAPI(title="GemLink AI Orchestrator API", version="1.1.0", lifespan=lif
 
 @app.post('/fine-tune', tags=['Entraînement'], dependencies=[Depends(verify_internal_key)], status_code=202)
 async def fine_tune(request: FineTuneRequest):
+    if settings.app_env == "production":
+        raise HTTPException(
+            status_code=503,
+            detail="FINE_TUNING_DISABLED: provenance individuelle requise en production.",
+        )
     try:
         return start_job(request, app.state.http_session)
     except ValueError as error:
@@ -222,7 +220,7 @@ async def vit_versions():
 
 
 def _load_vit_checkpoint(checkpoint_path: str):
-    checkpoint = torch.load(checkpoint_path, map_location=app.state.device)
+    checkpoint = torch.load(checkpoint_path, map_location=app.state.device, weights_only=True)
     if not isinstance(checkpoint, dict) or 'model' not in checkpoint or 'classes' not in checkpoint:
         raise ValueError('Le checkpoint ViT est invalide.')
     classes = checkpoint['classes']
@@ -274,11 +272,14 @@ async def activate_vit_version(version: str):
 @app.post("/api/chat", tags=["LLM Chat"], dependencies=[Depends(verify_internal_key)])
 async def chat_proxy(request: Request):
     """Transfère les requêtes de chat à Ollama en préservant le streaming."""
+    if not settings.ai_enabled or not settings.llm_enabled:
+        raise HTTPException(status_code=503, detail="LLM_NOT_READY")
     try:
         body = await request.json()
+        body["model"] = settings.ollama_text_model
 
         ollama_response = await app.state.http_session.post(
-            f"{OLLAMA_URL}/api/chat",
+            f"{settings.ollama_url.rstrip('/')}/api/chat",
             json=body
         )
 
@@ -301,36 +302,31 @@ async def chat_proxy(request: Request):
 
 
 # ==============================================================================
-# SECTION ROUTAGE : PIPELINE VISION (YOLO + ViT)
+# SECTION ROUTAGE : PIPELINE VISION (Torchvision + ViT)
 # ==============================================================================
 
 def run_vision_pipeline(image: Image.Image) -> dict:
     """
-    Exécute la détection YOLO puis la classification ViT sur une image.
+    Exécute la détection Torchvision puis la classification ViT sur une image.
     Réutilisée par /predict (rapide, agent vision seul) et /analyze (agent vision + agent connaissance).
     Lève ValueError si aucun minéral n'est détecté.
     """
-    yolo_results = app.state.detector(
-        image,
-        conf=DETECTION_CONFIDENCE_THRESHOLD,
-        imgsz=YOLO_INFERENCE_SIZE,
-        verbose=False,
-    )
-    if len(yolo_results) == 0 or len(yolo_results[0].boxes) == 0:
+    readiness = getattr(app.state, "readiness", {})
+    if not all(readiness.get(component, False) for component in ("detector", "classifier", "embeddings")):
+        raise DetectorNotReadyError("DETECTOR_NOT_READY")
+
+    detector_results = app.state.detector.detect(image, DETECTION_CONFIDENCE_THRESHOLD)
+    if not detector_results:
         logger.warning(
-            "YOLO n'a localisé aucun minéral (seuil=%.2f, imgsz=%d).",
+            "Le détecteur n'a localisé aucun minéral (seuil=%.2f).",
             DETECTION_CONFIDENCE_THRESHOLD,
-            YOLO_INFERENCE_SIZE,
         )
         raise ValueError("Aucun minéral localisé dans l'image.")
 
     detections = []
-    for box in yolo_results[0].boxes:
-        det_conf = float(box.conf[0].detach().cpu().item())
-        if det_conf <= DETECTION_CONFIDENCE_THRESHOLD:
-            continue
-
-        bbox = box.xyxy[0].detach().cpu().tolist()
+    for detected in detector_results:
+        det_conf = detected.confidence
+        bbox = detected.bbox
         crop_img = crop_with_padding(image, bbox)
         input_tensor = app.state.preprocess(crop_img).unsqueeze(0).to(app.state.device)
 
@@ -371,7 +367,7 @@ def run_vision_pipeline(image: Image.Image) -> dict:
 
 def compute_clip_embedding(crop_img: Image.Image) -> list[float]:
     """
-    Génère l'embedding CLIP ViT-B/32 (512D) sur le crop YOLO déjà produit —
+    Génère l'embedding CLIP ViT-B/32 (512D) sur le crop déjà produit —
     pas de nouveau découpage, on réutilise crop_img de run_vision_pipeline.
     L2-normalisé pour que la similarité cosinus se calcule comme un simple
     produit scalaire côté pgvector (index HNSW).
@@ -392,7 +388,7 @@ def compute_clip_embedding(crop_img: Image.Image) -> list[float]:
 def build_vision_analysis_response(vision_result: dict) -> dict:
     """Construit la réponse contractuelle sans attendre le LLM.
 
-    L'identification (YOLO, ViT et embedding CLIP) est disponible dès que la
+    L'identification (détection, ViT et embedding CLIP) est disponible dès que la
     vision a terminé. Les informations encyclopédiques ne sont pas nécessaires
     pour identifier le spécimen et ne doivent donc pas bloquer Messenger.
     """
@@ -406,7 +402,7 @@ def build_vision_analysis_response(vision_result: dict) -> dict:
         "model_version": vision_result["model_version"],
     }
 
-# Prompt few-shot : les petits modèles (ex. gemma3:1b, contrainte RAM du
+# Prompt few-shot : les petits modèles, adaptés à la contrainte RAM du
 # serveur de prod) respectent un schéma JSON strict beaucoup plus fiablement
 # avec un exemple complet à imiter qu'avec une simple description abstraite
 # de structure. Les consignes ci-dessous ciblent précisément les erreurs
@@ -455,7 +451,7 @@ Génère maintenant le JSON pour "{class_name}", en respectant strictement cette
 async def ask_knowledge_agent(class_name: str) -> dict:
     """Interroge Ollama pour enrichir la classe prédite avec des données minéralogiques structurées."""
     payload = {
-        "model": OLLAMA_TEXT_MODEL,
+        "model": settings.ollama_text_model,
         "messages": [{"role": "user", "content": ANALYSIS_PROMPT_TEMPLATE.format(class_name=class_name)}],
         "stream": False,
         "format": "json",  # force Ollama à produire du JSON valide (modèles compatibles)
@@ -465,11 +461,11 @@ async def ask_knowledge_agent(class_name: str) -> dict:
     }
 
     try:
-        response = await app.state.http_session.post(f"{OLLAMA_URL}/api/chat", json=payload)
+        response = await app.state.http_session.post(f"{settings.ollama_url.rstrip('/')}/api/chat", json=payload)
         if response.status != 200:
             error_body = await response.text()
             logger.error(
-                f"❌ Ollama a répondu HTTP {response.status} sur /api/chat (modèle={OLLAMA_TEXT_MODEL}) : "
+                f"Ollama a répondu HTTP {response.status} sur /api/chat (modèle={settings.ollama_text_model}) : "
                 f"{error_body[:500]}"
             )
             raise HTTPException(status_code=502, detail="L'agent de connaissance (Ollama) a répondu avec une erreur.")
@@ -494,7 +490,7 @@ async def analyze(
     file: UploadFile | None = File(None),
 ):
     """
-    Identification immédiate par vision (YOLO + ViT + CLIP), validée par
+    Identification immédiate par vision (Torchvision + ViT + CLIP), validée par
     StoneAnalysisResponse. L'enrichissement Ollama est volontairement hors du
     chemin critique afin qu'une fiche lente ne bloque pas une identification.
 
@@ -502,6 +498,11 @@ async def analyze(
     Symfony (AnalyzeMediaMessageHandler) envoie actuellement 'file'.
     """
     upload = media or file
+
+    if not settings.ai_enabled or not settings.vision_enabled:
+        raise HTTPException(status_code=503, detail="VISION_NOT_READY")
+    if not all(getattr(app.state, "readiness", {}).get(name, False) for name in ("detector", "classifier", "embeddings")):
+        raise HTTPException(status_code=503, detail="DETECTOR_NOT_READY")
 
     if upload is not None and upload.content_type == 'video/mp4':
         try:
@@ -543,10 +544,24 @@ async def analyze(
 
 @app.get("/health", tags=["Système"])
 async def health_check():
-    models_ready = hasattr(app.state, "detector") and hasattr(app.state, "classifier_model")
+    readiness = getattr(app.state, "readiness", {})
+    llm_ready = False
+    if settings.llm_enabled:
+        session = getattr(app.state, "http_session", None)
+        if session is not None:
+            try:
+                timeout = aiohttp.ClientTimeout(total=2)
+                async with session.get(f"{settings.ollama_url.rstrip('/')}/api/tags", timeout=timeout) as response:
+                    llm_ready = response.status == 200
+            except (aiohttp.ClientError, asyncio.TimeoutError):
+                llm_ready = False
+    readiness["llm"] = llm_ready
+    required = ["detector", "classifier", "embeddings"]
+    if settings.llm_enabled:
+        required.append("llm")
+    models_ready = settings.ai_enabled and all(readiness.get(name, False) for name in required)
     return {
         "status": "healthy" if models_ready and INTERNAL_API_KEY_CONFIGURED else "degraded",
-        "device": app.state.device if hasattr(app.state, "device") else "unknown",
-        "ollama_connectivity": not app.state.http_session.closed,
+        "components": {name: bool(readiness.get(name, False)) for name in required},
         "internal_api_key_configured": INTERNAL_API_KEY_CONFIGURED,
     }

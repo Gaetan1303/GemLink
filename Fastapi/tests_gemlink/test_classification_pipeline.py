@@ -1,4 +1,3 @@
-from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -6,36 +5,28 @@ import torch
 from PIL import Image
 
 import main
+from inference.detector import Detection
 
 
 class FakeDetector:
-    def __init__(self, boxes):
-        self.boxes = boxes
+    def __init__(self, detections):
+        self.detections = detections
         self.confidence_argument = None
-        self.image_size_argument = None
 
-    def __call__(self, _image, *, conf, imgsz, verbose):
-        self.confidence_argument = conf
-        self.image_size_argument = imgsz
-        assert verbose is False
-        return [SimpleNamespace(boxes=self.boxes)]
-
-
-def make_box(bbox, confidence):
-    return SimpleNamespace(
-        xyxy=torch.tensor([bbox], dtype=torch.float32),
-        conf=torch.tensor([confidence], dtype=torch.float32),
-    )
+    def detect(self, _image, confidence_threshold):
+        self.confidence_argument = confidence_threshold
+        return [item for item in self.detections if item.confidence > confidence_threshold]
 
 
 class ClassificationPipelineTest(unittest.TestCase):
     def test_pipeline_processes_each_detection_above_threshold(self):
         detector = FakeDetector([
-            make_box([5, 5, 30, 30], 0.90),
-            make_box([10, 10, 35, 35], 0.50),
-            make_box([20, 20, 50, 50], 0.75),
+            Detection([5, 5, 30, 30], 0.90),
+            Detection([10, 10, 35, 35], 0.50),
+            Detection([20, 20, 50, 50], 0.75),
         ])
         main.app.state.detector = detector
+        main.app.state.readiness = {"detector": True, "classifier": True, "embeddings": True}
         main.app.state.device = "cpu"
         main.app.state.classes = ["amethyste", "quartz"]
         main.app.state.preprocess = lambda _crop: torch.zeros(3, 224, 224)
@@ -45,7 +36,6 @@ class ClassificationPipelineTest(unittest.TestCase):
             result = main.run_vision_pipeline(Image.new("RGB", (100, 100)))
 
         self.assertEqual(0.5, detector.confidence_argument)
-        self.assertEqual(960, detector.image_size_argument)
         self.assertEqual(2, len(result["detections"]))
         self.assertTrue(all(item["label"] == "quartz" for item in result["detections"]))
         self.assertAlmostEqual(0.90, result["detections"][0]["detector_confidence"], places=5)

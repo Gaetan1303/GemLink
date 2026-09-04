@@ -3,7 +3,7 @@ from models.vit import get_model
 
 
 def load_model(path, device):
-    checkpoint = torch.load(path, map_location=device)
+    checkpoint = torch.load(path, map_location=device, weights_only=True)
     classes = checkpoint["classes"]
 
     model = get_model(len(classes)).to(device)

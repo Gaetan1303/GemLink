@@ -15,7 +15,7 @@ framework:
                 dsn: '%env(MESSENGER_FAILED_TRANSPORT_DSN)%'
 
             low_priority:
-                dsn: '%env(REDIS_URL)%/identification_low_priority'
+                dsn: '%env(MESSENGER_LOW_PRIORITY_TRANSPORT_DSN)%'
                 retry_strategy:
                     service: App\Messenger\AnalyzeMediaRetryStrategy
 

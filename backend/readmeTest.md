@@ -36,7 +36,7 @@ docker ps | grep gemlink_postgres_test
 Créer (ou vérifier) le fichier **`.env.test.local`** à la racine de `backend/` (ce fichier est ignoré par Git, il ne doit jamais être commité) :
 
 ```env
-DATABASE_URL="postgresql://gemlink:MimineForEver@127.0.0.1:5433/gemlink?serverVersion=16&charset=utf8"
+DATABASE_URL="postgresql://gemlink:gemlink-test-only-password@127.0.0.1:5433/gemlink?serverVersion=16&charset=utf8"
 ```
 
 > ⚠️ Ne pas ajouter `_test` au nom de la base dans l'URL : Doctrine l'ajoute automatiquement quand la commande est lancée avec `--env=test`.

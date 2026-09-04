@@ -1,4 +1,5 @@
 parameters:
+    app.admin_fixture_password_default: ''
     # MAILER
     app.mailer_from_email: '%env(MAILER_FROM_EMAIL)%'
     app.mailer_from_name: '%env(MAILER_FROM_NAME)%'
@@ -9,6 +10,7 @@ parameters:
     # MEDIA
     media.upload_dir: '%kernel.project_dir%/public/uploads'
     media.public_base_url: '%env(resolve:APP_URL)%/uploads'
+    media.r2_public_base_url: '%env(R2_PUBLIC_BASE_URL)%'
     # 'local' (dev, disque partagé worker/php) | 'r2' (prod, CDN public)
     # Valeur de repli utilisée par le processeur d'env "default:" ci-dessous
     # — doit être un PARAMÈTRE de conteneur classique, pas un env().
@@ -18,10 +20,12 @@ parameters:
     # INFOMANIAK NEWSLETTER
     infomaniak_newsletter.domain_id: '%env(INFOMANIAK_NEWSLETTER_DOMAIN_ID)%'
     infomaniak_newsletter.token: '%env(INFOMANIAK_NEWSLETTER_TOKEN)%'
+    infomaniak_newsletter.api_url: '%env(INFOMANIAK_NEWSLETTER_CLIENT_API_URL)%'
 
     # AI SERVICE
     app.ai_service_url: '%env(resolve:AI_SERVICE_URL)%'
     app.internal_api_key: '%env(resolve:INTERNAL_API_KEY)%'
+    app.ai_enabled: '%env(bool:AI_ENABLED)%'
 
 services:
     _defaults:
@@ -33,6 +37,8 @@ services:
             string $frontendUrl: '%app.frontend_url%'
             string $aiServiceUrl: '%app.ai_service_url%'
             string $internalApiKey: '%app.internal_api_key%'
+            bool $aiEnabled: '%app.ai_enabled%'
+            string $adminFixturePassword: '%env(default:app.admin_fixture_password_default:ADMIN_FIXTURE_PASSWORD)%'
 
     App\:
         resource: '../src/'
@@ -61,15 +67,44 @@ services:
         arguments:
             $token: '%infomaniak_newsletter.token%'
             $domainId: '%infomaniak_newsletter.domain_id%'
+            $baseUrl: '%infomaniak_newsletter.api_url%'
 
     # MEDIA UPLOAD
     App\Service\Media\MediaUploaderInterface:
-        alias: App\Service\Media\LocalMediaUploader
+        alias: App\Service\Media\StorageModeMediaUploader
 
     App\Service\Media\LocalMediaUploader:
         arguments:
             $uploadDir: '%media.upload_dir%'
             $publicBaseUrl: '%media.public_base_url%'
+
+    Aws\S3\S3Client:
+        arguments:
+            - version: 'latest'
+              region: 'auto'
+              endpoint: '%env(R2_ENDPOINT)%'
+              use_path_style_endpoint: true
+              credentials:
+                  key: '%env(R2_ACCESS_KEY_ID)%'
+                  secret: '%env(R2_SECRET_ACCESS_KEY)%'
+
+    League\Flysystem\AwsS3V3\AwsS3V3Adapter:
+        arguments:
+            $client: '@Aws\S3\S3Client'
+            $bucket: '%env(R2_BUCKET)%'
+
+    app.r2_filesystem:
+        class: League\Flysystem\Filesystem
+        arguments: ['@League\Flysystem\AwsS3V3\AwsS3V3Adapter']
+
+    App\Service\Media\R2MediaUploader:
+        arguments:
+            $filesystem: '@app.r2_filesystem'
+            $publicBaseUrl: '%media.r2_public_base_url%'
+
+    App\Service\Media\StorageModeMediaUploader:
+        arguments:
+            $storageMode: '%media.storage_mode%'
 
     # US 4.2 - CA-2 : client Redis natif pour VitrineViewCounterService.
     # Service à part entière, au même niveau que les autres sous `services:`
@@ -102,3 +137,20 @@ services:
     App\Controller\ConversationController:
         arguments:
             $chatMessageLimiter: '@limiter.chat_message'
+
+    App\EventSubscriber\ProductionConfigurationSubscriber:
+        arguments:
+            $appSecret: '%env(APP_SECRET)%'
+            $jwtPassphrase: '%env(JWT_PASSPHRASE)%'
+            $mailerDsn: '%env(MAILER_DSN)%'
+            $internalApiKey: '%app.internal_api_key%'
+            $mediaStorageMode: '%media.storage_mode%'
+            $r2AccessKeyId: '%env(R2_ACCESS_KEY_ID)%'
+            $r2AccountId: '%env(R2_ACCOUNT_ID)%'
+            $r2SecretAccessKey: '%env(R2_SECRET_ACCESS_KEY)%'
+            $r2Bucket: '%env(R2_BUCKET)%'
+            $r2Endpoint: '%env(R2_ENDPOINT)%'
+            $r2PublicBaseUrl: '%env(R2_PUBLIC_BASE_URL)%'
+            $corsAllowOrigin: '%env(CORS_ALLOW_ORIGIN)%'
+            $frontendUrl: '%app.frontend_url%'
+            $aiServiceUrl: '%app.ai_service_url%'

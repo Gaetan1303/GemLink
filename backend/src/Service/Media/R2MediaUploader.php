@@ -5,7 +5,7 @@
 namespace App\Service\Media;
 
 use App\Exception\InvalidMediaException;
-use League\Flysystem\Filesystem;
+use League\Flysystem\FilesystemOperator;
 use League\Flysystem\UnableToWriteFile;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Uid\Uuid;
@@ -22,7 +22,7 @@ use Symfony\Component\Uid\Uuid;
 final class R2MediaUploader implements MediaUploaderInterface
 {
     public function __construct(
-        private readonly Filesystem $filesystem,
+        private readonly FilesystemOperator $filesystem,
         private readonly string $publicBaseUrl, // ex. 'https://media.gem-link.org'
     ) {
     }
@@ -41,7 +41,6 @@ final class R2MediaUploader implements MediaUploaderInterface
         try {
             $this->filesystem->writeStream($key, $stream, [
                 'mimetype' => $file->getMimeType(),
-                'visibility' => 'public',
             ]);
         } catch (UnableToWriteFile $exception) {
             throw new InvalidMediaException('Le transfert du fichier vers le CDN a échoué.', previous: $exception);

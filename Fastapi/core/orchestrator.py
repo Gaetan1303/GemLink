@@ -52,7 +52,7 @@ class AIOrchestrator:
         """
         Point d'entrée principal arbitrant entre la puissance locale et la précision distante.
         """
-        # 1. Tentative d'exécution via le pipeline local (YOLO + ViT)
+        # 1. Tentative d'exécution via le pipeline local (détecteur + ViT)
         local_result = await self._run_local_pipeline(image)
         
         # 2. Vérification du critère de réussite locale
@@ -73,16 +73,16 @@ class AIOrchestrator:
             return {"success": False, "confidence": 0.0}
 
         try:
-            # Étape A : Détection YOLO
+            # Étape A : détection via le backend configuré
             bbox = None
             det_conf = 0.0
             if self.detector:
                 try:
                     bbox, det_conf = self.detector.detect(image)
                 except Exception as e:
-                    print(f"⚠️ Défaillance technique du détecteur YOLO : {e}")
+                    print(f"Défaillance technique du détecteur : {e}")
 
-            # Si YOLO échoue à localiser un minéral, on invalide la certitude locale pour déclencher le fallback
+            # Si la détection échoue, on invalide la certitude locale pour déclencher le fallback
             if bbox is None:
                 return {"success": False, "confidence": 0.0}
 

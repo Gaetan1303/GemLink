@@ -18,12 +18,20 @@ env/
 .vscode/
 .idea/
 
-# On ignore les gros volumes de données ou datasets si tu en as stocké localement
-# (Laisse tes fichiers dans 'checkpoints/' s'ils font moins de quelques centaines de Mo)
-# datasets/
-# ou *.zip, *.tar.gz
+# Training data and checkpoints are mounted explicitly in production.
 /data
 /dataset
 /raw_data
 /trash
 /tests
+/tests_gemlink
+/training
+/sources
+/downloader
+/runs
+/checkpoints
+*.pt
+*.pth
+.env
+.env.*
+.git/
