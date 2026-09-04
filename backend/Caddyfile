@@ -2,7 +2,7 @@
     frankenphp
 }
 
-:{$PORT:8080} {
+:8080 {
     root * /app/public
 
     encode gzip zstd

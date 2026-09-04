@@ -33,7 +33,6 @@ RUN composer install \
 COPY . .
 
 RUN composer dump-autoload --no-dev --classmap-authoritative --no-interaction --no-scripts \
-    && chmod +x bin/railway-bootstrap bin/railway-api-start bin/railway-worker-start \
     && mkdir -p var/cache var/log public/uploads \
     && chown -R www-data:www-data var public/uploads
 
@@ -42,6 +41,6 @@ USER www-data
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD php -r '$p=getenv("PORT") ?: "8080"; $c=@file_get_contents("http://127.0.0.1:".$p."/health"); exit($c===false?1:0);'
+    CMD php -r '$c=@file_get_contents("http://127.0.0.1:8080/health"); exit($c===false?1:0);'
 
 CMD ["frankenphp", "run"]

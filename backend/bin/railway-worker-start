@@ -1,6 +1,11 @@
-#!/bin/sh
+#!/usr/bin/env sh
 set -eu
 
-exec /app/bin/railway-bootstrap \
-  php bin/console messenger:consume async low_priority \
-  --time-limit=3600 --memory-limit=256M --sleep=1
+/app/bin/railway-jwt-bootstrap
+
+# Worker PHP Symfony Messenger. Aucun serveur HTTP n'est lancé ici.
+exec php bin/console messenger:consume async low_priority \
+  --time-limit=3600 \
+  --memory-limit=256M \
+  --sleep=1 \
+  --no-interaction
