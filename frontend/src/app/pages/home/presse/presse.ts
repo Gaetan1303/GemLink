@@ -1,12 +1,11 @@
 import { Component, computed, inject } from '@angular/core';
 import {SharedModule} from "../../../shared/shared-module";
-import { NavBarMobile } from "../../../components/nav-bar-mobile/nav-bar-mobile";
 import {AuthService} from "../../../core/services/auth";
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
 
 @Component({
   selector: 'app-presse',
-  imports: [SharedModule, NavBarMobile,],
+  imports: [SharedModule,],
   templateUrl: './presse.html',
   styleUrls: ['./presse.scss'],
 })

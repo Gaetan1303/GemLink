@@ -1,0 +1,79 @@
+name: Production Gate
+
+on:
+  push:
+    branches: [prod]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-policy:
+    name: Production policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject committed production secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -n -I -E \
+            'xkeysib-[A-Za-z0-9_-]{20,}|SG\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{20,}|-----BEGIN (RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----' \
+            -- . ':(exclude)docs/**' ':(exclude)doc/**' ':(exclude)**/*.example' ; then
+            echo 'A production credential/private key appears to be committed.' >&2
+            exit 1
+          fi
+
+      - name: Reject forbidden AI runtime dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE '(^|[^A-Za-z])(ultralytics|gemma3(:1b)?)([^A-Za-z]|$)|yolov8n\.pt|yolo26n\.pt' \
+            Fastapi/requirements*.txt Fastapi/main.py Fastapi/app Fastapi/core Fastapi/engines 2>/dev/null; then
+            echo 'A forbidden legacy AI dependency/model remains in the production runtime.' >&2
+            exit 1
+          fi
+
+      - name: Verify production frontend API origin
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "apiUrl: 'https://caverne.gem-link.org'" frontend/src/environments/environment.prod.ts
+
+  docker-images:
+    name: Production Docker images
+    runs-on: ubuntu-latest
+    needs: production-policy
+    strategy:
+      matrix:
+        include:
+          - name: symfony
+            context: backend
+          - name: fastapi
+            context: Fastapi
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.name }} image
+        run: docker build --pull --tag gemlink-${{ matrix.name }}:ci ${{ matrix.context }}
+
+  compose-sanity:
+    name: Compose sanity
+    runs-on: ubuntu-latest
+    needs: production-policy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate local compose after production changes
+        shell: bash
+        env:
+          APP_SECRET: ci-app-secret-with-at-least-32-characters
+          POSTGRES_PASSWORD: ci-postgres-password
+          INTERNAL_API_KEY: ci-internal-key-with-at-least-32-characters
+        run: docker compose config --quiet

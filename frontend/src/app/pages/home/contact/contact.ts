@@ -1,14 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { SharedModule } from "../../../shared/shared-module";
-import { NavBarMobile } from "../../../components/nav-bar-mobile/nav-bar-mobile";
 import { AuthService } from "../../../core/services/auth";
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
 import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-contact',
-  imports: [SharedModule, NavBarMobile],
+  imports: [SharedModule, ],
   templateUrl: './contact.html',
   styleUrls: ['./contact.scss'],
 })

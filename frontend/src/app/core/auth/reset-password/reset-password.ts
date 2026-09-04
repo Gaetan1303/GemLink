@@ -8,12 +8,11 @@ import { AuthService } from '../../services/auth';
 import { SharedModule } from '../../../shared/shared-module';
 import { HeaderImage } from '../../../shared/header-image/header-image';
 import { Header } from '../../../shared/header/header';
-import { Footer } from '../../../shared/footer/footer';
 
 @Component({
   selector: 'app-reset-password',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, SharedModule, HeaderImage, Header, Footer],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, SharedModule, HeaderImage, Header,],
   templateUrl: './reset-password.html',
   styleUrls: ['./reset-password.scss'],
 })

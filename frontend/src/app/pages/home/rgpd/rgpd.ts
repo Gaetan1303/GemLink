@@ -1,6 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
 import {SharedModule} from "../../../shared/shared-module";
-import { NavBarMobile } from "../../../components/nav-bar-mobile/nav-bar-mobile";
 import {AuthService} from "../../../core/services/auth";
 import { MenuRole } from '../../../components/menu-burger/menu-navigation.model';
 import { HttpClient } from '@angular/common/http';
@@ -10,7 +9,7 @@ import { signal } from '@angular/core';
 
 @Component({
   selector: 'app-rgpd',
-  imports: [SharedModule, NavBarMobile, Header],
+  imports: [SharedModule,  Header],
   templateUrl: './rgpd.html',
   styleUrls: ['./rgpd.scss'],
 })
@@ -55,7 +54,6 @@ export class Rgpd {
     });
   }
 }
-
 
 
 

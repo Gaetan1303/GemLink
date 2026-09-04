@@ -32,22 +32,23 @@ class AuthService
     public const JWT_TTL_SECONDS = 900;
     public const REFRESH_TOKEN_TTL_SECONDS = 604800;
 
-    public function __construct(
-        private EntityManagerInterface $em,
-        private UserRepository $userRepository,
-        private EmailValidationTokenRepository $emailValidationTokenRepository,
-        private RefreshTokenRepository $refreshTokenRepository,
-        private UserPasswordHasherInterface $passwordHasher,
-        private MessageBusInterface $messageBus,
-        private EmailValidationTokenSigner $emailValidationTokenSigner,
-        private JWTTokenManagerInterface $jwtManager,
-        private CacheInterface $cache,
-        private CacheItemPoolInterface $cachePool,
-        private string $frontendUrl,
-        private int $maxLoginAttempts = 5,
-        private int $loginAttemptWindow = 600,
-        private PasswordResetTokenRepository $passwordResetTokenRepository,
-    ) {}
+public function __construct(
+    private EntityManagerInterface $em,
+    private UserRepository $userRepository,
+    private EmailValidationTokenRepository $emailValidationTokenRepository,
+    private RefreshTokenRepository $refreshTokenRepository,
+    private UserPasswordHasherInterface $passwordHasher,
+    private MessageBusInterface $messageBus,
+    private EmailValidationTokenSigner $emailValidationTokenSigner,
+    private JWTTokenManagerInterface $jwtManager,
+    private CacheInterface $cache,
+    private CacheItemPoolInterface $cachePool,
+    private string $frontendUrl,
+    private PasswordResetTokenRepository $passwordResetTokenRepository,
+    private int $maxLoginAttempts = 5,
+    private int $loginAttemptWindow = 600,
+) {
+}
 
     // --- US 1.1 : Inscription ---
     public function register(array $data): User
@@ -125,6 +126,9 @@ class AuthService
         }
 
         $user = $email !== '' ? $this->userRepository->findOneBy(['email' => $email]) : null;
+        if ($user instanceof User && $user->isTemporaryBanExpired()) {
+            $user->unban();
+        }
         if (
             !$user instanceof User
             || $user->getStatus() !== 'ACTIVE'
@@ -135,6 +139,7 @@ class AuthService
         }
 
         $this->resetLoginAttempts($email);
+        $user->markLoggedIn();
 
         ['refreshToken' => $refreshToken, 'refreshTokenExpiresAt' => $expiresAt, 'refreshTokenEntity' => $entity]
             = $this->issueRefreshToken($user);
@@ -145,7 +150,11 @@ class AuthService
         $jti = bin2hex(random_bytes(16));
 
         return [
-            'token' => $this->jwtManager->createFromPayload($user, ['jti' => $jti]),
+            'token' => $this->jwtManager->createFromPayload($user, [
+                'jti' => $jti,
+                'email' => $user->getEmail(),
+                'id' => $user->getId()->toRfc4122(),
+            ]),
             'refreshToken' => $refreshToken,
             'refreshTokenExpiresAt' => $expiresAt,
         ];
@@ -177,6 +186,15 @@ class AuthService
 
         $user = $refreshToken->getUser();
 
+        if ($user->isTemporaryBanExpired()) {
+            $user->unban();
+        }
+        if ($user->getStatus() !== 'ACTIVE') {
+            $refreshToken->revoke();
+            $this->em->flush();
+            throw new InvalidArgumentException('Compte indisponible.');
+        }
+
         // CA-2 : révoquer l'ancien refresh token avant d'en émettre un nouveau
         $refreshToken->revoke();
 
@@ -192,7 +210,11 @@ class AuthService
         $jti = bin2hex(random_bytes(16));
 
         return [
-            'token' => $this->jwtManager->createFromPayload($user, ['jti' => $jti]),
+            'token' => $this->jwtManager->createFromPayload($user, [
+                'jti' => $jti,
+                'email' => $user->getEmail(),
+                'id' => $user->getId()->toRfc4122(),
+            ]),
             'refreshToken' => $newRawToken,
             'refreshTokenExpiresAt' => $expiresAt,
         ];
@@ -219,7 +241,7 @@ class AuthService
             $payload = $this->decodeJwtPayloadUnsafe($rawJwt);
             $jti = isset($payload['jti']) && is_string($payload['jti']) ? $payload['jti'] : '';
             $exp = isset($payload['exp']) && is_int($payload['exp']) ? $payload['exp'] : 0;
-            $ttl = $exp - time();
+            $ttl = min(self::JWT_TTL_SECONDS, $exp - time());
 
             if ($jti !== '' && $ttl > 0) {
                 $item = $this->cachePool->getItem(JwtBlocklistListener::blocklistKey($jti));

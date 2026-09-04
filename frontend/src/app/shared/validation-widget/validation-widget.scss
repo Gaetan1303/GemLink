@@ -1,0 +1,71 @@
+// US 2.7 : styles de base. À réaligner sur les design tokens du projet
+// (_post-theme.scss, clip-path facetté, JetBrains Mono) — pas de visibilité
+// sur ce fichier partagé pour l'instant, donc rendu volontairement neutre.
+
+.validation-widget {
+  margin-top: 1.5rem;
+}
+
+.validation-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.validation-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid currentColor;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 150ms ease-out, opacity 150ms ease-out;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.is-active {
+    font-weight: 600;
+  }
+}
+
+.validation-btn--confirm { color: #2e7d32; }
+.validation-btn--correct { color: #ef6c00; }
+.validation-btn--reject  { color: #c62828; }
+
+.validation-btn--confirm.is-active { background-color: rgba(46, 125, 50, 0.1); }
+.validation-btn--correct.is-active { background-color: rgba(239, 108, 0, 0.1); }
+.validation-btn--reject.is-active  { background-color: rgba(198, 40, 40, 0.1); }
+
+.validation-current-proposal {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.validation-correction-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.validation-correction-field {
+  width: 100%;
+  max-width: 320px;
+}
+
+.validation-correction-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.validation-error {
+  margin-top: 0.5rem;
+  color: #c62828;
+  font-size: 0.85rem;
+}

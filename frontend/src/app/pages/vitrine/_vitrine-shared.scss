@@ -1,0 +1,284 @@
+@use './../post/post-theme' as theme;
+
+@mixin gem-cut($size: 16px) {
+  clip-path: polygon(
+    #{$size} 0, 100% 0, 100% calc(100% - #{$size}),
+    calc(100% - #{$size}) 100%, 0 100%, 0 #{$size}
+  );
+}
+
+// ── Boutons (Origine) ──────────────────────────
+
+@mixin btn-publish {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: theme.$gold;
+  color: theme.$ink;
+  font-family: theme.$font-display;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.75rem;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  @include theme.facet-corner-sm;
+
+  mat-icon { font-size: 1.15rem; width: 1.15rem; height: 1.15rem; }
+
+  &:hover:not(:disabled) { background-color: #d4b473; }
+  &:active:not(:disabled) { transform: scale(0.98); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:focus-visible { outline: 2px solid theme.$text; outline-offset: 3px; }
+}
+
+@mixin btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: 1px solid theme.$gold;
+  color: theme.$gold;
+  border-radius: 6px;
+  padding: 0.65rem 1.4rem;
+  font-family: theme.$font-display;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+
+  mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; }
+
+  &:hover:not(:disabled) { background: theme.$gold-dim; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+@mixin btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: 1px solid rgba(224, 122, 95, 0.4);
+  color: theme.$coral;
+  border-radius: 6px;
+  padding: 0.65rem 1.4rem;
+  font-family: theme.$font-display;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+
+  mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; }
+
+  &:hover:not(:disabled) { background: rgba(224, 122, 95, 0.12); border-color: theme.$coral; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+@mixin btn-icon-remove {
+  background: rgba(4, 10, 32, 0.75);
+  border: none;
+  color: theme.$text;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+
+  mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+  &:hover { background: theme.$coral; }
+}
+
+// ── Alerte, eyebrow, champs (identiques => post-create) ───────────
+
+@mixin alert-base {
+  padding: 0.85rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+  p { margin: 0; }
+  p + p { margin-top: 0.3rem; }
+}
+
+@mixin alert-error {
+  background: rgba(224, 122, 95, 0.15);
+  border: 1px solid rgba(224, 122, 95, 0.4);
+  color: theme.$coral;
+}
+
+@mixin catalog-eyebrow {
+  display: inline-block;
+  @include theme.catalog-label;
+  color: theme.$violet;
+}
+
+@mixin form-field-label {
+  font-family: theme.$font-display;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: theme.$text;
+}
+
+@mixin form-field-input {
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(197, 160, 89, 0.25);
+  border-radius: 6px;
+  padding: 0.75rem 0.95rem;
+  color: theme.$text;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &::placeholder { color: theme.$text-faint; }
+  &:hover { border-color: rgba(197, 160, 89, 0.6); }
+  &:focus {
+    outline: none;
+    border-color: theme.$gold;
+    box-shadow: 0 0 0 3px theme.$gold-dim;
+  }
+}
+
+@mixin upload-dropzone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  border: 1px dashed rgba(197, 160, 89, 0.35);
+  background: theme.$surface;
+  color: theme.$text-dim;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  @include theme.facet-corner-sm;
+
+  input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  mat-icon { color: theme.$gold; opacity: 0.7; }
+
+  &:hover { border-color: theme.$gold; background: theme.$surface-raised; color: theme.$text; }
+  &--busy { opacity: 0.6; pointer-events: none; }
+}
+
+@mixin status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  @include theme.meta-mono;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(197, 160, 89, 0.25);
+  color: theme.$text-dim;
+
+  &--published { color: theme.$emerald; border-color: rgba(123, 201, 154, 0.35); }
+}
+
+// ── Modale (custom) ────────────────────────────────
+
+@mixin modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 10, 32, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1.5rem;
+}
+
+@mixin modal {
+  background: theme.$surface;
+  border: 1px solid rgba(197, 160, 89, 0.25);
+  padding: 1.75rem;
+  max-width: 420px;
+  width: 100%;
+  @include gem-cut(14px);
+
+  h2 { margin-top: 0; font-family: theme.$font-display; color: theme.$gold; }
+  p { color: theme.$text-dim; line-height: 1.5; }
+}
+
+// ── Balayage de lumière au survol — signature interactive ────────
+
+@mixin facet-sweep {
+  &::after {
+    content: '';
+    position: absolute;
+    top: -60%;
+    left: -70%;
+    width: 45%;
+    height: 220%;
+    background: linear-gradient(
+      100deg, transparent,
+      rgba(197, 160, 89, 0.18) 48%,
+      rgba(255, 255, 255, 0.22) 50%,
+      rgba(197, 160, 89, 0.18) 52%,
+      transparent
+    );
+    transform: rotate(10deg);
+    pointer-events: none;
+    transition: left 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  &:hover::after, &:focus-within::after { left: 140%; }
+
+  @media (prefers-reduced-motion: reduce) { &::after { display: none; } }
+}
+
+// ── Filet gravé sous un titre ──────────────────────────────────
+
+@mixin engraved-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 220px;
+
+  &::before, &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(197, 160, 89, 0.5), transparent);
+  }
+
+  .diamond {
+    width: 6px; height: 6px;
+    background: theme.$gold;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+}
+
+// ── Entrée en cascade — délai piloté par --reveal-delay (binding
+//    Angular [style.--reveal-delay]), plus robuste que :nth-child
+//    pour des listes filtrées/dynamiques. ──────────────────────────
+
+@keyframes vitrine-reveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@mixin reveal {
+  opacity: 0;
+  animation: vitrine-reveal 420ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation-delay: var(--reveal-delay, 0ms);
+
+  @media (prefers-reduced-motion: reduce) { animation: none; opacity: 1; }
+}
+
+@keyframes vitrine-shimmer {
+  0%   { background-position: -150% 0; }
+  100% { background-position: 150% 0; }
+}
+
+@mixin skeleton {
+  background: linear-gradient(100deg, theme.$surface 35%, theme.$surface-raised 50%, theme.$surface 65%);
+  background-size: 200% 100%;
+  animation: vitrine-shimmer 1.6s ease-in-out infinite;
+  border: 1px solid rgba(197, 160, 89, 0.12);
+  @include gem-cut(14px);
+
+  @media (prefers-reduced-motion: reduce) { animation: none; background: theme.$surface; }
+}

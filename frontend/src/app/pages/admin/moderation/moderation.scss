@@ -1,0 +1,207 @@
+@use '../../post/post-theme' as theme;
+
+.moderation-page {
+  min-height: 100vh;
+  padding: 3rem max(1.25rem, calc((100vw - 1180px) / 2)) 5rem;
+  color: theme.$text;
+  background:
+    radial-gradient(circle at 88% 0, theme.$violet-dim, transparent 28%),
+    radial-gradient(circle at 6% 40%, theme.$gold-dim, transparent 24%),
+    theme.$ink;
+  @include theme.mobile-nav-clearance(2rem);
+}
+
+.moderation-hero {
+  max-width: 760px;
+  margin-bottom: 2rem;
+}
+
+.eyebrow,
+.catalog-id {
+  margin: 0 0 0.5rem;
+  @include theme.catalog-label;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-family: theme.$font-display;
+}
+
+h1 { font-size: clamp(2.2rem, 5vw, 4rem); }
+h2 { font-size: clamp(1.35rem, 2.5vw, 1.9rem); }
+
+.moderation-hero > p:last-child,
+.report-heading p,
+.current-reason > p {
+  color: theme.$text-dim;
+  line-height: 1.6;
+}
+
+.feedback,
+.loading,
+.empty-state {
+  padding: 1rem 1.2rem;
+  border: 1px solid theme.$line;
+  background: rgba(10, 19, 48, 0.92);
+  @include theme.facet-corner-sm;
+}
+
+.feedback--error { border-color: rgba(theme.$coral, 0.55); color: theme.$coral; }
+.feedback--success { border-color: rgba(theme.$emerald, 0.45); color: theme.$emerald; }
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid theme.$line;
+  border-top-color: theme.$gold;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.queue { display: grid; gap: 1.5rem; }
+
+.report-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 310px) minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid theme.$line;
+  background: linear-gradient(145deg, theme.$surface, rgba(16, 27, 61, 0.8));
+  @include theme.facet-corner(16px);
+}
+
+.media-frame { position: relative; min-height: 310px; background: #020617; }
+.media-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.report-count {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(theme.$gold, 0.45);
+  color: theme.$ink;
+  background: theme.$gold;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+}
+
+.report-content { min-width: 0; padding: 1.4rem; }
+.report-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
+.report-heading p { margin: 0.4rem 0 0; }
+
+.post-link {
+  flex: none;
+  color: theme.$gold;
+  font-weight: 700;
+  text-underline-offset: 0.25rem;
+}
+
+.current-reason {
+  margin-top: 1.2rem;
+  padding: 1rem;
+  border-left: 3px solid theme.$coral;
+  background: rgba(theme.$coral, 0.08);
+}
+
+.reason-badge {
+  display: inline-flex;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(theme.$coral, 0.4);
+  color: #ffad98;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.current-reason p { margin: 0.65rem 0 0; font-size: 0.85rem; }
+blockquote { margin: 0.8rem 0 0; color: theme.$text; font-style: italic; }
+
+.details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+details { border: 1px solid theme.$line; background: rgba(4, 10, 32, 0.55); }
+summary { display: flex; justify-content: space-between; gap: 1rem; padding: 0.9rem; cursor: pointer; font-weight: 750; }
+summary span { color: theme.$gold; }
+
+.reason-list,
+.history-list { list-style: none; margin: 0; padding: 0 0.9rem 0.9rem; }
+.reason-list li { padding: 0.7rem 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.reason-list div { display: flex; justify-content: space-between; gap: 0.8rem; }
+.reason-list span,
+.history-list span { color: theme.$text-dim; font-size: 0.75rem; }
+.reason-list p,
+.history-list p { margin: 0.35rem 0 0; color: theme.$text-dim; font-size: 0.85rem; }
+
+.history-list li { position: relative; display: grid; grid-template-columns: 10px 1fr; gap: 0.65rem; padding: 0.7rem 0; }
+.history-marker { width: 8px; height: 8px; margin-top: 0.35rem; border-radius: 50%; background: theme.$violet; }
+.history-list div > span { display: block; margin-top: 0.2rem; }
+.empty-detail { margin: 0; padding: 0 0.9rem 0.9rem; color: theme.$text-dim; }
+
+.decision-panel { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid theme.$line; }
+.decision-panel label { display: block; margin-bottom: 0.5rem; font-weight: 750; }
+.decision-panel label span { color: theme.$text-dim; font-weight: 400; }
+
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  padding: 0.8rem;
+  border: 1px solid theme.$line;
+  border-radius: 0.35rem;
+  color: theme.$text;
+  background: rgba(4, 10, 32, 0.8);
+}
+
+textarea:focus { outline: 2px solid theme.$gold; outline-offset: 2px; }
+.decision-footer { display: flex; justify-content: space-between; gap: 1rem; margin-top: 0.7rem; }
+.decision-footer > span { @include theme.meta-mono; }
+.actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 0.65rem; }
+
+.button {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.3rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.button:disabled { cursor: wait; opacity: 0.55; }
+.button--reject { border-color: theme.$line; color: theme.$text; background: transparent; }
+.button--accept { color: #fff; background: #a83232; }
+.button--reject:hover:not(:disabled) { border-color: theme.$gold; }
+.button--accept:hover:not(:disabled) { background: #c23c3c; }
+
+.empty-state { padding: 3rem 1rem; text-align: center; }
+.empty-state > span { display: inline-grid; place-items: center; width: 52px; height: 52px; margin-bottom: 1rem; border-radius: 50%; color: theme.$ink; background: theme.$emerald; font-size: 1.5rem; }
+.empty-state p { color: theme.$text-dim; }
+
+@media (max-width: 850px) {
+  .report-card { grid-template-columns: 1fr; }
+  .media-frame { min-height: 240px; max-height: 420px; }
+}
+
+@media (max-width: 620px) {
+  .moderation-page { padding-top: 2rem; }
+  .report-heading, .decision-footer { align-items: stretch; flex-direction: column; }
+  .details-grid { grid-template-columns: 1fr; }
+  .actions { display: grid; grid-template-columns: 1fr; }
+  .reason-list div { flex-direction: column; gap: 0.2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
+}

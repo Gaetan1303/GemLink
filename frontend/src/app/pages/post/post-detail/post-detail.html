@@ -1,0 +1,169 @@
+<div><app-header /></div>
+
+<app-header-image></app-header-image>
+
+<main class="post-detail-page" id="main-content">
+  <div class="post-detail-container">
+
+    @if (isLoading()) {
+      <p class="post-detail-loading">Chargement du post...</p>
+    } @else if (loadError()) {
+      <div class="alert alert--error" role="alert">{{ loadError() }}</div>
+    } @else if (post(); as p) {
+
+      <div class="specimen-record">
+
+        <div class="post-media">
+          @if (p.mediaType === 'IMAGE') {
+            <img [src]="p.mediaUrl" [alt]="p.title ?? 'Pierre publiée par ' + p.author.username" />
+          } @else {
+            <video [src]="p.mediaUrl" controls></video>
+          }
+
+          @if (p.status === 'PENDING_ANALYSIS') {
+            <div class="scan-overlay" @scanFade></div>
+          }
+
+          <span class="post-media__catalog">N° {{ p.id.slice(0, 8) | uppercase }}</span>
+        </div>
+
+        <div class="post-body">
+          <div class="post-header">
+            <h1>{{ p.title || 'Sans titre' }}</h1>
+            <app-analysis-status [status]="p.status" />
+          </div>
+
+          <dl class="post-meta">
+            <div><dt>Auteur</dt><dd>{{ p.author.username }}</dd></div>
+            <div><dt>Déposé le</dt><dd>{{ p.createdAt | date:'d MMM y' }}</dd></div>
+            <div><dt>Vues</dt><dd>{{ p.viewCount }}</dd></div>
+          </dl>
+
+          <div class="post-like">
+            <button
+              type="button"
+              class="btn-like"
+              [class.btn-like--active]="p.likedByCurrentUser"
+              [disabled]="!authService.isAuthenticated() || isLiking()"
+              [attr.aria-pressed]="p.likedByCurrentUser"
+              [attr.aria-label]="p.likedByCurrentUser ? 'Retirer mon like' : 'Liker ce post'"
+              (click)="toggleLike()"
+            >
+              <mat-icon>{{ p.likedByCurrentUser ? 'favorite' : 'favorite_border' }}</mat-icon>
+              {{ p.likeCount }}
+            </button>
+            @if (likeError()) {
+              <p class="field-error" role="alert">{{ likeError() }}</p>
+            }
+          </div>
+
+          @if (p.description) {
+            <p class="post-description">{{ p.description }}</p>
+          }
+
+          <app-post-analysis-result [status]="p.status" [identification]="p.identification" />
+
+          @if ((p.status === 'ANALYZED' || p.status === 'COMMUNITY_VALIDATED') && p.identification && canValidate()) {
+            <app-validation-widget [postId]="p.id" />
+          }
+
+          @if (p.tags.length > 0) {
+            <div class="post-tags">
+              @for (tag of p.tags; track tag) {
+                <a class="tag" [routerLink]="'/posts'" [queryParams]="{ tag: tag }" [attr.aria-label]="'Filtrer les publications par le tag ' + tag">#{{ tag }}</a>
+              }
+            </div>
+          }
+
+          @if (canDelete()) {
+            <div class="post-actions">
+              @if (deleteError()) {
+                <p class="field-error" role="alert">{{ deleteError() }}</p>
+              }
+
+              @if (!showDeleteConfirm()) {
+                <button type="button" class="btn-delete" (click)="confirmDelete()">Supprimer ce post</button>
+              } @else {
+                <div class="delete-confirm">
+                  <span>Confirmer la suppression ?</span>
+                  <button type="button" class="btn-delete" [disabled]="isDeleting()" (click)="deletePost()">
+                    @if (isDeleting()) { Suppression... } @else { Oui, supprimer }
+                  </button>
+                  <button type="button" class="btn-secondary" [disabled]="isDeleting()" (click)="cancelDelete()">Annuler</button>
+                </div>
+              }
+            </div>
+          }
+
+          @if (canReport()) {
+            <section class="report-section" aria-labelledby="report-title">
+              <h2 id="report-title">Signaler ce contenu</h2>
+              <p>Votre signalement sera transmis à l’équipe de modération.</p>
+
+              @if (!showReport()) {
+                <button type="button" class="btn-secondary" (click)="openReportForm()">Signaler</button>
+              } @else {
+                <form class="report-form" [formGroup]="reportForm" (ngSubmit)="submitReport()">
+                  <label for="report-reason">Motif <span aria-hidden="true">*</span></label>
+                  <select id="report-reason" formControlName="reasonType" required>
+                    <option value="" disabled>Choisir un motif</option>
+                    <option value="INAPPROPRIATE_CONTENT">Contenu inapproprié</option>
+                    <option value="WRONG_IDENTIFICATION">Identification manifestement incorrecte</option>
+                    <option value="SPAM">Spam</option>
+                    <option value="HARASSMENT">Harcèlement</option>
+                  </select>
+                  @if (reportForm.controls.reasonType.touched && reportForm.controls.reasonType.invalid) {
+                    <p class="field-error" role="alert">Veuillez sélectionner un motif.</p>
+                  }
+
+                  <label for="report-description">Description <span class="optional">(facultative)</span></label>
+                  <textarea id="report-description" formControlName="description" maxlength="1000" rows="4" placeholder="Ajoutez un contexte utile à la modération."></textarea>
+                  <span class="report-form__count">{{ reportForm.controls.description.value.length }}/1000</span>
+
+                  <div class="report-form__actions">
+                    <button type="submit" class="btn-delete" [disabled]="reportForm.invalid || isReporting()">
+                      @if (isReporting()) { Envoi... } @else { Envoyer le signalement }
+                    </button>
+                    <button type="button" class="btn-secondary" [disabled]="isReporting()" (click)="cancelReport()">Annuler</button>
+                  </div>
+                </form>
+              }
+
+              @if (reportMessage()) { <p class="report-section__message" role="status">{{ reportMessage() }}</p> }
+            </section>
+          }
+        </div>
+      </div>
+
+      <!-- US 2.4 — Commentaires MVP -->
+      <app-comment-section [postId]="p.id" />
+
+      @if (isSimilarLoading() || similarPosts().length > 0) {
+        <section class="similar-posts" aria-labelledby="similar-posts-title">
+          <div class="similar-posts__heading"><div><span class="similar-posts__eyebrow">Exploration minéralogique</span><h2 id="similar-posts-title">Posts similaires</h2></div><p>Les spécimens visuellement les plus proches de cette pierre.</p></div>
+          @if (isSimilarLoading()) {
+            <div class="similar-posts__grid similar-posts__grid--loading" aria-label="Chargement des posts similaires">
+              @for (placeholder of [1, 2, 3]; track placeholder) { <div class="similar-post-skeleton"></div> }
+            </div>
+          } @else {
+            <div class="similar-posts__grid">
+              @for (similar of similarPosts(); track similar.id) {
+                <a class="similar-post" [routerLink]="['/posts', similar.id]" [attr.aria-label]="'Consulter le post similaire ' + (similar.title || similar.identification?.nom || similar.id)">
+                  <div class="similar-post__media">
+                    @if (similar.mediaType === 'IMAGE') { <img [src]="similar.mediaUrl" [alt]="similar.title || similar.identification?.nom || 'Pierre similaire'" /> }
+                    @else { <span class="similar-post__video"><mat-icon>videocam</mat-icon></span> }
+                    <strong>{{ similar.similarity | percent:'1.0-0' }}</strong>
+                  </div>
+                  <div class="similar-post__body"><small>N° {{ similar.id.slice(0, 8) | uppercase }}</small><span>{{ similar.title || similar.identification?.nom || 'Sans titre' }}</span><em>Découvrir <mat-icon>arrow_forward</mat-icon></em></div>
+                </a>
+              }
+            </div>
+          }
+        </section>
+      }
+    }
+
+  </div>
+</main>
+
+<app-footer />

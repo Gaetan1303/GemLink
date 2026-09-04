@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+set -eu
+
+JWT_DIR="${JWT_RUNTIME_DIR:-/tmp/gemlink-jwt}"
+PRIVATE_PATH="${JWT_SECRET_KEY:-$JWT_DIR/private.pem}"
+PUBLIC_PATH="${JWT_PUBLIC_KEY:-$JWT_DIR/public.pem}"
+
+if [ -z "${JWT_PRIVATE_KEY_B64:-}" ] || [ -z "${JWT_PUBLIC_KEY_B64:-}" ]; then
+  echo "[railway-jwt-bootstrap] JWT_PRIVATE_KEY_B64/JWT_PUBLIC_KEY_B64 manquantes" >&2
+  exit 1
+fi
+
+mkdir -p "$(dirname "$PRIVATE_PATH")" "$(dirname "$PUBLIC_PATH")"
+printf '%s' "$JWT_PRIVATE_KEY_B64" | base64 -d > "$PRIVATE_PATH"
+printf '%s' "$JWT_PUBLIC_KEY_B64" | base64 -d > "$PUBLIC_PATH"
+chmod 600 "$PRIVATE_PATH"
+chmod 644 "$PUBLIC_PATH"
+
+# Vérification minimale sans afficher le secret.
+openssl pkey -in "$PRIVATE_PATH" -passin "pass:${JWT_PASSPHRASE:-}" -noout >/dev/null 2>&1 || {
+  echo "[railway-jwt-bootstrap] clé privée JWT invalide ou passphrase incorrecte" >&2
+  exit 1
+}
+openssl pkey -pubin -in "$PUBLIC_PATH" -noout >/dev/null 2>&1 || {
+  echo "[railway-jwt-bootstrap] clé publique JWT invalide" >&2
+  exit 1
+}

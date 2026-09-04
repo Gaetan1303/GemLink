@@ -1,0 +1,37 @@
+# .dockerignore
+
+# 💡 ON IGNORE L'ENVIRONNEMENT VIRTUEL LOCAL (Le coupable des 5 Go)
+.venv/
+venv/
+env/
+
+# On ignore les caches Python
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# On ignore les dossiers de versioning et d'IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Training data and checkpoints are mounted explicitly in production.
+/data
+/dataset
+/raw_data
+/trash
+/tests
+/tests_gemlink
+/training
+/sources
+/downloader
+/runs
+/checkpoints
+*.pt
+*.pth
+.env
+.env.*
+.git/

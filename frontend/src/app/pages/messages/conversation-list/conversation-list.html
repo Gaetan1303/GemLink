@@ -1,0 +1,43 @@
+<app-header />
+<main class="conversations-page messages-page" id="main-content">
+  <h1>Messages</h1>
+  <div class="engraved-rule"><span class="diamond"></span></div>
+
+  @if(isLoading()){
+    <div aria-hidden="true">
+      @for(i of [1,2,3,4]; track i){<div class="skeleton-row"></div>}
+    </div>
+  } @else if(loadError()){
+    <p class="state state--error" role="alert"><mat-icon>error_outline</mat-icon>{{loadError()}}</p>
+  } @else if(!conversations().length){
+    <div class="empty-state">
+      <mat-icon class="empty-state__icon">forum</mat-icon>
+      <p>Aucune conversation pour le moment.</p>
+    </div>
+  } @else {
+    <ul class="conversations-list">
+      @for(conversation of conversations(); track conversation.id; let i = $index){
+        <li>
+          <button type="button" class="thread" [style.--reveal-delay]="(i * 45) + 'ms'" (click)="open(conversation.id)">
+            <span class="thread__avatar">
+              @if(conversation.avatarUrl){
+                <img [src]="conversation.avatarUrl" [alt]="'Avatar de '+conversation.title" />
+              } @else {
+                <mat-icon>{{conversation.type==='FACTION'?'groups':'person'}}</mat-icon>
+              }
+            </span>
+            <span class="thread__body">
+              <strong class="thread__title">{{conversation.title}}</strong>
+              <span class="status-badge" [class.status-badge--faction]="conversation.type==='FACTION'" [class.status-badge--direct]="conversation.type!=='FACTION'">{{conversation.type==='FACTION'?'Faction':'Direct'}}</span>
+              <span class="thread__preview">{{conversation.lastMessage?.content||'Aucun message'}}</span>
+            </span>
+            @if(conversation.unreadCount){
+              <span class="unread" [attr.aria-label]="conversation.unreadCount+' messages non lus'">{{conversation.unreadCount}}</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</main>
+<app-footer />

@@ -16,28 +16,29 @@ class PierreRepository extends ServiceEntityRepository
         parent::__construct($registry, Pierre::class);
     }
 
-    //    /**
-    //     * @return Pierre[] Returns an array of Pierre objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('p.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /**
+     * Le classifieur ViT renvoie des labels en minuscules (`class_name.lower()`
+     * côté FastAPI) ; la comparaison insensible à la casse évite de créer des
+     * doublons ("Améthyste" vs "amethyste") au fil des analyses.
+     */
+    public function findOneByNameIgnoreCase(string $name): ?Pierre
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('LOWER(p.name) = LOWER(:name)')
+            ->setParameter('name', $name)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 
-    //    public function findOneBySomeField($value): ?Pierre
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    /** @return Pierre[] */
+    public function searchByName(string $query, int $limit = 10): array
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('LOWER(p.name) LIKE LOWER(:query)')
+            ->setParameter('query', '%' . trim($query) . '%')
+            ->orderBy('p.name', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
 }

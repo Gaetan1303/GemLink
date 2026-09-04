@@ -3,7 +3,6 @@ import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SharedModule } from '../../shared/shared-module';
 import { KeyFigure } from '../../shared/key-figures/key-figures';
-import { NavBarMobile } from '../../components/nav-bar-mobile/nav-bar-mobile';
 import { AuthService } from '../../core/services/auth';
 import { MenuRole } from '../../components/menu-burger/menu-navigation.model';
 import { CookieConsentService } from '../../core/services/cookie-consent.service';
@@ -13,7 +12,7 @@ import { CookieConsentBanner } from '../../shared/cookie-consent-banner/cookie-c
 
 @Component({
   selector: 'app-home',
-  imports: [SharedModule, CommonModule, NavBarMobile, CookieConsentBanner],
+  imports: [SharedModule, CommonModule, CookieConsentBanner],
   templateUrl: './home.html',
   styleUrls: ['./home.scss'],
 })

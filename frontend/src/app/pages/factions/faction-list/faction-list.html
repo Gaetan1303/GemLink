@@ -1,0 +1,62 @@
+<app-header />
+<main class="faction-list-page community-page" id="main-content">
+  <section class="hero">
+    <span class="eyebrow">Communautés</span>
+    <h1>Factions</h1>
+    <div class="engraved-rule"><span class="diamond"></span></div>
+    <p>Rejoignez des passionnés et partagez vos découvertes.</p>
+    <a routerLink="/factions/new" class="btn btn--primary"><mat-icon>add</mat-icon>Créer une faction</a>
+  </section>
+
+  <form class="filters" (ngSubmit)="load()" role="search">
+    <label class="field">
+      <span class="field__label">Rechercher</span>
+      <input name="search" [(ngModel)]="search" maxlength="100" placeholder="Nom de faction…" />
+    </label>
+    <label class="filters__checkbox">
+      <input type="checkbox" name="mine" [(ngModel)]="mine" /> Mes factions
+    </label>
+    <button class="btn" type="submit"><mat-icon>search</mat-icon>Filtrer</button>
+  </form>
+
+  @if(loading()){
+    <div class="faction-grid" aria-hidden="true">
+      @for(i of [1,2,3,4]; track i){<div class="skeleton-card"></div>}
+    </div>
+  } @else if(error()){
+    <p class="state state--error" role="alert"><mat-icon>error_outline</mat-icon>{{error()}}</p>
+  } @else if(!factions().length){
+    <div class="empty-state">
+      <mat-icon class="empty-state__icon">group_off</mat-icon>
+      <h2>Aucune faction ne correspond à votre recherche</h2>
+      <p>Essayez un autre mot-clé, ou lancez votre propre cercle de collectionneurs.</p>
+    </div>
+  } @else {
+    <section class="faction-grid" aria-label="Liste des factions">
+      @for(faction of factions(); track faction.id; let i = $index){
+        <article class="faction-card" [style.--reveal-delay]="(i * 45) + 'ms'">
+          <div class="faction-card__avatar">
+            @if(faction.avatarUrl){
+              <img [src]="faction.avatarUrl" [alt]="'Avatar de '+faction.name" />
+            } @else {
+              <mat-icon>groups</mat-icon>
+            }
+          </div>
+          <h2 class="faction-card__name">{{faction.name}}</h2>
+          <p class="faction-card__description">{{faction.description||'Aucune description.'}}</p>
+          <div class="faction-card__meta">
+            <span class="status-badge" [class.status-badge--private]="faction.visibility==='PRIVATE'" [class.status-badge--public]="faction.visibility!=='PRIVATE'">
+              <mat-icon>{{faction.visibility==='PRIVATE'?'lock':'public'}}</mat-icon>{{faction.visibility==='PRIVATE'?'Privée':'Publique'}}
+            </span>
+            <span class="faction-card__count"><mat-icon>group</mat-icon>{{faction.memberCount}} membres</span>
+          </div>
+          <a [routerLink]="['/factions',faction.id]" class="btn faction-card__cta">Voir<mat-icon>arrow_forward</mat-icon></a>
+        </article>
+      }
+    </section>
+    @if(nextCursor()){
+      <button class="btn load-more" type="button" (click)="load(nextCursor()!)"><mat-icon>expand_more</mat-icon>Charger plus</button>
+    }
+  }
+</main>
+<app-footer />

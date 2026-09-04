@@ -1,0 +1,43 @@
+<app-header />
+<main class="conversation-detail-page messages-page chat" id="main-content">
+  <header><h1>{{conversation()?.title||'Conversation'}}</h1></header>
+
+  @if(error()){<p class="state state--error" role="alert"><mat-icon>error_outline</mat-icon>{{error()}}</p>}
+  @if(loading()){
+    <div aria-hidden="true">
+      @for(i of [1,2,3]; track i){<div class="skeleton-row"></div>}
+    </div>
+  } @else {
+    @if(nextCursor()){
+      <button class="btn load-older" type="button" (click)="loadOlder()"><mat-icon>expand_less</mat-icon>Charger les anciens messages</button>
+    }
+    <section class="conversation-messages" aria-live="polite">
+      @for(message of messages(); track message.id){
+        <article class="message" [class.message--me]="canEdit(message)">
+          <header>
+            <strong>{{message.author.username}}</strong>
+            <time [attr.datetime]="message.createdAt">{{message.createdAt|date:'short'}}</time>
+          </header>
+          <p>{{message.content}}</p>
+          @if(message.editedAt&&!message.deletedAt){<small>modifié</small>}
+          @if(canEdit(message)){
+            <div class="message__actions">
+              <button type="button" (click)="edit(message)"><mat-icon>edit</mat-icon>Modifier</button>
+              <button type="button" (click)="remove(message)"><mat-icon>delete_outline</mat-icon>Supprimer</button>
+            </div>
+          }
+        </article>
+      } @empty {
+        <div class="empty-state"><mat-icon class="empty-state__icon">chat_bubble_outline</mat-icon><p>Aucun message. Lancez la discussion !</p></div>
+      }
+    </section>
+    <form class="conversation-compose" (ngSubmit)="send()">
+      <label class="sr-only" for="chat-message">Votre message</label>
+      <textarea id="chat-message" name="message" [(ngModel)]="draft" maxlength="2000" rows="2" required placeholder="Écrivez un message…"></textarea>
+      <button class="btn btn--primary" type="submit" [disabled]="sending()||!draft.trim()">
+        <mat-icon>{{sending()?'hourglass_top':'send'}}</mat-icon>{{sending()?'Envoi…':'Envoyer'}}
+      </button>
+    </form>
+  }
+</main>
+<app-footer />

@@ -1,0 +1,91 @@
+// ════════════════════════════════════════════════════════════════
+// PAGES/POST — SOCLE DE DESIGN PARTAGÉ
+// ════════════════════════════════════════════════════════════════
+// Direction : "fiche de spécimen minéralogique" — chaque post est traité
+// comme une pièce de collection cataloguée (numéro, étiquette, coin taillé
+// façon pierre brute), plutôt qu'une carte SaaS générique. Le motif du coin
+// facetté (voir facet-corner ci-dessous) est le fil conducteur repris sur
+// les cartes de la grille, le cadre du média, la fiche d'identification et
+// la zone de dépôt du formulaire de publication.
+//
+// Palette : reprend et prolonge les couleurs déjà en place ailleurs dans
+// l'app (fond marine #040A20, accent or #C5A059) plutôt que d'en introduire
+// une nouvelle — la violette est la seule addition, réservée à la décoration
+// ambiante (jamais aux badges de statut, qui gardent leur sémantique
+// existante or/vert/corail dans AnalysisStatus).
+
+// ── Couleurs ──────────────────────────────────────────────────────
+$ink:            #040A20; // fond
+$surface:        #0A1330; // panneau légèrement plus clair que le fond
+$surface-raised: #101B3D; // survol / élévation
+$line:           rgba(197, 160, 89, 0.18); // bordures discrètes
+
+$gold:      #C5A059; // accent existant — "veine de pyrite"
+$gold-dim:  rgba(197, 160, 89, 0.12);
+$violet:    #8D7FE0; // nouveau — décor ambiant uniquement ("améthyste")
+$violet-dim: rgba(141, 127, 224, 0.14);
+$emerald:   #7BC99A; // succès (existant, légèrement approfondi)
+$coral:     #e07a5f; // erreur (existant)
+
+$text:      #f0f0f0;
+$text-dim:  rgba(240, 240, 240, 0.62);
+$text-faint: rgba(240, 240, 240, 0.4);
+
+// ── Typographie ───────────────────────────────────────────────────
+$font-display: 'Plus Jakarta Sans', sans-serif;
+// Police mono réservée aux métadonnées "étiquette de musée" : numéros de
+// catalogue, dates, coordonnées de confiance — jamais pour du texte courant.
+$font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+// ── Motif signature : coin facetté ─────────────────────────────────
+// Coupe les coins haut-droit et bas-gauche façon pierre taillée. Appliqué
+// aux cartes, au cadre média, à la fiche d'identification et à la zone de
+// dépôt — jamais aux boutons ni aux champs de formulaire, pour que le motif
+// reste identifiable comme "ceci est un spécimen", pas juste une déco de
+// coin générique.
+@mixin facet-corner($cut: 18px) {
+  clip-path: polygon(
+    0 0,
+    calc(100% - #{$cut}) 0,
+    100% #{$cut},
+    100% 100%,
+    #{$cut} 100%,
+    0 calc(100% - #{$cut})
+  );
+}
+
+@mixin facet-corner-sm {
+  @include facet-corner(10px);
+}
+
+// Étiquette mono façon numéro de catalogue.
+@mixin catalog-label {
+  font-family: $font-mono;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: $gold;
+  text-transform: uppercase;
+}
+
+@mixin meta-mono {
+  font-family: $font-mono;
+  font-size: 0.78rem;
+  color: $text-dim;
+  letter-spacing: 0.01em;
+}
+
+// ── Dégagement pour la nav-bar mobile fixe ─────────────────────────
+// nav-bar-mobile.scss est `position: fixed; bottom: 0; height: 72px`,
+// visible sous 768px (le même composant se masque lui-même au-delà via
+// `@media (min-width: 768px) { display: none }`). Sans ce dégagement, le
+// bas de page (fiche d'identification, actions, pagination...) se
+// retrouve caché sous la barre au scroll. `env(safe-area-inset-bottom)`
+// couvre en plus l'encoche des iPhone récents.
+$mobile-nav-height: 72px;
+
+@mixin mobile-nav-clearance($extra: 1.5rem) {
+  @media (max-width: 767px) {
+    padding-bottom: calc(#{$mobile-nav-height} + env(safe-area-inset-bottom, 0px) + #{$extra});
+  }
+}

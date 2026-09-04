@@ -28,7 +28,7 @@ export interface LoginResponse {
 }
 
 export interface User {
-  id:       number;
+  id:       string;
   username: string;
   role:     MenuRole;
 }
@@ -46,9 +46,39 @@ export class AuthService {
   isAuthenticated = computed(() => !!this.currentUser());
 
   constructor() {
-    const token = localStorage.getItem('token');
+    const token = this.getUsableAccessToken();
     if (token) {
       this.decodeAndSetUser(token);
+    }
+  }
+
+  /**
+   * Ne retourne jamais un JWT expiré ou illisible. Cela évite que
+   * l'intercepteur envoie un ancien Bearer token sur les routes publiques :
+   * Symfony tenterait alors de l'authentifier et répondrait 401 avant même
+   * d'appliquer la règle PUBLIC_ACCESS.
+   */
+  getUsableAccessToken(): string | null {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return null;
+    }
+
+    try {
+      const decoded = jwtDecode<{ exp?: number }>(token);
+      const now = Math.floor(Date.now() / 1000);
+
+      if (typeof decoded.exp !== 'number' || decoded.exp <= now) {
+        localStorage.removeItem('token');
+        this.currentUser.set(null);
+        return null;
+      }
+
+      return token;
+    } catch {
+      localStorage.removeItem('token');
+      this.currentUser.set(null);
+      return null;
     }
   }
 
@@ -162,13 +192,17 @@ export class AuthService {
         username: string;
         iat: number;
         exp: number;
-        id: number;
+        id: string;
       } = jwtDecode(token);
 
       this.currentUser.set({
         id:       decoded.id,
         username: decoded.username,
-        role:     decoded.roles[0] ?? 'VISITEUR',
+        role: decoded.roles.includes('ROLE_ADMIN')
+          ? 'ROLE_ADMIN'
+          : decoded.roles.includes('ROLE_MODERATOR')
+            ? 'ROLE_MODERATOR'
+            : 'ROLE_USER',
       });
     } catch (error) {
       console.error('Failed to decode token:', error);

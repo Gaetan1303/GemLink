@@ -1,0 +1,20 @@
+@use '../post/_post-theme' as theme;
+.identify-page { min-height: 100vh; padding: 3rem 1.5rem; background: theme.$ink; color: theme.$text; }
+
+.identify-card { max-width: 640px; margin: auto; padding: 2rem; background: theme.$surface; border: 1px solid theme.$line; text-align: center; }
+
+.eyebrow { color: theme.$violet; text-transform: uppercase; font-size: .75rem; letter-spacing: .1em; } h1 { color: theme.$gold; }
+
+.upload-zone { display: block; padding: 2rem 1rem; margin: 1.5rem 0; border: 1px dashed theme.$gold; cursor: pointer; } 
+
+.upload-zone input { display: none; }
+
+.preview { max-width: 100%; max-height: 300px; object-fit: contain; margin-bottom: 1rem; }
+
+.btn-identify { border: 0; padding: .75rem 1.25rem; background: theme.$gold; color: theme.$ink; font-weight: 700; cursor: pointer; }
+
+.btn-identify:disabled { opacity: .5; cursor: not-allowed; }
+
+.pending,.hint { color: theme.$text-dim; }
+
+.error { color: theme.$coral; }

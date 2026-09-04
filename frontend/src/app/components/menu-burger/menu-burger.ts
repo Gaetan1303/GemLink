@@ -1,6 +1,5 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { NgClass } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { NAVIGATION_MENUS, MenuRole, MenuItem } from './menu-navigation.model';
 
@@ -27,5 +26,11 @@ menuItems = computed<MenuItem[]>(() => NAVIGATION_MENUS[this.role()].menuItems);
 
   closeMenu(): void {
     this.isOpen.set(false);
+  }
+
+  closeFromOverlay(event: Event): void {
+    if (event.target === event.currentTarget) {
+      this.closeMenu();
+    }
   }
 }

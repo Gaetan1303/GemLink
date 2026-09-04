@@ -1,0 +1,68 @@
+<section class="pipeline" aria-labelledby="pipeline-title">
+  <header class="pipeline__header">
+    <div>
+      <span class="pipeline__eyebrow">Résultat IA</span>
+      <h2 id="pipeline-title">{{ result().nom }}</h2>
+    </div>
+    <div class="pipeline__score" [attr.data-level]="confidenceLevel(result().confidence)">
+      <strong>{{ result().confidence | percent: '1.0-0' }}</strong>
+      <span>confiance ViT</span>
+    </div>
+  </header>
+
+  @if (result().description) {
+    <p class="pipeline__description">{{ result().description }}</p>
+  }
+
+  <ol class="pipeline__stages" aria-label="Étapes du pipeline de classification">
+    @for (stage of stages(); track stage.name; let last = $last) {
+      <li class="stage">
+        <span class="stage__marker" aria-hidden="true">✓</span>
+        <div>
+          <small>{{ stage.name }}</small>
+          <strong>{{ stage.model }}</strong>
+          <span>{{ stage.detail }}</span>
+          @if (stage.version) {
+            <code [title]="'Version du modèle ' + stage.model">{{ stage.version }}</code>
+          }
+        </div>
+        @if (!last) { <span class="stage__connector" aria-hidden="true"></span> }
+      </li>
+    }
+  </ol>
+
+  <div class="pipeline__detections">
+    <h3>
+      {{ detections().length }} pierre{{ detections().length > 1 ? 's' : '' }} détectée{{ detections().length > 1 ? 's' : '' }}
+    </h3>
+    <div class="detection-grid">
+      @for (detection of detections(); track $index) {
+        <article class="detection" [attr.data-level]="confidenceLevel(detection.confidence)">
+          <div class="detection__heading">
+            <span>Zone {{ $index + 1 }}</span>
+            <strong>{{ detection.nom }}</strong>
+          </div>
+          <dl>
+            <div>
+              <dt>Classification ViT</dt>
+              <dd>{{ detection.confidence | percent: '1.0-0' }}</dd>
+            </div>
+            <div>
+              <dt>Détection SSDLite</dt>
+              <dd>
+                @if (detection.detectorConfidence !== null) {
+                  {{ detection.detectorConfidence | percent: '1.0-0' }}
+                } @else {
+                  Non communiqué
+                }
+              </dd>
+            </div>
+          </dl>
+          @if (detection.bbox[2] > detection.bbox[0] && detection.bbox[3] > detection.bbox[1]) {
+            <small class="detection__bbox">Zone [{{ detection.bbox.join(', ') }}]</small>
+          }
+        </article>
+      }
+    </div>
+  </div>
+</section>

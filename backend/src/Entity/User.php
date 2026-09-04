@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+
 
 namespace App\Entity;
 
@@ -48,18 +48,27 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'trust_score', type: 'smallint', options: ['default' => 0])]
     private int $trustScore = 0;
 
-    #[ORM\Column(length: 20, options: ['default' => 'USER'])]
+    #[ORM\Column(length: 20, options: ['default' => 'USER'], columnDefinition: 'user_role')]
     private string $role = 'USER';
 
     #[ORM\Column(options: ['default' => 0])]
     private int $points = 0;
 
+    #[ORM\Column(name: 'banned_reason', type: 'text', nullable: true)]
+    private ?string $bannedReason = null;
+
+    #[ORM\Column(name: 'banned_until', type: 'datetimetz_immutable', nullable: true)]
+    private ?DateTimeImmutable $bannedUntil = null;
+
+    #[ORM\Column(name: 'last_login_at', type: 'datetimetz_immutable', nullable: true)]
+    private ?DateTimeImmutable $lastLoginAt = null;
+
     #[ORM\Column(type: 'smallint', options: ['default' => 1])]
     private int $level = 1;
 
-    #[ORM\Column(length: 25, options: ['default' => 'PENDING_VALIDATION'])]
+    #[ORM\Column(length: 25, options: ['default' => 'PENDING_VALIDATION'], columnDefinition: 'user_status')]
     private string $status = 'PENDING_VALIDATION';
-
+    
     #[ORM\Column(name: 'created_at')]
     private DateTimeImmutable $createdAt;
 
@@ -81,6 +90,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: EmailValidationToken::class, cascade: ['persist', 'remove'])]
     private Collection $emailValidationTokens;
 
+    /** @var Collection<int, Badge> */
+    #[ORM\ManyToMany(targetEntity: Badge::class)]
+    #[ORM\JoinTable(name: 'user_badge')]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'badge_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $badges;
+
+    /** @var Collection<int, Tag> Tags utilisés pour personnaliser le feed. */
+    #[ORM\ManyToMany(targetEntity: Tag::class)]
+    #[ORM\JoinTable(name: 'user_interest_tag')]
+    private Collection $interestTags;
+
     public function __construct()
     {
         $this->id = Uuid::v7();
@@ -88,6 +109,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->refreshTokens = new ArrayCollection();
         $this->passwordResetTokens = new ArrayCollection();
         $this->emailValidationTokens = new ArrayCollection();
+        $this->badges = new ArrayCollection();
+        $this->interestTags = new ArrayCollection();
     }
 
     // --- Identifiants & Infos de Base ---
@@ -231,9 +254,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setPoints(int $points): self
     {
-        $this->points = $points;
+        $this->points = max(0, $points);
 
         return $this;
+    }
+
+    public function addPoints(int $points): self
+    {
+        return $this->setPoints($this->points + $points);
     }
 
     public function getLevel(): int
@@ -264,9 +292,60 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function ban(string $reason, ?DateTimeImmutable $until): self
+    {
+        $this->status = 'BANNED';
+        $this->bannedReason = trim($reason);
+        $this->bannedUntil = $until;
+
+        return $this;
+    }
+
+    public function unban(): self
+    {
+        $this->status = 'ACTIVE';
+        $this->bannedReason = null;
+        $this->bannedUntil = null;
+
+        return $this;
+    }
+
+    public function getBannedReason(): ?string { return $this->bannedReason; }
+    public function getBannedUntil(): ?DateTimeImmutable { return $this->bannedUntil; }
+    public function getLastLoginAt(): ?DateTimeImmutable { return $this->lastLoginAt; }
+    public function markLoggedIn(): self { $this->lastLoginAt = new DateTimeImmutable(); return $this; }
+    public function isTemporaryBanExpired(): bool { return $this->status === 'BANNED' && $this->bannedUntil !== null && $this->bannedUntil <= new DateTimeImmutable(); }
+
     public function getCreatedAt(): DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    /** @return Collection<int, Badge> */
+    public function getBadges(): Collection { return $this->badges; }
+
+    public function addBadge(Badge $badge): self
+    {
+        if (!$this->badges->contains($badge)) {
+            $this->badges->add($badge);
+        }
+
+        return $this;
+    }
+
+    /** @return Collection<int, Tag> */
+    public function getInterestTags(): Collection { return $this->interestTags; }
+
+    public function setInterestTags(iterable $tags): self
+    {
+        $this->interestTags->clear();
+        foreach ($tags as $tag) {
+            if ($tag instanceof Tag) {
+                $this->interestTags->add($tag);
+            }
+        }
+
+        return $this;
     }
 
     // --- Collections de Tokens (Relations) ---

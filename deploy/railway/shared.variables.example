@@ -1,0 +1,16 @@
+# Create these in Railway Project Settings > Shared Variables (production),
+# then SEAL every secret value. Do not commit real values.
+APP_SECRET=<generate-64-hex-chars-and-seal>
+INTERNAL_API_KEY=<generate-64-hex-chars-and-seal>
+JWT_PASSPHRASE=<generate-strong-passphrase-and-seal>
+JWT_PRIVATE_KEY_B64=<base64-of-fresh-lexik-private-key-and-seal>
+JWT_PUBLIC_KEY_B64=<base64-of-fresh-lexik-public-key>
+MAILER_DSN=<fresh-brevo-or-other-approved-mailer-dsn-and-seal>
+R2_ACCOUNT_ID=<cloudflare-account-id>
+R2_ACCESS_KEY_ID=<r2-access-key-and-seal>
+R2_SECRET_ACCESS_KEY=<r2-secret-and-seal>
+R2_BUCKET=<bucket-name>
+R2_ENDPOINT=<https-r2-endpoint>
+R2_PUBLIC_BASE_URL=<https-public-media-domain>
+INFOMANIAK_NEWSLETTER_TOKEN=<token-and-seal>
+INFOMANIAK_NEWSLETTER_DOMAIN_ID=<domain-id>

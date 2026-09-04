@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   HttpTestingController,
@@ -14,9 +15,12 @@ import { environment } from '../../../environments/environment';
 
 const LOGOUT_URL = `${environment.apiUrl}/auth/logout`;
 
+@Component({ template: '' })
+class EmptyRouteComponent {}
+
 const JWT_VALIDE = [
   btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
-  btoa(JSON.stringify({ id: 1, username: 'gemuser', roles: ['USER'], iat: 1000, exp: 1000 + 900 })),
+  btoa(JSON.stringify({ id: '1', username: 'gemuser', roles: ['USER'], iat: 1000, exp: 1000 + 900 })),
   'signature',
 ].map(p => p.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')).join('.');
 
@@ -34,7 +38,7 @@ describe('AuthService — US 1.5 Déconnexion', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: '', component: {} as any }]),
+        provideRouter([{ path: '', component: EmptyRouteComponent }]),
         AuthService,
       ],
     });
@@ -87,6 +91,31 @@ describe('AuthService — US 1.5 Déconnexion', () => {
     expect(req.request.headers.has('Authorization')).toBe(false);
 
     req.flush({ message: 'Déconnexion réussie.' });
+  });
+
+  it('devrait supprimer un JWT expiré avant son envoi par l’intercepteur', () => {
+    const expiredToken = [
+      btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
+      btoa(JSON.stringify({ id: '1', username: 'gemuser', roles: ['ROLE_USER'], exp: 1 })),
+      'signature',
+    ].map(p => p.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')).join('.');
+    localStorage.setItem('token', expiredToken);
+
+    expect(service.getUsableAccessToken()).toBeNull();
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(service.currentUser()).toBeNull();
+  });
+
+  it('devrait conserver un JWT non expiré', () => {
+    const validToken = [
+      btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
+      btoa(JSON.stringify({ id: '1', username: 'gemuser', roles: ['ROLE_USER'], exp: Math.floor(Date.now() / 1000) + 900 })),
+      'signature',
+    ].map(p => p.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')).join('.');
+    localStorage.setItem('token', validToken);
+
+    expect(service.getUsableAccessToken()).toBe(validToken);
+    expect(localStorage.getItem('token')).toBe(validToken);
   });
 
   // ── CA-3 : nettoyage local + redirection après succès ───────────────────

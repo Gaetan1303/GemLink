@@ -2,22 +2,16 @@
 
 namespace App\Service;
 
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class NewsletterCampaignService
 {
-    private const BASE_URL = 'https://api.infomaniak.com/1/newsletter';
-
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-
-        #[Autowire('%env(INFOMANIAK_NEWSLETTER_CLIENT_API)%')]
         private readonly string $token,
-
-        #[Autowire('%env(int:INFOMANIAK_NEWSLETTER_DOMAIN_ID)%')]
         private readonly int $domainId,
+        private readonly string $baseUrl,
     ) {
     }
 
@@ -29,7 +23,7 @@ class NewsletterCampaignService
         try {
             $response = $this->httpClient->request(
                 'GET',
-                self::BASE_URL . "/{$this->domainId}/mailing_lists",
+                rtrim($this->baseUrl, '/') . "/{$this->domainId}/mailing_lists",
                 [
                     'headers' => [
                         'Authorization' => "Bearer {$this->token}",
@@ -65,7 +59,7 @@ class NewsletterCampaignService
         try {
             $response = $this->httpClient->request(
                 'POST',
-                self::BASE_URL . "/{$this->domainId}/campaigns",
+                rtrim($this->baseUrl, '/') . "/{$this->domainId}/campaigns",
                 [
                     'headers' => [
                         'Authorization' => "Bearer {$this->token}",

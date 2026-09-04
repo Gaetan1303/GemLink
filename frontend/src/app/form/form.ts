@@ -7,7 +7,6 @@ import { takeUntil } from 'rxjs/operators';
 
 import { SharedModule } from '../shared/shared-module';
 import { AuthService } from '../core/services/auth';
-import { ResetPassword } from '../core/auth/reset-password/reset-password';
 import { RouterLink } from '@angular/router';
 
 // ── Constantes US 1.3 CA-3 ───────────────────────────────────

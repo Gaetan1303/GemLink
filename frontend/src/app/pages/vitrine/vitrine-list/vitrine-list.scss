@@ -1,0 +1,188 @@
+@use '../../post/post-theme' as theme;
+@use '../vitrine-shared' as shared;
+
+.vitrine-list-page {
+  min-height: 100vh;
+  background-color: theme.$ink;
+  color: theme.$text;
+  padding: 3.5rem 1.5rem 4rem;
+  position: relative;
+  overflow-x: hidden;
+  @include theme.mobile-nav-clearance(0rem);
+
+  // Halo de spot — l'éclairage d'une vraie vitrine de musée.
+  &::before {
+    content: '';
+    position: absolute;
+    top: -8%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 640px;
+    background: radial-gradient(ellipse at center, rgba(197, 160, 89, 0.09) 0%, rgba(197, 160, 89, 0.03) 45%, transparent 70%);
+    pointer-events: none;
+  }
+}
+
+.vitrine-page-header {
+  max-width: 640px;
+  margin: 0 auto 3rem;
+  text-align: center;
+  position: relative;
+
+  .eyebrow { @include shared.catalog-eyebrow; }
+
+  h1 {
+    font-family: theme.$font-display;
+    font-weight: 800;
+    font-size: 2rem;
+    color: theme.$gold;
+    margin: 0.6rem 0 1.1rem;
+  }
+
+  &__subtitle {
+    color: theme.$text-dim;
+    font-size: 0.95rem;
+    margin-top: 1.1rem;
+    line-height: 1.6;
+  }
+
+  .btn-publish { @include shared.btn-publish; margin-top: 1.5rem; }
+}
+
+.engraved-rule { @include shared.engraved-rule; margin: 0 auto; }
+
+.vitrine-grid {
+  max-width: 1040px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.75rem;
+  position: relative;
+}
+
+.piece {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: theme.$surface;
+  border: 1px solid rgba(197, 160, 89, 0.16);
+  overflow: hidden;
+  text-decoration: none;
+  color: theme.$text;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease;
+  @include shared.gem-cut(16px);
+  @include shared.facet-sweep;
+  @include shared.reveal;
+
+  &:hover { transform: translateY(-4px); border-color: rgba(197, 160, 89, 0.55); }
+}
+
+.piece-cover {
+  aspect-ratio: 4 / 3;
+  display: grid;
+  gap: 2px;
+  background: theme.$surface-raised;
+
+  &--1 { grid-template-columns: 1fr; }
+  &--2 { grid-template-columns: 1fr 1fr; }
+  &--3 {
+    grid-template-columns: 1.4fr 1fr;
+    grid-template-rows: 1fr 1fr;
+
+    .piece-cover__tile:first-child { grid-row: span 2; }
+  }
+}
+
+.piece-cover__tile {
+  position: relative;
+  overflow: hidden;
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+
+.piece-cover__video {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: theme.$surface-raised;
+  color: theme.$gold;
+}
+
+.piece-cover__more {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 10, 32, 0.55);
+  color: theme.$text;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: theme.$font-display;
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.piece-cover__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(197, 160, 89, 0.3);
+
+  mat-icon { font-size: 2.25rem; width: 2.25rem; height: 2.25rem; }
+}
+
+.piece-body {
+  padding: 1.25rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.piece-status { @include shared.status-badge; align-self: flex-start; }
+
+.piece-title {
+  font-family: theme.$font-display;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.piece-description {
+  color: theme.$text-dim;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.plaque {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(197, 160, 89, 0.16);
+  margin-top: auto;
+  padding-top: 0.75rem;
+  @include theme.meta-mono;
+
+  span:last-child { color: theme.$gold; }
+}
+
+.skeleton-card { @include shared.skeleton; height: 320px; }
+
+.alert { @include shared.alert-base; &--error { @include shared.alert-error; } }
+
+.empty-state {
+  max-width: 480px;
+  margin: 3rem auto;
+  text-align: center;
+  color: theme.$text-dim;
+
+  &__icon { font-size: 2.5rem; width: 2.5rem; height: 2.5rem; color: theme.$gold; margin-bottom: 0.75rem; }
+  h2 { font-family: theme.$font-display; color: theme.$text; margin: 0 0 0.5rem; }
+  p { line-height: 1.6; margin: 0 0 1.5rem; }
+  .btn-publish { @include shared.btn-publish; }
+}

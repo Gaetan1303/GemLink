@@ -1,0 +1,350 @@
+@use '../post-theme' as theme;
+
+.post-list-page {
+  min-height: 100vh;
+  background-color: theme.$ink;
+  color: theme.$text;
+  @include theme.mobile-nav-clearance(0rem);
+}
+
+// ── Hero ──────────────────────────────────────────────────────────
+.post-list-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  align-items: center;
+  gap: clamp(2rem, 6vw, 5rem);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 3rem;
+  border-bottom: 1px solid theme.$line;
+
+  &__content {
+    position: relative;
+    max-width: 640px;
+    text-align: left;
+  }
+
+  &__subtitle {
+    color: theme.$text-dim;
+    line-height: 1.6;
+    margin: 0.6rem 0 1.75rem;
+    font-size: 1rem;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-family: theme.$font-mono;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: theme.$violet;
+    margin-bottom: 0.5rem;
+  }
+
+  h1 {
+    font-family: theme.$font-display;
+    font-weight: 800;
+    font-size: 2.4rem;
+    color: theme.$gold;
+    margin: 0;
+  }
+}
+
+.hero-specimen-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46% 1fr;
+  min-height: 220px;
+  overflow: hidden;
+  color: theme.$text;
+  text-decoration: none;
+  background: linear-gradient(145deg, theme.$surface-raised, theme.$surface 72%);
+  border: 1px solid rgba(197, 160, 89, .5);
+  box-shadow: 0 22px 55px rgba(0, 0, 0, .32);
+  transition: transform .2s ease, border-color .2s ease;
+  @include theme.facet-corner;
+
+  &:hover { border-color: theme.$gold; transform: translateY(-4px); }
+
+  &__media {
+    position: relative;
+    min-height: 220px;
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+    > span { position: absolute; left: .65rem; bottom: .65rem; display: inline-flex; align-items: center; gap: .3rem; padding: .35rem .5rem; color: theme.$ink; background: rgba(197, 160, 89, .92); font-family: theme.$font-mono; font-size: .62rem; text-transform: uppercase; }
+    mat-icon { width: 15px; height: 15px; font-size: 15px; }
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: .65rem;
+    padding: 1.15rem;
+
+    small { @include theme.catalog-label; color: theme.$violet; }
+    strong { color: theme.$gold; font-family: theme.$font-display; font-size: 1.15rem; line-height: 1.25; }
+    > span { display: flex; align-items: center; gap: .25rem; color: theme.$text-dim; font-size: .78rem; line-height: 1.45; }
+    mat-icon { flex: 0 0 auto; width: 16px; height: 16px; font-size: 16px; }
+  }
+}
+
+.btn-publish {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: theme.$gold;
+  color: theme.$ink;
+  font-family: theme.$font-display;
+  font-weight: 700;
+  padding: 0.7rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+
+  &:hover { background-color: #d4b473; }
+  &:active { transform: scale(0.98); }
+}
+
+// ── Corps ─────────────────────────────────────────────────────────
+.post-list-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+.active-tag-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: .75rem 1rem;
+  color: theme.$gold;
+  background: linear-gradient(90deg, theme.$gold-dim, rgba(141,127,224,.08));
+  border: 1px solid rgba(197,160,89,.32);
+  @include theme.facet-corner-sm;
+
+  button { display: inline-flex; align-items: center; gap: .3rem; color: theme.$text; background: transparent; border: 0; cursor: pointer; }
+  button:hover { color: theme.$gold; }
+}
+
+.alert--error {
+  padding: 0.85rem 1rem;
+  border-radius: 6px;
+  background: rgba(224, 122, 95, 0.15);
+  border: 1px solid rgba(224, 122, 95, 0.4);
+  color: theme.$coral;
+  margin-bottom: 1.5rem;
+}
+
+// ── État vide ─────────────────────────────────────────────────────
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;
+  padding: 4rem 1.5rem;
+  border: 1px dashed theme.$line;
+  border-radius: 14px;
+  background: theme.$surface;
+
+  &__icon {
+    color: theme.$gold;
+    opacity: 0.5;
+    font-size: 2.75rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h2 {
+    font-family: theme.$font-display;
+    font-weight: 700;
+    color: theme.$text;
+    margin: 0;
+  }
+
+  p {
+    color: theme.$text-dim;
+    max-width: 360px;
+    margin: 0 0 0.75rem;
+  }
+}
+
+// ── Grille & cartes ───────────────────────────────────────────────
+.post-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.post-card {
+  display: flex;
+  flex-direction: column;
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  color: inherit;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  @include theme.facet-corner-sm;
+
+  opacity: 0;
+  animation: cardEnter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: rgba(197, 160, 89, 0.55);
+    background: theme.$surface-raised;
+  }
+
+  &__media {
+    position: relative;
+    height: 180px;
+    background: rgba(255, 255, 255, 0.04);
+
+    &::after {
+      // Fine ligne dorée sous le média, écho du coin facetté.
+      content: '';
+      position: absolute;
+      inset: 0;
+      box-shadow: inset 0 -1px 0 rgba(197, 160, 89, 0.25);
+    }
+  }
+
+  &__link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &__video-thumb {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(240, 240, 240, 0.5);
+    font-size: 2rem;
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.9rem 1rem 1rem;
+  }
+
+  &__catalog {
+    @include theme.catalog-label;
+  }
+
+  &__title {
+    font-weight: 700;
+    font-family: theme.$font-display;
+    color: theme.$text;
+  }
+
+  &__author {
+    font-size: 0.8rem;
+    color: theme.$text-dim;
+  }
+
+  app-analysis-status {
+    align-self: flex-start;
+    margin-top: 0.3rem;
+  }
+}
+
+.btn-like {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-end;
+  gap: 0.3rem;
+  margin: 0 1rem 1rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid theme.$line;
+  border-radius: 999px;
+  background: transparent;
+  color: theme.$text-dim;
+  cursor: pointer;
+
+  mat-icon { width: 1rem; height: 1rem; font-size: 1rem; }
+  &:hover:not(:disabled), &--active { color: theme.$coral; border-color: rgba(224, 122, 95, 0.55); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+}
+
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ── Squelette de chargement ───────────────────────────────────────
+.skeleton-card {
+  height: 260px;
+  background: linear-gradient(
+    100deg,
+    theme.$surface 30%,
+    theme.$surface-raised 50%,
+    theme.$surface 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  @include theme.facet-corner-sm;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 140% 0; }
+  100% { background-position: -40% 0; }
+}
+
+// ── Pagination ────────────────────────────────────────────────────
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+
+  &__meta {
+    @include theme.meta-mono;
+  }
+
+  button {
+    background: transparent;
+    border: 1px solid theme.$gold;
+    color: theme.$gold;
+    border-radius: 6px;
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    &:hover:not(:disabled) { background: theme.$gold-dim; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-card { animation: none; opacity: 1; }
+  .skeleton-card { animation: none; }
+}
+
+@media (max-width: 760px) {
+  .post-list-hero { grid-template-columns: 1fr; padding-top: 2rem; }
+  .post-list-hero__content { text-align: center; }
+  .hero-specimen-card { width: min(100%, 480px); margin: 0 auto; }
+}
+
+@media (max-width: 430px) {
+  .hero-specimen-card { grid-template-columns: 1fr; }
+  .hero-specimen-card__media { min-height: 180px; }
+}

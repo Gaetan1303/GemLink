@@ -10,6 +10,8 @@ import { KeyFigures } from './key-figures/key-figures';
 import { LatestDiscoveries } from './latest-discoveries/latest-discoveries';
 import { HeaderImage } from './header-image/header-image';
 import { CookieConsentBanner } from './cookie-consent-banner/cookie-consent-banner';
+import { AnalysisStatus } from './analysis-status/analysis-status';
+import { ValidationWidget } from './validation-widget/validation-widget';
 
 
 
@@ -26,7 +28,9 @@ import { CookieConsentBanner } from './cookie-consent-banner/cookie-consent-bann
     LatestDiscoveries,
     MatIconModule,
     HeaderImage,
-    CookieConsentBanner
+    CookieConsentBanner,
+    AnalysisStatus,
+    ValidationWidget
   ],
   exports: [
     CommonModule,
@@ -40,6 +44,8 @@ import { CookieConsentBanner } from './cookie-consent-banner/cookie-consent-bann
     MatIconModule,
     HeaderImage,
     CookieConsentBanner,
+    AnalysisStatus,
+    ValidationWidget,
   ]
 })
 export class SharedModule {}

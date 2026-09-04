@@ -16,6 +16,33 @@ class EmbeddingRepository extends ServiceEntityRepository
         parent::__construct($registry, Embedding::class);
     }
 
+    /** @return array<int, array{id: string, similarity: float}> */
+    public function findSimilarPublicationIds(string $publicationId, int $limit = 5): array
+    {
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            <<<'SQL'
+                SELECT other.publication_id::text AS id,
+                       1 - (other.vector_data <=> source.vector_data) AS similarity
+                FROM embedding source
+                JOIN embedding other ON other.publication_id <> source.publication_id
+                JOIN publication publication ON publication.id = other.publication_id
+                WHERE source.publication_id = :publicationId
+                  AND publication.deleted_at IS NULL
+                  AND publication.status IN ('ANALYZED', 'COMMUNITY_VALIDATED')
+                ORDER BY other.vector_data <=> source.vector_data,
+                         other.publication_id ASC
+                LIMIT :limit
+                SQL,
+            ['publicationId' => $publicationId, 'limit' => $limit],
+            ['limit' => \Doctrine\DBAL\ParameterType::INTEGER],
+        );
+
+        return array_map(static fn (array $row): array => [
+            'id' => (string) $row['id'],
+            'similarity' => round((float) $row['similarity'], 4),
+        ], $rows);
+    }
+
     //    /**
     //     * @return Embedding[] Returns an array of Embedding objects
     //     */

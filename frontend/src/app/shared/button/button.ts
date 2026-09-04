@@ -1,4 +1,4 @@
-import { Component, input, Input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';

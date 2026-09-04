@@ -1,10 +1,32 @@
 import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
-import { Profile } from './pages/user/profile/profile';
-
-
+import { adminGuard } from './core/guards/admin-guard';
+import { moderationGuard } from './core/guards/moderation-guard';
 export const routes: Routes = [
   { path: '', component: Home },
+  { path: 'factions', loadComponent: () => import('./pages/factions/faction-list/faction-list').then(m => m.FactionList) },
+  { path: 'factions/new', loadComponent: () => import('./pages/factions/faction-new/faction-new').then(m => m.FactionNew) },
+  { path: 'factions/:id/manage', loadComponent: () => import('./pages/factions/faction-manage/faction-manage').then(m => m.FactionManage) },
+  { path: 'factions/:id', loadComponent: () => import('./pages/factions/faction-detail/faction-detail').then(m => m.FactionDetail) },
+  { path: 'messages', loadComponent: () => import('./pages/messages/conversation-list/conversation-list').then(m => m.ConversationList) },
+  { path: 'messages/:conversationId', loadComponent: () => import('./pages/messages/conversation-detail/conversation-detail').then(m => m.ConversationDetail) },
+  {
+    path: 'leaderboard',
+    loadComponent: () => import('./pages/leaderboard/leaderboard').then(m => m.Leaderboard),
+  },
+  {
+    path: 'admin',
+    canActivate: [adminGuard],
+    loadComponent: () => import('./pages/admin/admin-dashboard/admin-dashboard').then(m => m.AdminDashboardComponent),
+  },
+  {
+    path: 'admin/moderation',
+    canActivate: [moderationGuard],
+    loadComponent: () => import('./pages/admin/moderation/moderation').then(m => m.Moderation),
+  },
+  
+  { path: 'identifier',
+     loadComponent: () => import('./pages/identify/identify').then(m => m.Identify) },
   {
     path: 'mentions-legales',
     loadComponent: () => import('./pages/home/mentions-legales/mentions-legales').then(m => m.MentionsLegales)
@@ -25,10 +47,51 @@ export const routes: Routes = [
     path: 'rgpd',
     loadComponent: () => import('./pages/home/rgpd/rgpd').then(m => m.Rgpd)
   },
-
+// US 2.1 — Publication d'un post MVP
+  // US 2.2 — Consultation des posts (liste + détail), publiques
+  {
+    path: 'posts',
+    loadComponent: () => import('./pages/post/post-list/post-list').then(m => m.PostList)
+  },
+  {
+    path: 'posts/new',
+    loadComponent: () => import('./pages/post/post-create/post-create').then(m => m.PostCreate)
+  },
+  {
+    path: 'posts/:id',
+    loadComponent: () => import('./pages/post/post-detail/post-detail').then(m => m.PostDetail)
+  },
+  {
+    path: 'vitrine',
+    loadComponent: () => import('./pages/vitrine/vitrine-list/vitrine-list').then(m => m.VitrineList)
+  },
+  {
+    path: 'vitrines/new',
+    loadComponent: () => import('./pages/vitrine/vitrine-create/vitrine-create').then(m => m.VitrineCreate)
+  },
+  // US 4.2 - CA-1 : page publique par slug, sans authentification.
+  // Doit être déclarée AVANT 'vitrines/:id' (owner, par UUID) — sinon le
+  // router matcherait 'public' comme une valeur de :id et ne l'atteindrait
+  // jamais, exactement comme 'vitrines/new' doit précéder 'vitrines/:id'.
+  {
+    path: 'vitrines/public/:slug',
+    loadComponent: () => import('./pages/vitrine/vitrine-public/vitrine-public').then(m => m.VitrinePublic)
+  },
+  {
+    path: 'vitrines/:id',
+    loadComponent: () => import('./pages/vitrine/vitrine-detail/vitrine-detail').then(m => m.VitrineDetail)
+  },
   {
     path: 'users/me',
     loadComponent: () => import('./pages/user/profile/profile').then(m => m.Profile)
+  },
+  {
+    path: 'users/:id',
+    loadComponent: () => import('./pages/user/profile/profile').then(m => m.Profile)
+  },
+  {
+    path: 'notifications',
+    loadComponent: () => import('./pages/notifications/notifications').then(m => m.Notifications)
   },
 
   {

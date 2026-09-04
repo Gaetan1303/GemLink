@@ -1,0 +1,33 @@
+<app-header />
+<main class="faction-new-page community-page" id="main-content">
+  <section class="create-faction">
+    <span class="eyebrow">Nouvelle communauté</span>
+    <h1>Créer une faction</h1>
+    <div class="engraved-rule"><span class="diamond"></span></div>
+    @if(error()){<div class="alert alert--error" role="alert">{{error()}}</div>}
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <label class="field">
+        <span class="field__label">Nom <span class="field__required">*</span></span>
+        <input formControlName="name" maxlength="100" required placeholder="Les Gardiens du Quartz" />
+        @if(form.controls.name.touched&&form.controls.name.invalid){
+          <small class="field__error">Le nom doit contenir entre 3 et 100 caractères.</small>
+        }
+      </label>
+      <label class="field">
+        <span class="field__label">Description</span>
+        <textarea formControlName="description" maxlength="2000" rows="6" placeholder="Présentez votre faction (optionnel)"></textarea>
+      </label>
+      <label class="field">
+        <span class="field__label">Visibilité</span>
+        <select formControlName="visibility">
+          <option value="PUBLIC">Publique</option>
+          <option value="PRIVATE">Privée</option>
+        </select>
+      </label>
+      <button class="btn btn--primary" type="submit" [disabled]="submitting()">
+        <mat-icon>{{submitting()?'hourglass_top':'add'}}</mat-icon>{{submitting()?'Création…':'Créer'}}
+      </button>
+    </form>
+  </section>
+</main>
+<app-footer />

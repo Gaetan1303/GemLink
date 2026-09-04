@@ -1,0 +1,643 @@
+<app-header />
+<app-header-image></app-header-image>
+
+<main class="admin-page" id="main-content">
+  <section class="admin-hero">
+    <p class="eyebrow">Console opérationnelle</p>
+    <h1>Administration GemLink</h1>
+    <p>
+      Surveillez la communauté, pilotez les modèles et intervenez sans quitter le fil de l’activité.
+    </p>
+  </section>
+
+  @if (error()) {
+  <div class="admin-error" role="alert"><mat-icon>error_outline</mat-icon>{{ error() }}</div>
+  } @if (loading()) {
+  <div class="loading"><mat-spinner diameter="42" />Chargement des indicateurs…</div>
+  } @if (dashboard(); as data) {
+  <section class="kpi-grid" aria-label="Indicateurs opérationnels">
+    <article class="kpi">
+      <mat-icon>dynamic_feed</mat-icon><span>Posts · 24 h</span><strong>{{ data.posts24h }}</strong>
+    </article>
+    <article class="kpi">
+      <mat-icon>psychology</mat-icon><span>Analyses IA · 24 h</span
+      ><strong>{{ data.aiAnalyses24h }}</strong>
+    </article>
+    <article class="kpi">
+      <mat-icon>groups</mat-icon><span>Membres actifs · 7 j</span
+      ><strong>{{ data.activeUsers7d }}</strong>
+    </article>
+    <article class="kpi">
+      <mat-icon>verified</mat-icon><span>Validation communautaire</span
+      ><strong>{{ data.communityValidationRate | percent:'1.0-1' }}</strong>
+    </article>
+  </section>
+
+  <section class="dashboard-grid">
+    <mat-card class="panel minerals"
+      ><mat-card-header
+        ><mat-card-title>Minéraux identifiés</mat-card-title
+        ><mat-card-subtitle>Top 10 de la communauté</mat-card-subtitle></mat-card-header
+      ><mat-card-content>
+        @for (mineral of data.topMinerals; track mineral.name) {
+        <div class="mineral-row">
+          <span>{{ mineral.name }}</span>
+          <div>
+            <i
+              [style.width.%]="data.topMinerals[0] ? mineral.count / data.topMinerals[0].count * 100 : 0"
+            ></i>
+          </div>
+          <b>{{ mineral.count }}</b>
+        </div>
+        } @empty {
+        <p class="empty">Les premières identifications apparaîtront ici.</p>
+        }
+      </mat-card-content></mat-card
+    >
+    <mat-card class="panel training"
+      ><mat-card-header
+        ><mat-card-title>Fine-tuning en cours</mat-card-title
+        ><mat-card-subtitle
+          >Mise à jour automatique toutes les 5 secondes</mat-card-subtitle
+        ></mat-card-header
+      ><mat-card-content>
+        @for (job of data.fineTuningJobs; track job.id) {
+        <article class="job" [attr.aria-label]="'Cycle ' + jobModelName(job)">
+          <div class="job__header">
+            <div>
+              <strong>{{ jobModelName(job) }}</strong>
+              <span>Trust Score supérieur ou égal à {{ job.minTrustScore }}</span>
+            </div>
+            <span class="status" [class.status--active]="job.status === 'running'">
+              {{ job.status }}
+            </span>
+            <b>{{ job.progress }}%</b>
+          </div>
+          <mat-progress-bar
+            mode="determinate"
+            [value]="job.progress"
+            [attr.aria-label]="'Progression de ' + jobModelName(job)"
+          />
+          @if (job.sampleCount !== undefined) {
+          <p class="job__samples">
+            <mat-icon>dataset</mat-icon>{{ job.sampleCount }} validations retenues @if
+            (job.excludedCandidateCount !== undefined) {
+            <span>· {{ job.excludedCandidateCount }} écartées</span>
+            }
+          </p>
+          } @if (job.error) {
+          <p class="job__error" role="alert"><mat-icon>error_outline</mat-icon>{{ job.error }}</p>
+          } @if (job.logs?.length) {
+          <details class="job-logs" open>
+            <summary>Journal du cycle <span>{{ job.logs?.length }} entrées</span></summary>
+            <ol aria-live="polite" aria-relevant="additions">
+              @for (log of job.logs?.slice(-6); track $index) {
+              <li [attr.data-level]="logLevel(log)">
+                <span>{{ logLevel(log) }}</span>{{ logMessage(log) }}
+              </li>
+              }
+            </ol>
+          </details>
+          }
+        </article>
+        } @empty {
+        <p class="empty">
+          Aucun cycle actif. Le prochain entraînement peut être préparé ci-dessous.
+        </p>
+        }
+      </mat-card-content></mat-card
+    >
+  </section>
+  }
+
+  <section class="admin-section" aria-labelledby="points-scale-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Récompenses communautaires</p>
+        <h2 id="points-scale-title">Barème de points</h2>
+      </div>
+    </div>
+    <mat-card class="panel points-settings"
+      ><mat-card-content>
+        <p>
+          Les nouveaux montants sont appliqués aux prochaines actions, sans déploiement ni
+          redémarrage du worker.
+        </p>
+        <form [formGroup]="pointsForm" (ngSubmit)="savePointsScale()">
+          <mat-form-field appearance="outline"
+            ><mat-label>Publication créée</mat-label
+            ><input matInput type="number" formControlName="postCreated" min="0" max="10000" /><span
+              matTextSuffix
+              >pts</span
+            ></mat-form-field
+          >
+          <mat-form-field appearance="outline"
+            ><mat-label>Like reçu</mat-label
+            ><input
+              matInput
+              type="number"
+              formControlName="likeReceived"
+              min="0"
+              max="10000"
+            /><span matTextSuffix>pts</span></mat-form-field
+          >
+          <mat-form-field appearance="outline"
+            ><mat-label>Validation soumise</mat-label
+            ><input
+              matInput
+              type="number"
+              formControlName="validationSubmitted"
+              min="0"
+              max="10000"
+            /><span matTextSuffix>pts</span></mat-form-field
+          >
+          <mat-form-field appearance="outline"
+            ><mat-label>Validation confirmée</mat-label
+            ><input
+              matInput
+              type="number"
+              formControlName="validationConsensusConfirmed"
+              min="0"
+              max="10000"
+            /><span matTextSuffix>pts</span></mat-form-field
+          >
+          <button mat-flat-button type="submit" [disabled]="pointsForm.invalid || working()">
+            Enregistrer le barème
+          </button>
+        </form>
+      </mat-card-content></mat-card
+    >
+  </section>
+
+  <section class="admin-section" aria-labelledby="levels-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Expertise communautaire</p>
+        <h2 id="levels-title">Niveaux et paliers</h2>
+      </div>
+      <span>{{ levels().length }} niveau(x) configuré(s)</span>
+    </div>
+    <div class="level-admin-layout">
+      <mat-card class="panel level-form-panel"
+        ><mat-card-content>
+          <p>
+            Les seuils enregistrés sont appliqués immédiatement au calcul de la progression des
+            membres.
+          </p>
+          <form [formGroup]="levelForm" (ngSubmit)="saveLevel()" class="level-form">
+            <mat-form-field appearance="outline"
+              ><mat-label>Numéro</mat-label
+              ><input
+                matInput
+                type="number"
+                formControlName="number"
+                min="1"
+                [readonly]="selectedLevel() !== null"
+            /></mat-form-field>
+            <mat-form-field appearance="outline"
+              ><mat-label>Nom du niveau</mat-label
+              ><input matInput formControlName="name" maxlength="50"
+            /></mat-form-field>
+            <mat-form-field appearance="outline"
+              ><mat-label>Seuil minimum</mat-label
+              ><input matInput type="number" formControlName="minPoints" min="0" /><span
+                matTextSuffix
+                >pts</span
+              ></mat-form-field
+            >
+            <mat-form-field appearance="outline"
+              ><mat-label>Badge attribué au passage</mat-label
+              ><mat-select formControlName="badgeId"
+                ><mat-option value="">Aucun badge</mat-option>@for (badge of badges(); track
+                badge.id) {
+                <mat-option [value]="badge.id">{{ badge.name }}</mat-option> }</mat-select
+              ></mat-form-field
+            >
+            <div class="level-form__actions">
+              <button mat-flat-button type="submit" [disabled]="levelForm.invalid || working()">
+                <mat-icon>{{ selectedLevel() ? 'save' : 'add' }}</mat-icon>{{ selectedLevel() ?
+                'Enregistrer le palier' : 'Ajouter le niveau' }}
+              </button>
+              @if (selectedLevel()) {
+              <button mat-button type="button" (click)="resetLevelForm()" [disabled]="working()">
+                Annuler
+              </button>
+              }
+            </div>
+          </form>
+        </mat-card-content></mat-card
+      >
+      <mat-card class="panel level-list-panel"
+        ><mat-card-content>
+          <div class="level-list">
+            @for (level of levels(); track level.id; let last = $last; let index = $index) {
+            <article
+              class="level-row"
+              [class.level-row--editing]="selectedLevel()?.id === level.id"
+            >
+              <span class="level-row__number">{{ level.number }}</span>
+              <div>
+                <strong>{{ level.name }}</strong>
+                <p>
+                  @if (last) { {{ level.minPoints }}+ pts } @else { {{ level.minPoints }}–{{
+                  levels()[index + 1].minPoints - 1 }} pts }
+                </p>
+                <small><mat-icon>workspace_premium</mat-icon>{{ badgeName(level.badgeId) }}</small>
+              </div>
+              <div class="level-row__actions">
+                <button
+                  mat-icon-button
+                  type="button"
+                  [attr.aria-label]="'Modifier le niveau ' + level.name"
+                  (click)="editLevel(level)"
+                  [disabled]="working()"
+                >
+                  <mat-icon>edit</mat-icon></button
+                ><button
+                  mat-icon-button
+                  type="button"
+                  [class.confirm-delete]="levelPendingDeletion() === level.id"
+                  [attr.aria-label]="levelPendingDeletion() === level.id ? 'Confirmer la suppression du niveau ' + level.name : 'Supprimer le niveau ' + level.name"
+                  (click)="requestLevelDeletion(level)"
+                  [disabled]="working() || levels().length === 1"
+                >
+                  <mat-icon
+                    >{{ levelPendingDeletion() === level.id ? 'delete_forever' : 'delete_outline'
+                    }}</mat-icon
+                  >
+                </button>
+              </div>
+            </article>
+            } @empty {
+            <p class="empty">Aucun niveau configuré.</p>
+            }
+          </div>
+        </mat-card-content></mat-card
+      >
+    </div>
+  </section>
+
+  <section class="admin-section" aria-labelledby="badges-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Récompenses communautaires</p>
+        <h2 id="badges-title">Badges automatiques</h2>
+      </div>
+      <span>{{ badges().length }} badge(s) configuré(s)</span>
+    </div>
+    <div class="badge-admin-layout">
+      <mat-card class="panel badge-form-panel"
+        ><mat-card-content>
+          <p>
+            Les conditions sont évaluées automatiquement après les publications et les
+            identifications de pierres.
+          </p>
+          <form [formGroup]="badgeForm" (ngSubmit)="saveBadge()" class="badge-form">
+            <mat-form-field appearance="outline"
+              ><mat-label>Nom du badge</mat-label
+              ><input matInput formControlName="name" maxlength="100"
+            /></mat-form-field>
+            <mat-form-field appearance="outline"
+              ><mat-label>Description</mat-label
+              ><textarea
+                matInput
+                formControlName="description"
+                rows="3"
+                maxlength="1000"
+              ></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline"
+              ><mat-label>Condition</mat-label
+              ><mat-select formControlName="conditionType"
+                >@for (condition of badgeConditions; track condition.value) {
+                <mat-option [value]="condition.value">{{ condition.label }}</mat-option>
+                }</mat-select
+              ></mat-form-field
+            >
+            <mat-form-field appearance="outline"
+              ><mat-label>Seuil</mat-label
+              ><input matInput type="number" formControlName="conditionValue" min="1" /><span
+                matTextSuffix
+                >fois</span
+              ></mat-form-field
+            >
+            @if (badgeForm.controls.conditionType.value === 'MINERAL_IDENTIFICATION_COUNT') {
+            <mat-form-field appearance="outline" class="badge-form__mineral"
+              ><mat-label>Pierre concernée</mat-label
+              ><input
+                matInput
+                formControlName="mineralQuery"
+                [matAutocomplete]="mineralAutocomplete"
+                placeholder="Rechercher une pierre"
+                (input)="clearMineralSelection()"
+              />@if (badgeForm.controls.pierreId.value) {
+              <mat-hint>Pierre sélectionnée</mat-hint> }<mat-autocomplete
+                #mineralAutocomplete="matAutocomplete"
+                >@for (mineral of mineralOptions(); track mineral.id) {
+                <mat-option [value]="mineral.nom" (onSelectionChange)="selectMineral(mineral)"
+                  >{{ mineral.nom }}</mat-option
+                >
+                }</mat-autocomplete
+              ></mat-form-field
+            >
+            }
+            <button mat-flat-button type="submit" [disabled]="badgeForm.invalid || working()">
+              <mat-icon>workspace_premium</mat-icon>Créer le badge
+            </button>
+          </form>
+        </mat-card-content></mat-card
+      >
+      <mat-card class="panel badge-list-panel"
+        ><mat-card-content>
+          <div class="badge-list">
+            @for (badge of badges(); track badge.id) {
+            <article class="badge-row">
+              <span class="badge-row__emblem"><mat-icon>workspace_premium</mat-icon></span>
+              <div>
+                <strong>{{ badge.name }}</strong>
+                <p>{{ badge.description || 'Aucune description.' }}</p>
+                <small>{{ badge.conditionValue }} · {{ badge.conditionType }}</small>
+              </div>
+              <button
+                mat-icon-button
+                type="button"
+                [attr.aria-label]="'Supprimer le badge ' + badge.name"
+                (click)="deleteBadge(badge)"
+                [disabled]="working()"
+              >
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </article>
+            } @empty {
+            <p class="empty">Aucun badge administrable pour le moment.</p>
+            }
+          </div>
+        </mat-card-content></mat-card
+      >
+    </div>
+  </section>
+
+  <section class="admin-section" aria-labelledby="trust-threshold-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Qualité du dataset IA</p>
+        <h2 id="trust-threshold-title">Seuil minimum de Trust Score</h2>
+      </div>
+      @if (validationSettings(); as settings) {
+      <span>Seuil actif : {{ settings.datasetCandidateTrustThreshold }}/100</span>
+      }
+    </div>
+    <mat-card class="panel trust-threshold-settings">
+      <mat-card-content>
+        <div class="trust-threshold-settings__intro">
+          <mat-icon>verified_user</mat-icon>
+          <p>
+            Les validations dont le Trust Score est inférieur à ce seuil sont exclues du dataset
+            candidat au fine-tuning. Un score égal au seuil reste admissible.
+          </p>
+        </div>
+        <form [formGroup]="trustThresholdForm" (ngSubmit)="saveTrustThreshold()">
+          <mat-form-field appearance="outline">
+            <mat-label>Trust Score minimum</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="datasetCandidateTrustThreshold"
+              min="0"
+              max="100"
+              step="1"
+              inputmode="numeric"
+            />
+            <span matTextSuffix>/100</span>
+            @if (trustThresholdForm.controls.datasetCandidateTrustThreshold.invalid) {
+            <mat-error>Saisissez un entier compris entre 0 et 100.</mat-error>
+            }
+          </mat-form-field>
+          <button
+            mat-flat-button
+            type="submit"
+            [disabled]="trustThresholdForm.invalid || working()"
+          >
+            <mat-icon>save</mat-icon>Enregistrer le seuil
+          </button>
+          @if (trustThresholdSaved()) {
+          <span class="settings-saved" role="status">Seuil enregistré.</span>
+          }
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </section>
+
+  <section class="admin-section" aria-labelledby="fine-tuning-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Modèle de reconnaissance</p>
+        <h2 id="fine-tuning-title">Fine-tuning ViT</h2>
+      </div>
+      @if (hasRunningFineTuning()) {
+      <span class="live-indicator"><i></i>Cycle en direct</span>
+      }
+    </div>
+    @if (fineTuningOverview(); as overview) {
+    <div class="training-overview" aria-label="Préparation du prochain cycle">
+      <article class="training-stat">
+        <mat-icon>fact_check</mat-icon>
+        <span>Nouvelles validations</span>
+        <strong>{{ overview.availableValidations ?? '—' }}</strong>
+        <small>Disponibles pour le dataset candidat</small>
+      </article>
+      <article class="training-stat">
+        <mat-icon>verified_user</mat-icon>
+        <span>Seuil de qualité</span>
+        <strong>> {{ overview.trustScoreThreshold ?? '—' }}</strong>
+        <small>Trust Score strictement supérieur</small>
+      </article>
+      <article class="training-stat">
+        <mat-icon>history</mat-icon>
+        <span>Dernier cycle exécuté</span>
+        @if (overview.lastCycleAt) {
+        <strong class="training-stat__date">{{ overview.lastCycleAt | date: 'medium' }}</strong>
+        } @else {
+        <strong class="training-stat__date">Aucun cycle enregistré</strong>
+        }
+        <small>Historique des entraînements ViT</small>
+      </article>
+    </div>
+    }
+    <div class="model-layout">
+      <mat-card class="panel training-launcher"
+        ><mat-card-content
+          ><form [formGroup]="fineTuningForm" (ngSubmit)="startFineTuning()" class="training-form">
+            <div class="training-form__intro">
+              <mat-icon>model_training</mat-icon>
+              <div>
+                <strong>Préparer un nouveau modèle</strong>
+                <p>Le dataset est composé uniquement des validations communautaires qualifiées.</p>
+              </div>
+            </div>
+            <mat-form-field appearance="outline"
+              ><mat-label>Nom de version</mat-label
+              ><input matInput class="version-name-input" formControlName="versionName" />@if
+              (fineTuningForm.controls.versionName.hasError('pattern')) {
+              <mat-error>Format attendu : vit-v1.2.0</mat-error>
+              }</mat-form-field
+            >
+            <mat-form-field appearance="outline" class="trust-score-field"
+              ><mat-label>Seuil de Trust Score configuré</mat-label
+              ><input
+                matInput
+                type="number"
+                formControlName="minTrustScore"
+                min="0"
+                max="100"
+                readonly
+              /><mat-hint class="training-form__hint"
+                >Inclusion si Trust Score ≥ {{ fineTuningForm.controls.minTrustScore.value
+                }}.</mat-hint
+              ></mat-form-field
+            >
+            <div class="training-form__quality">
+              <mat-icon>shield</mat-icon>
+              Les contributions sous le seuil sont exclues avant l'entraînement.
+            </div>
+            <button
+              mat-flat-button
+              type="submit"
+              [disabled]="fineTuningForm.invalid || working() || hasRunningFineTuning()"
+            >
+              <mat-icon>play_arrow</mat-icon>
+              {{ hasRunningFineTuning() ? 'Un cycle est déjà en cours' : 'Lancer le fine-tuning' }}
+            </button>
+          </form></mat-card-content
+        ></mat-card
+      >
+      <mat-card class="panel version-history"
+        ><mat-card-content class="versions">
+          <div class="versions__heading">
+            <div>
+              <strong>Versions du modèle</strong>
+              <span>Restaurez une version stable en cas de régression.</span>
+            </div>
+            <mat-icon>history</mat-icon>
+          </div>
+          @for (model of versions(); track model.id) {
+          <article class="version" [class.version--active]="model.status === 'active'">
+            <div>
+              <strong>{{ model.name }}</strong
+              ><span>Accuracy {{ model.accuracy ?? '—' }} · F1 {{ model.f1Score ?? '—' }}</span>
+              @if (model.createdAt) {
+              <small>Créée le {{ model.createdAt | date: 'short' }}</small>
+              }
+            </div>
+            <span class="status" [class.status--active]="model.status === 'active'"
+              >{{ model.status }}</span
+            >@if (model.status !== 'active' && model.status !== 'training') {
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="activate(model)"
+              [disabled]="working()"
+              [attr.aria-label]="'Restaurer la version ' + model.name"
+            >
+              <mat-icon>settings_backup_restore</mat-icon>Restaurer
+            </button>
+            }
+          </article>
+          } @empty {
+          <p class="empty">Aucune version ViT disponible.</p>
+          }
+        </mat-card-content></mat-card
+      >
+    </div>
+  </section>
+
+  <section class="admin-section">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Communauté</p>
+        <h2>Gestion des utilisateurs</h2>
+      </div>
+      <span>{{ users().length }} membres chargés</span>
+    </div>
+    <div class="user-table" role="region" aria-label="Utilisateurs administrables" tabindex="0">
+      <table>
+        <thead>
+          <tr>
+            <th>Membre</th>
+            <th>Rôle</th>
+            <th>Trust</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of users(); track user.id) {
+          <tr>
+            <td data-label="Membre">
+              <strong>{{ user.username }}</strong><small>{{ user.email }}</small>
+            </td>
+            <td data-label="Rôle">
+              <mat-form-field appearance="outline"
+                ><mat-select
+                  [value]="user.role"
+                  (selectionChange)="updateRole(user, $event.value)"
+                  [disabled]="user.role === 'admin' || working()"
+                  >@for (role of roleOptions; track role) {
+                  <mat-option [value]="role">{{ role }}</mat-option>}</mat-select
+                ></mat-form-field
+              >
+            </td>
+            <td data-label="Trust Score">{{ user.trustScore }}/100</td>
+            <td data-label="Statut">
+              <span class="status" [class.status--banned]="user.status === 'banned'"
+                >{{ user.status }}</span
+              >
+            </td>
+            <td data-label="Actions">
+              @if (user.role === 'admin') { <span class="admin-protected">Protégé</span> } @else if
+              (user.status === 'banned') {
+              <button mat-stroked-button (click)="unban(user)" [disabled]="working()">
+                Débannir
+              </button>
+              } @else {
+              <button mat-stroked-button (click)="openBan(user)" [disabled]="working()">
+                Bannir
+              </button>
+              }
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  @if (selectedUser(); as user) {
+  <div class="ban-backdrop">
+    <mat-card class="ban-dialog"
+      ><mat-card-header
+        ><mat-card-title>Bannir {{ user.username }}</mat-card-title
+        ><mat-card-subtitle
+          >Les refresh tokens actifs seront révoqués immédiatement.</mat-card-subtitle
+        ></mat-card-header
+      ><mat-card-content
+        ><form [formGroup]="banForm" (ngSubmit)="ban()">
+          <mat-form-field appearance="outline"
+            ><mat-label>Motif</mat-label
+            ><textarea matInput formControlName="reason" rows="3"></textarea></mat-form-field
+          ><mat-form-field appearance="outline"
+            ><mat-label>Fin du bannissement (optionnelle)</mat-label
+            ><input matInput type="datetime-local" formControlName="until"
+          /></mat-form-field>
+          <div class="dialog-actions">
+            <button mat-button type="button" (click)="closeBan()">Annuler</button
+            ><button mat-flat-button type="submit" [disabled]="banForm.invalid || working()">
+              Confirmer le bannissement
+            </button>
+          </div>
+        </form></mat-card-content
+      ></mat-card
+    >
+  </div>
+  }
+</main>

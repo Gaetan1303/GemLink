@@ -4,7 +4,7 @@ export interface MenuItem {
   iconClass: string;
 }
 
-export type MenuRole = 'VISITEUR' | 'ROLE_USER' | 'ROLE_ADMIN';
+export type MenuRole = 'VISITEUR' | 'ROLE_USER' | 'ROLE_MODERATOR' | 'ROLE_ADMIN';
 
 export interface MenuConfig {
   navItems: MenuItem[];  // nav-bar-mobile (5 max)
@@ -20,6 +20,7 @@ export const NAVIGATION_MENUS: Record<MenuRole, MenuConfig> = {
     ],
     menuItems: [
       { label: 'Accueil',     route: '/',              iconClass: 'home' },
+      { label: 'Classement',  route: '/leaderboard',   iconClass: 'leaderboard' },
       { label: 'Connexion',   route: '/auth/login',    iconClass: 'login' },
       { label: 'Inscription', route: '/auth/register', iconClass: 'person_add' },
     ],
@@ -28,32 +29,48 @@ export const NAVIGATION_MENUS: Record<MenuRole, MenuConfig> = {
     navItems: [
       { label: 'Accueil',    route: '/',            iconClass: 'home' },
       { label: 'Post',       route: '/posts',        iconClass: 'near_me' },
-      { label: 'Identifier', route: '/identifier',  iconClass: 'center_focus_strong' },
+      { label: 'Identifier', route: '/posts/new',  iconClass: 'center_focus_strong' },
       { label: 'Profil',     route: '/users/me',    iconClass: 'person' },
-      { label: 'Galerie',    route: '/collections', iconClass: 'collections' },
+      { label: 'Galerie',    route: '/vitrine', iconClass: 'collections' },
     ],
     menuItems: [
       { label: 'Accueil',     route: '/',            iconClass: 'home' },
       { label: 'Post',        route: '/posts',        iconClass: 'near_me' },
-      { label: 'Identifier',  route: '/identifier',  iconClass: 'center_focus_strong' },
+      { label: 'Identifier',  route: '/posts/new',  iconClass: 'center_focus_strong' },
       { label: 'Profil',      route: '/users/me',    iconClass: 'person' },
-      { label: 'Galerie',     route: '/collections', iconClass: 'collections' },
+      { label: 'Galerie',     route: '/vitrine', iconClass: 'collections' },
+      { label: 'Notifications', route: '/notifications', iconClass: 'notifications' },
+      { label: 'Messages', route: '/messages', iconClass: 'chat' },
+      { label: 'Classement', route: '/leaderboard', iconClass: 'leaderboard' },
       { label: 'Faction',     route: '/factions',    iconClass: 'groups' },
       { label: 'Badge',       route: '/badges',      iconClass: 'military_tech' },
       { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
     ],
   },
-  ROLE_ADMIN: {
+  ROLE_MODERATOR: {
     navItems: [
-      { label: 'Accueil',    route: '/',                iconClass: 'home' },
-      { label: 'Dashboard',  route: '/admin/stats',     iconClass: 'dashboard' },
-      { label: 'Modération', route: '/admin/reports',   iconClass: 'shield' },
+      { label: 'Modération', route: '/admin/moderation', iconClass: 'shield' },
+      { label: 'Retour', route: '/', iconClass: 'arrow_back' },
       { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
     ],
     menuItems: [
-      { label: 'Accueil',    route: '/',                iconClass: 'home' },
-      { label: 'Dashboard',  route: '/admin/stats',     iconClass: 'dashboard' },
-      { label: 'Modération', route: '/admin/reports',   iconClass: 'shield' },
+      { label: 'Modération', route: '/admin/moderation', iconClass: 'shield' },
+      { label: 'Retour', route: '/', iconClass: 'arrow_back' },
+      { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
+    ],
+  },
+  ROLE_ADMIN: {
+    navItems: [
+      { label: 'Dashboard',  route: '/admin',           iconClass: 'dashboard' },
+      { label: 'Modération', route: '/admin/moderation', iconClass: 'shield' },
+      { label: 'Retour',     route: '/',                iconClass: 'arrow_back' },
+      { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
+    ],
+    menuItems: [
+      { label: 'Dashboard',  route: '/admin',           iconClass: 'dashboard' },
+      { label: 'Modération', route: '/admin/moderation', iconClass: 'shield' },
+      { label: 'Retour',     route: '/',                iconClass: 'arrow_back' },
+      { label: 'Déconnexion', route: '/auth/logout', iconClass: 'logout' },
     ],
   },
 };

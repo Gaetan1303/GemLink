@@ -27,7 +27,7 @@ describe('Form — US 1.3 Connexion', () => {
   let loginSpy:    MockInstance;
   let navigateSpy: MockInstance;
 
-  let authServiceMock: any; // Simplifié pour accueillir le signal facilement
+  let authServiceMock: Record<string, unknown>;
 
   beforeEach(async () => {
     loginSpy = vi.fn();
