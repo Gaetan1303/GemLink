@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Badge;
+use App\Entity\Pierre;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -14,6 +15,20 @@ class BadgeRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Badge::class);
+    }
+
+    /** @return list<Badge> */
+    public function findAutomaticBadges(): array
+    {
+        return $this->createQueryBuilder('b')
+            ->andWhere('b.conditionType IN (:types)')
+            ->setParameter('types', [Badge::CONDITION_POST_COUNT, Badge::CONDITION_VALIDATION_COUNT, Badge::CONDITION_STONE_IDENTIFICATION_COUNT, Badge::CONDITION_MINERAL_IDENTIFICATION_COUNT])
+            ->getQuery()->getResult();
+    }
+
+    public function findMineralIdentificationBadge(Pierre $pierre): ?Badge
+    {
+        return $this->findOneBy(['conditionType' => Badge::CONDITION_MINERAL_IDENTIFICATION_COUNT, 'pierre' => $pierre]);
     }
 
     //    /**

@@ -2,6 +2,7 @@
 ###> symfony/framework-bundle ###t
 .env.production
 .env
+.env.test
 .env.dev
 /.env.local
 /.env.local.php
@@ -11,7 +12,7 @@
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
-
+var/
 ###> lexik/jwt-authentication-bundle ###
 /config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
@@ -20,3 +21,4 @@ commande.md
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+.compose.test.yaml

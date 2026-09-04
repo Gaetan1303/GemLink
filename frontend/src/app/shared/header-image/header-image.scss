@@ -1,0 +1,39 @@
+:host {
+  display: block;
+}
+
+.header-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  // Même hauteur que .header
+  height: 114px;
+  z-index: 0;
+
+  // Pas de pointer-events : le header cliquable passe par-dessus
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.header-image__crystal {
+  position: absolute;
+  // Cristaux positionnés en haut à droite comme sur le screenshot
+  top: 0;
+  right: 0;
+
+  width: 420px;
+  height: 160px;
+
+  background: url('/assets/images/header-image.png') top right / cover no-repeat;
+
+  // Légère transparence pour que les cristaux ne masquent pas le contenu
+  opacity: 0.22;
+}
+
+@media (max-width: 420px) {
+  .header-image__crystal {
+    width: 220px;
+    height: 120px;
+  }
+}

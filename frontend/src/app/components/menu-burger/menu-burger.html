@@ -1,31 +1,36 @@
-<div class="menu-burger-trigger" [class.open]="isOpen()" (click)="toggleMenu()">
+<div
+  class="menu-burger-trigger"
+  role="button"
+  tabindex="0"
+  [attr.aria-expanded]="isOpen()"
+  aria-label="Ouvrir le menu de navigation"
+  [class.open]="isOpen()"
+  (click)="toggleMenu()"
+  (keydown.enter)="toggleMenu()"
+  (keydown.space)="toggleMenu(); $event.preventDefault()"
+>
   <span></span>
   <span></span>
   <span></span>
 </div>
 
 @if (isOpen()) {
-  <div class="menu-overlay" (click)="closeMenu()">
-    <nav class="menu-nav" (click)="$event.stopPropagation()">
-      
+  <div class="menu-overlay" tabindex="-1" (click)="closeFromOverlay($event)" (keydown.escape)="closeMenu()">
+    <nav class="menu-nav">
       <ul class="frame-59">
         @for (item of menuItems(); track item.route) {
           <li>
-            <a 
-              [routerLink]="item.route" 
-              routerLinkActive="active" 
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="active"
               [routerLinkActiveOptions]="{ exact: item.route === '/' }"
               (click)="closeMenu()">
-              
-              <i class="menu-icon" [ngClass]="item.iconClass"></i>
-              
+              <mat-icon class="menu-icon">{{ item.iconClass }}</mat-icon>
               <span class="menu-label">{{ item.label }}</span>
-              
             </a>
           </li>
         }
       </ul>
-
     </nav>
   </div>
 }

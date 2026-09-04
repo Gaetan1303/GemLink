@@ -1,0 +1,9 @@
+.env
+.env.*.local
+config/jwt/*.pem
+var/
+vendor/
+.phpunit.cache/
+compose*.yaml
+tests/
+.git/

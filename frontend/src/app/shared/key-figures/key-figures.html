@@ -1,0 +1,11 @@
+<section class="key-figures">
+  <h2>Chiffres clés</h2>
+  <div class="figures-container" role="list">
+    @for (figure of figures; track figure.label) {
+      <div class="figure" role="listitem">
+        <span class="figure-number">{{ figure.number }}</span>
+        <span class="figure-label">{{ figure.label }}</span>
+      </div>
+    }
+  </div>
+</section>

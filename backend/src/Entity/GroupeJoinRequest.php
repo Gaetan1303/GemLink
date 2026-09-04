@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Entity;
+
+use App\Repository\GroupeJoinRequestRepository;
+use DateTimeImmutable;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Uuid;
+
+#[ORM\Entity(repositoryClass: GroupeJoinRequestRepository::class)]
+#[ORM\Table(name: 'groupe_join_request')]
+#[ORM\Index(name: 'idx_groupe_join_request_group_status', fields: ['group', 'status'])]
+#[ORM\Index(name: 'idx_groupe_join_request_requester_status', fields: ['requester', 'status'])]
+class GroupeJoinRequest
+{
+    public const PENDING = 'PENDING'; public const ACCEPTED = 'ACCEPTED'; public const REJECTED = 'REJECTED'; public const CANCELLED = 'CANCELLED';
+    #[ORM\Id, ORM\Column(type: 'uuid')] private Uuid $id;
+    #[ORM\ManyToOne(targetEntity: Groupe::class), ORM\JoinColumn(name: 'groupe_id', nullable: false, onDelete: 'CASCADE')] private Groupe $group;
+    #[ORM\ManyToOne(targetEntity: User::class), ORM\JoinColumn(name: 'requester_id', nullable: false, onDelete: 'CASCADE')] private User $requester;
+    #[ORM\Column(length: 20)] private string $status = self::PENDING;
+    #[ORM\Column(type: 'text', nullable: true)] private ?string $message = null;
+    #[ORM\ManyToOne(targetEntity: User::class), ORM\JoinColumn(name: 'reviewed_by', nullable: true, onDelete: 'SET NULL')] private ?User $reviewedBy = null;
+    #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')] private DateTimeImmutable $createdAt;
+    #[ORM\Column(name: 'reviewed_at', type: 'datetimetz_immutable', nullable: true)] private ?DateTimeImmutable $reviewedAt = null;
+
+    public function __construct(Groupe $group, User $requester, ?string $message = null) { $this->id = Uuid::v7(); $this->group = $group; $this->requester = $requester; $this->createdAt = new DateTimeImmutable(); $this->setMessage($message); }
+    public function getId(): Uuid { return $this->id; } public function getGroup(): Groupe { return $this->group; } public function getRequester(): User { return $this->requester; } public function getStatus(): string { return $this->status; } public function getMessage(): ?string { return $this->message; } public function getReviewedBy(): ?User { return $this->reviewedBy; } public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; } public function getReviewedAt(): ?DateTimeImmutable { return $this->reviewedAt; } public function isPending(): bool { return $this->status === self::PENDING; }
+    public function setMessage(?string $message): self { $message = $message === null ? null : trim($message); if ($message !== null && mb_strlen($message) > 500) throw new \InvalidArgumentException('Le message est limité à 500 caractères.'); $this->message = $message ?: null; return $this; }
+    public function review(string $status, ?User $reviewer): self { if (!$this->isPending() || !in_array($status, [self::ACCEPTED, self::REJECTED, self::CANCELLED], true)) throw new \LogicException('Demande non modifiable.'); $this->status = $status; $this->reviewedBy = $reviewer; $this->reviewedAt = new DateTimeImmutable(); return $this; }
+}

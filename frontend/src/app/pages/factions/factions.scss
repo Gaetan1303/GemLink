@@ -1,0 +1,498 @@
+// ════════════════════════════════════════════════════════════════
+// PAGES/FACTIONS — SOCLE DE DESIGN PARTAGÉ
+// ════════════════════════════════════════════════════════════════
+// Direction : le "cercle de collectionneurs" — une faction est traitée
+// comme une guilde au sein de GemLink, pas comme une liste d'équipe
+// SaaS générique. On reprend intégralement le langage visuel déjà en
+// place (ink/gold, coin facetté, catalog-label, meta-mono) posé par
+// post-theme et les briques de vitrine-shared (boutons, alerte, champ,
+// badge, règle gravée, animation d'entrée, squelette) plutôt que
+// d'introduire quoi que ce soit de nouveau. La seule nuance propre aux
+// factions : le halo violet en fond de page, comme sur profile/vitrine,
+// pour ancrer ces pages dans la même famille "communauté".
+//
+// Ce fichier est importé (sans espace de nom) par chaque page de
+// src/app/pages/factions/**/*.scss via `@use '../factions';` — la
+// structure d'import existante est conservée à l'identique.
+
+@use '../post/post-theme' as theme;
+@use '../vitrine/vitrine-shared' as shared;
+
+// ── Conteneur de page ────────────────────────────────────────────
+.community-page {
+  position: relative;
+  min-height: 100vh;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 4rem;
+  background-color: theme.$ink;
+  color: theme.$text;
+  overflow-x: hidden;
+  @include theme.mobile-nav-clearance(0rem);
+
+  // Halo d'ambiance — écho du spot de vitrine et du dégradé violet de profile.
+  &::before {
+    content: '';
+    position: absolute;
+    top: -6%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 560px;
+    background: radial-gradient(ellipse at center, theme.$violet-dim, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// ── En-tête / hero ───────────────────────────────────────────────
+.hero {
+  max-width: 640px;
+  margin: 0 auto 2.75rem;
+  text-align: center;
+
+  .eyebrow { @include shared.catalog-eyebrow; }
+
+  h1 {
+    margin: 0.6rem 0 1rem;
+    font-family: theme.$font-display;
+    font-weight: 800;
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    color: theme.$gold;
+  }
+
+  > p {
+    margin: 0 0 1.5rem;
+    color: theme.$text-dim;
+    line-height: 1.6;
+  }
+}
+
+.engraved-rule { @include shared.engraved-rule; margin: 0 auto 1.25rem; }
+
+// ── Boutons ───────────────────────────────────────────────────────
+// `.btn` reste le nom de classe historique du template ; les modificateurs
+// s'appuient sur les briques déjà écrites pour post/vitrine.
+.btn {
+  @include shared.btn-secondary;
+
+  &--primary { @include shared.btn-publish; }
+  &--ghost { @include shared.btn-secondary; }
+  &--danger { @include shared.btn-danger; }
+  &--sm { padding: 0.4rem 0.85rem; font-size: 0.82rem; }
+}
+
+// ── États (chargement / erreur / vide) ─────────────────────────────
+.alert { @include shared.alert-base; &--error { @include shared.alert-error; } }
+
+.state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 2.5rem auto;
+  color: theme.$text-dim;
+  text-align: center;
+
+  mat-icon { color: theme.$gold; opacity: 0.75; }
+  &--error { color: theme.$coral; mat-icon { color: theme.$coral; } }
+}
+
+.empty-state {
+  max-width: 480px;
+  margin: 3rem auto;
+  text-align: center;
+  color: theme.$text-dim;
+
+  &__icon { font-size: 2.5rem; width: 2.5rem; height: 2.5rem; color: theme.$gold; margin-bottom: 0.75rem; }
+  h2 { font-family: theme.$font-display; color: theme.$text; margin: 0 0 0.5rem; }
+  p { line-height: 1.6; margin: 0 0 1.5rem; }
+}
+
+.skeleton-card { @include shared.skeleton; height: 210px; }
+
+// ── Badge de statut (visibilité, rôle) ─────────────────────────────
+.status-badge {
+  @include shared.status-badge;
+
+  mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+
+  &--private { color: theme.$coral; border-color: rgba(224, 122, 95, 0.35); }
+  &--public { color: theme.$emerald; border-color: rgba(123, 201, 154, 0.35); }
+  &--owner { color: theme.$gold; border-color: rgba(197, 160, 89, 0.4); }
+}
+
+// ── Champs de formulaire (filtre + création) ───────────────────────
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__label { @include shared.form-field-label; }
+  &__required { color: theme.$gold; }
+  &__error { margin: 0; font-size: 0.8rem; color: theme.$coral; }
+
+  input, textarea, select { @include shared.form-field-input; }
+  textarea { resize: vertical; }
+
+  select {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, theme.$gold 50%),
+      linear-gradient(135deg, theme.$gold 50%, transparent 50%);
+    background-position: calc(100% - 1.3rem) center, calc(100% - 1rem) center;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+  }
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1.25rem;
+  margin: 0 0 2.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid theme.$line;
+  background: theme.$surface;
+  @include theme.facet-corner-sm;
+
+  .field { flex: 1 1 220px; }
+
+  &__checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.85rem;
+    font-family: theme.$font-display;
+    font-size: 0.9rem;
+    color: theme.$text-dim;
+    cursor: pointer;
+
+    input[type='checkbox'] { accent-color: theme.$gold; width: 1.05rem; height: 1.05rem; }
+  }
+
+  .btn { align-self: flex-end; margin-bottom: 0.05rem; }
+}
+
+// ── Grille & carte de faction ───────────────────────────────────────
+.faction-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.faction-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1.5rem;
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  @include theme.facet-corner-sm;
+  @include shared.reveal;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: rgba(197, 160, 89, 0.55);
+    background: theme.$surface-raised;
+  }
+
+  &__avatar {
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    overflow: hidden;
+    border: 2px solid theme.$gold;
+    border-radius: 50%;
+    background: theme.$surface-raised;
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+    mat-icon { color: theme.$gold; }
+  }
+
+  &__name {
+    margin: 0;
+    font-family: theme.$font-display;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: theme.$text;
+  }
+
+  &__description {
+    flex: 1;
+    margin: 0;
+    color: theme.$text-dim;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  &__count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    @include theme.meta-mono;
+
+    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+  }
+
+  &__cta {
+    margin-top: 0.4rem;
+    align-self: flex-start;
+
+    mat-icon { font-size: 1.05rem; width: 1.05rem; height: 1.05rem; transition: transform 0.15s ease; }
+    &:hover mat-icon { transform: translateX(3px); }
+  }
+}
+
+.load-more {
+  display: flex;
+  margin: 0 auto;
+}
+
+// ── Détail de faction ────────────────────────────────────────────
+.faction-banner {
+  display: block;
+  width: 100%;
+  height: clamp(140px, 22vw, 240px);
+  margin-bottom: -3rem;
+  object-fit: cover;
+  border: 1px solid theme.$line;
+  @include theme.facet-corner;
+}
+
+.faction-header {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid theme.$line;
+  background: linear-gradient(120deg, theme.$surface, #111b3b);
+  @include theme.facet-corner;
+
+  &__avatar {
+    display: grid;
+    place-items: center;
+    width: 84px;
+    height: 84px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 2px solid theme.$gold;
+    border-radius: 50%;
+    background: theme.$surface-raised;
+    color: theme.$gold;
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+    mat-icon { transform: scale(1.6); }
+  }
+
+  > div {
+    flex: 1 1 260px;
+    min-width: 0;
+  }
+
+  h1 {
+    margin: 0 0 0.4rem;
+    font-family: theme.$font-display;
+    font-weight: 800;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    color: theme.$gold;
+  }
+
+  p {
+    margin: 0 0 0.6rem;
+    color: theme.$text-dim;
+    line-height: 1.5;
+  }
+
+  .status-badge { margin-right: 0.6rem; }
+
+  .faction-header__owner {
+    display: block;
+    margin-top: 0.5rem;
+    @include theme.meta-mono;
+  }
+}
+
+.faction-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 0 2rem;
+}
+
+.faction-section {
+  margin-bottom: 2.5rem;
+
+  h2 {
+    margin: 0 0 1rem;
+    font-family: theme.$font-display;
+    color: theme.$gold;
+    font-size: 1.2rem;
+  }
+}
+
+// ── Listes de membres / demandes ─────────────────────────────────
+.member-list, .request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.member-row, .request-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid theme.$line;
+  background: theme.$surface;
+  @include theme.facet-corner-sm;
+}
+
+.member-row {
+  &__avatar {
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(197, 160, 89, 0.4);
+    background: theme.$surface-raised;
+    color: theme.$gold;
+    overflow: hidden;
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+    mat-icon { font-size: 1.2rem; width: 1.2rem; height: 1.2rem; }
+  }
+
+  &__name {
+    flex: 1;
+    min-width: 0;
+    font-family: theme.$font-display;
+    font-weight: 600;
+    color: theme.$text;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
+
+.request-card {
+  align-items: flex-start;
+  justify-content: space-between;
+
+  &__body {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+
+  strong {
+    display: block;
+    font-family: theme.$font-display;
+    color: theme.$text;
+  }
+
+  p {
+    margin: 0.3rem 0 0;
+    color: theme.$text-dim;
+    font-size: 0.9rem;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+.danger-zone {
+  margin-top: 2.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid rgba(224, 122, 95, 0.3);
+  background: rgba(224, 122, 95, 0.06);
+  @include theme.facet-corner-sm;
+
+  h2 {
+    margin: 0 0 0.4rem;
+    font-family: theme.$font-display;
+    color: theme.$coral;
+    font-size: 1.05rem;
+  }
+
+  p {
+    margin: 0 0 1rem;
+    color: theme.$text-dim;
+    font-size: 0.88rem;
+  }
+}
+
+// ── Création de faction ───────────────────────────────────────────
+.create-faction {
+  max-width: 560px;
+  margin: 0 auto;
+  text-align: center;
+
+  h1 {
+    margin: 0.4rem 0 1.25rem;
+    font-family: theme.$font-display;
+    font-weight: 800;
+    font-size: 1.85rem;
+    color: theme.$gold;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: left;
+  }
+
+  .btn { justify-content: center; }
+}
+
+// ── Mouvement d'entrée / accessibilité ─────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .faction-card { animation: none; opacity: 1; }
+}
+
+// ── Responsive ────────────────────────────────────────────────────
+@media (max-width: 640px) {
+  .community-page { padding: 2.5rem 1rem 3.5rem; }
+  .faction-header { padding: 1.5rem; }
+  .faction-header img { width: 64px; height: 64px; }
+  .faction-header__avatar { width: 64px; height: 64px; }
+  .filters { flex-direction: column; align-items: stretch; }
+  .filters .btn { align-self: stretch; justify-content: center; }
+  .member-row, .request-card { flex-direction: column; align-items: flex-start; }
+  .member-row__actions, .request-card__actions { width: 100%; }
+}

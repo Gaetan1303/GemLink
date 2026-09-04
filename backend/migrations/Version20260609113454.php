@@ -9,7 +9,7 @@ final class Version20260609113454 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Schéma initial GemLink : Tables, Types, Index avancés dédoublonnés et Triggers métiers.';
+        return 'Schéma initial GemLink corrigé : Tables, Types, Index avancés et Triggers alignés ORM.';
     }
 
     public function up(Schema $schema): void
@@ -42,9 +42,9 @@ final class Version20260609113454 extends AbstractMigration
         $this->addSql('
             CREATE TABLE utilisateur (
                 id              UUID            NOT NULL DEFAULT uuid_generate_v4(),
-                username        VARCHAR(30)     NOT NULL,
-                email           VARCHAR(255)    NOT NULL,
-                password_hash   VARCHAR(255)    NOT NULL,
+                username        VARCHAR(30)     NOT NULL DEFAULT \'\',
+                email           VARCHAR(255)    NOT NULL DEFAULT \'\',
+                password_hash   VARCHAR(255)    NOT NULL DEFAULT \'\',
                 avatar_url      TEXT,
                 bio             VARCHAR(500),
                 trust_score     SMALLINT        NOT NULL DEFAULT 0 CHECK (trust_score BETWEEN 0 AND 100),
@@ -59,7 +59,6 @@ final class Version20260609113454 extends AbstractMigration
                 CONSTRAINT uq_utilisateur_username UNIQUE (username)
             )
         ');
-        // Note : idx_utilisateur_email est supprimé car uq_utilisateur_email crée déjà cet index sous PostgreSQL.
         $this->addSql('CREATE INDEX idx_utilisateur_role     ON utilisateur (role)');
         $this->addSql('CREATE INDEX idx_utilisateur_status   ON utilisateur (status)');
         $this->addSql('CREATE INDEX idx_utilisateur_points   ON utilisateur (points DESC)');
@@ -71,8 +70,8 @@ final class Version20260609113454 extends AbstractMigration
             CREATE TABLE vendeur (
                 id                      UUID            NOT NULL DEFAULT uuid_generate_v4(),
                 user_id                 UUID            NOT NULL,
-                company_name            VARCHAR(150)    NOT NULL,
-                siret                   VARCHAR(14)     NOT NULL,
+                company_name            VARCHAR(150)    NOT NULL DEFAULT \'\',
+                siret                   VARCHAR(14)     NOT NULL DEFAULT \'\',
                 address                 TEXT,
                 subscription_plan       VARCHAR(50),
                 subscription_expires_at TIMESTAMPTZ,
@@ -91,7 +90,7 @@ final class Version20260609113454 extends AbstractMigration
             CREATE TABLE refresh_token (
                 id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
                 user_id     UUID        NOT NULL,
-                token_hash  VARCHAR(64) NOT NULL,
+                token_hash  VARCHAR(64) NOT NULL DEFAULT \'\',
                 expires_at  TIMESTAMPTZ NOT NULL,
                 revoked_at  TIMESTAMPTZ,
                 created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -108,7 +107,7 @@ final class Version20260609113454 extends AbstractMigration
         $this->addSql('
             CREATE TABLE pierre (
                 id             UUID            NOT NULL DEFAULT uuid_generate_v4(),
-                name           VARCHAR(100)    NOT NULL,
+                name           VARCHAR(100)    NOT NULL DEFAULT \'\',
                 category       VARCHAR(100),
                 hardness       NUMERIC(4, 2)   CHECK (hardness BETWEEN 0 AND 10),
                 crystal_system VARCHAR(50),
@@ -127,7 +126,7 @@ final class Version20260609113454 extends AbstractMigration
             CREATE TABLE tag (
                 id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
                 owner_id    UUID,
-                name        VARCHAR(50) NOT NULL,
+                name        VARCHAR(50) NOT NULL DEFAULT \'\',
                 scope       tag_scope   NOT NULL DEFAULT \'GLOBAL\',
                 created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
@@ -145,7 +144,7 @@ final class Version20260609113454 extends AbstractMigration
                 user_id      UUID        NOT NULL,
                 title        VARCHAR(200),
                 description  TEXT,
-                media_url    TEXT        NOT NULL,
+                media_url    TEXT        NOT NULL DEFAULT \'\',
                 media_type   media_type  NOT NULL,
                 status       post_status NOT NULL DEFAULT \'PENDING_ANALYSIS\',
                 is_sponsored BOOLEAN     NOT NULL DEFAULT FALSE,
@@ -182,13 +181,13 @@ final class Version20260609113454 extends AbstractMigration
                 id             UUID          NOT NULL DEFAULT uuid_generate_v4(),
                 publication_id UUID          NOT NULL,
                 user_id        UUID          NOT NULL,
-                content        TEXT          NOT NULL,
+                content        TEXT          NOT NULL DEFAULT \'\',
                 created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
                 updated_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
                 deleted_at     TIMESTAMPTZ,
                 PRIMARY KEY (id),
                 CONSTRAINT fk_commentaire_publication FOREIGN KEY (publication_id) REFERENCES publication(id) ON DELETE CASCADE,
-                CONSTRAINT fk_commentaire_utilisateur FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE
+                CONSTRAINT fk_commentaire_utilisateur FOREIGN KEY (user_id) REFERENCES utilisateur (id) ON DELETE CASCADE
             )
         ');
         $this->addSql('CREATE INDEX idx_commentaire_pub_id ON commentaire (publication_id)');
@@ -213,10 +212,11 @@ final class Version20260609113454 extends AbstractMigration
         $this->addSql('
             CREATE TABLE ai_model_version (
                 id          UUID            NOT NULL DEFAULT uuid_generate_v4(),
-                name        VARCHAR(50)     NOT NULL,
+                name        VARCHAR(50)     NOT NULL DEFAULT \'\',
                 model_type  ai_model_type   NOT NULL,
                 accuracy    NUMERIC(5, 4)   CHECK (accuracy BETWEEN 0 AND 1),
                 f1_score    NUMERIC(5, 4)   CHECK (f1_score BETWEEN 0 AND 1),
+                description TEXT,
                 status      ai_model_status NOT NULL DEFAULT \'TRAINING\',
                 created_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
@@ -285,15 +285,15 @@ final class Version20260609113454 extends AbstractMigration
             CREATE TABLE vitrine (
                 id           UUID         NOT NULL DEFAULT uuid_generate_v4(),
                 user_id      UUID         NOT NULL,
-                title        VARCHAR(100) NOT NULL,
+                title        VARCHAR(100) NOT NULL DEFAULT \'\',
                 description  TEXT,
-                slug         VARCHAR(150) NOT NULL,
+                slug         VARCHAR(150) NOT NULL DEFAULT \'\',
                 view_count   INTEGER      NOT NULL DEFAULT 0,
                 created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
                 updated_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
                 CONSTRAINT uq_vitrine_slug UNIQUE (slug),
-                CONSTRAINT fk_vitrine_utilisateur FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE CASCADE
+                CONSTRAINT fk_vitrine_utilisateur FOREIGN KEY (user_id) REFERENCES utilisateur (id) ON DELETE CASCADE
             )
         ');
 
@@ -317,7 +317,7 @@ final class Version20260609113454 extends AbstractMigration
         $this->addSql('
             CREATE TABLE badge (
                 id              UUID                 NOT NULL DEFAULT uuid_generate_v4(),
-                name            VARCHAR(100)         NOT NULL,
+                name            VARCHAR(100)         NOT NULL DEFAULT \'\',
                 description     TEXT,
                 condition_type  badge_condition_type NOT NULL,
                 condition_value INTEGER              NOT NULL,
@@ -348,9 +348,9 @@ final class Version20260609113454 extends AbstractMigration
             CREATE TABLE notification (
                 id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
                 user_id     UUID        NOT NULL,
-                type        VARCHAR(50) NOT NULL,
+                type        VARCHAR(50) NOT NULL DEFAULT \'\',
                 target_id   UUID        NOT NULL,
-                target_type VARCHAR(50) NOT NULL,
+                target_type VARCHAR(50) NOT NULL DEFAULT \'\',
                 is_read     BOOLEAN     NOT NULL DEFAULT FALSE,
                 created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
@@ -385,7 +385,7 @@ final class Version20260609113454 extends AbstractMigration
         $this->addSql('
             CREATE TABLE groupe (
                 id          UUID             NOT NULL DEFAULT uuid_generate_v4(),
-                name        VARCHAR(100)     NOT NULL,
+                name        VARCHAR(100)     NOT NULL DEFAULT \'\',
                 description TEXT,
                 visibility  group_visibility NOT NULL DEFAULT \'PUBLIC\',
                 created_by  UUID             NOT NULL,
@@ -448,14 +448,66 @@ final class Version20260609113454 extends AbstractMigration
             CREATE TABLE audit_log (
                 id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
                 user_id     UUID        NOT NULL,
-                action      VARCHAR(50) NOT NULL,
-                target_type VARCHAR(50) NOT NULL,
+                action      VARCHAR(50) NOT NULL DEFAULT \'\',
+                target_type VARCHAR(50) NOT NULL DEFAULT \'\',
                 target_id   UUID        NOT NULL,
                 created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (id),
                 CONSTRAINT fk_audit_log_user FOREIGN KEY (user_id) REFERENCES utilisateur(id) ON DELETE RESTRICT
             )
         ');
+
+        // ─────────────────────────────────────────────
+        // 24 BIS. EMAIL_VALIDATION_TOKEN (US 1.1)
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE email_validation_token (
+                id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
+                user_id     UUID        NOT NULL,
+                token       VARCHAR(255) NOT NULL DEFAULT \'\',
+                expires_at  TIMESTAMPTZ NOT NULL,
+                used        BOOLEAN     NOT NULL DEFAULT FALSE,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (id),
+                CONSTRAINT fk_email_validation_token_user FOREIGN KEY (user_id) REFERENCES utilisateur (id) ON DELETE CASCADE,
+                CONSTRAINT uq_email_validation_token_token UNIQUE (token)
+            )
+        ');
+        $this->addSql('CREATE INDEX idx_email_validation_token_user_id ON email_validation_token (user_id)');
+
+        // ─────────────────────────────────────────────
+        // 24 TER. PASSWORD_RESET_TOKEN
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE password_reset_token (
+                id          UUID        NOT NULL DEFAULT uuid_generate_v4(),
+                user_id     UUID        NOT NULL,
+                token       VARCHAR(255) NOT NULL DEFAULT \'\',
+                expires_at  TIMESTAMPTZ NOT NULL,
+                used        BOOLEAN     NOT NULL DEFAULT FALSE,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (id),
+                CONSTRAINT fk_password_reset_token_user FOREIGN KEY (user_id) REFERENCES utilisateur (id) ON DELETE CASCADE,
+                CONSTRAINT uq_password_reset_token_token UNIQUE (token)
+            )
+        ');
+        $this->addSql('CREATE INDEX idx_password_reset_token_user_id ON password_reset_token (user_id)');
+
+        // ─────────────────────────────────────────────
+        // 24 QUATER. NEWSLETTER_SUBSCRIBER
+        // ─────────────────────────────────────────────
+        $this->addSql('
+            CREATE TABLE newsletter_subscriber (
+                id               UUID        NOT NULL DEFAULT uuid_generate_v4(),
+                email            VARCHAR(255) NOT NULL DEFAULT \'\',
+                status           VARCHAR(20) NOT NULL DEFAULT \'ACTIVE\',
+                subscribed_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                unsubscribed_at  TIMESTAMPTZ,
+                PRIMARY KEY (id),
+                CONSTRAINT uq_newsletter_subscriber_email UNIQUE (email)
+            )
+        ');
+        $this->addSql('CREATE INDEX idx_newsletter_subscriber_status ON newsletter_subscriber (status)');
 
         // ─────────────────────────────────────────────
         // 25. INDEX RECHERCHE AVANCÉE (FTS & FEED)
@@ -467,7 +519,6 @@ final class Version20260609113454 extends AbstractMigration
         // ─────────────────────────────────────────────
         // 26. TRIGGERS POSTGRESQL (Automatisation Métier)
         // ─────────────────────────────────────────────
-        
         $this->addSql('
             CREATE OR REPLACE FUNCTION trigger_set_timestamp() RETURNS TRIGGER AS $$
             BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
@@ -490,7 +541,6 @@ final class Version20260609113454 extends AbstractMigration
         ');
         $this->addSql('CREATE TRIGGER auto_moderate_pub_after_report AFTER INSERT OR UPDATE ON report FOR EACH ROW EXECUTE FUNCTION trigger_auto_moderate_publication()');
 
-        // Correction du trigger de Trust Score pour supporter le DELETE
         $this->addSql('
             CREATE OR REPLACE FUNCTION trigger_recalculate_trust_score() RETURNS TRIGGER AS $$
             DECLARE 
@@ -572,6 +622,9 @@ final class Version20260609113454 extends AbstractMigration
         $this->addSql('DROP TABLE IF EXISTS publication');
         $this->addSql('DROP TABLE IF EXISTS tag');
         $this->addSql('DROP TABLE IF EXISTS pierre');
+        $this->addSql('DROP TABLE IF EXISTS newsletter_subscriber');
+        $this->addSql('DROP TABLE IF EXISTS password_reset_token');
+        $this->addSql('DROP TABLE IF EXISTS email_validation_token');
         $this->addSql('DROP TABLE IF EXISTS refresh_token');
         $this->addSql('DROP TABLE IF EXISTS vendeur');
         $this->addSql('DROP TABLE IF EXISTS utilisateur');

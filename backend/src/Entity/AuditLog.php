@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+
 
 namespace App\Entity;
 
@@ -9,10 +9,32 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
+/**
+ * Journal d'audit immuable (cf. trigger_protect_audit_log en base : ni UPDATE
+ * ni DELETE ne sont autorisés une fois une ligne insérée).
+ *
+ * US 2.4 CA-2 : action COMMENT_DELETED, target = le commentaire supprimé.
+ */
 #[ORM\Entity(repositoryClass: AuditLogRepository::class)]
 #[ORM\Table(name: 'audit_log')]
+#[ORM\Index(name: 'idx_audit_log_target_history', fields: ['targetType', 'targetId', 'createdAt'])]
 class AuditLog
 {
+    public const ACTION_COMMENT_DELETED = 'COMMENT_DELETED';
+    public const ACTION_REPORT_ACCEPTED = 'REPORT_ACCEPTED';
+    public const ACTION_REPORT_REJECTED = 'REPORT_REJECTED';
+    public const ACTION_FACTION_ARCHIVED = 'FACTION_ARCHIVED';
+    public const ACTION_FACTION_MEMBER_REMOVED = 'FACTION_MEMBER_REMOVED';
+    public const ACTION_FACTION_MEMBER_ROLE_CHANGED = 'FACTION_MEMBER_ROLE_CHANGED';
+    public const ACTION_FACTION_OWNERSHIP_TRANSFERRED = 'FACTION_OWNERSHIP_TRANSFERRED';
+    public const ACTION_CHAT_MESSAGE_MODERATED = 'CHAT_MESSAGE_MODERATED';
+
+    public const TARGET_TYPE_COMMENTAIRE = 'COMMENTAIRE';
+    public const TARGET_TYPE_REPORT = 'REPORT';
+    public const TARGET_TYPE_PUBLICATION = 'PUBLICATION';
+    public const TARGET_TYPE_FACTION = 'FACTION';
+    public const TARGET_TYPE_CHAT_MESSAGE = 'CHAT_MESSAGE';
+
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
     private Uuid $id;
@@ -30,16 +52,55 @@ class AuditLog
     #[ORM\Column(name: 'target_id', type: 'uuid')]
     private Uuid $targetId;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $reason;
+
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $createdAt;
 
-    public function __construct(User $user, string $action, string $targetType, Uuid $targetId)
+    public function __construct(User $user, string $action, string $targetType, Uuid $targetId, ?string $reason = null)
     {
         $this->id = Uuid::v7();
         $this->user = $user;
         $this->action = $action;
         $this->targetType = $targetType;
         $this->targetId = $targetId;
+        $this->reason = $reason;
         $this->createdAt = new DateTimeImmutable();
+    }
+
+    public function getId(): Uuid
+    {
+        return $this->id;
+    }
+
+    public function getUser(): User
+    {
+        return $this->user;
+    }
+
+    public function getAction(): string
+    {
+        return $this->action;
+    }
+
+    public function getTargetType(): string
+    {
+        return $this->targetType;
+    }
+
+    public function getTargetId(): Uuid
+    {
+        return $this->targetId;
+    }
+
+    public function getReason(): ?string
+    {
+        return $this->reason;
+    }
+
+    public function getCreatedAt(): DateTimeImmutable
+    {
+        return $this->createdAt;
     }
 }

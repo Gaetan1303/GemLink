@@ -1,0 +1,299 @@
+// ════════════════════════════════════════════════════════════════
+// PAGES/MESSAGES — SOCLE DE DESIGN PARTAGÉ
+// ════════════════════════════════════════════════════════════════
+// Direction : le "salon de correspondance" — la liste de conversations
+// et le fil de discussion reprennent exactement le langage visuel déjà
+// posé par post-theme (ink/gold, coin facetté, catalog-label, meta-mono)
+// et par les briques de vitrine-shared (boutons, alerte, champ, badge,
+// squelette, animation d'entrée). Rien de neuf n'est inventé ici : les
+// bulles de message réutilisent la même surface/ligne que les cartes
+// de post et de vitrine, seule la disposition change pour épouser un
+// fil de discussion.
+//
+// Ce fichier est importé (sans espace de nom) par chaque page de
+// src/app/pages/messages/**/*.scss via `@use '../messages';` — la
+// structure d'import existante est conservée à l'identique.
+
+@use '../post/post-theme' as theme;
+@use '../vitrine/vitrine-shared' as shared;
+
+// ── Conteneur de page ────────────────────────────────────────────
+.messages-page {
+  position: relative;
+  min-height: 100vh;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 4rem;
+  background-color: theme.$ink;
+  color: theme.$text;
+  @include theme.mobile-nav-clearance(0rem);
+}
+
+.messages-page > h1,
+.conversation-detail-page header h1 {
+  margin: 0 0 0.4rem;
+  font-family: theme.$font-display;
+  font-weight: 800;
+  font-size: clamp(1.7rem, 3.4vw, 2.2rem);
+  color: theme.$gold;
+}
+
+.messages-page > h1 { margin-bottom: 1.75rem; }
+
+.engraved-rule { @include shared.engraved-rule; margin: 0 0 1.75rem; }
+
+// ── Boutons ───────────────────────────────────────────────────────
+.btn {
+  @include shared.btn-secondary;
+
+  &--primary { @include shared.btn-publish; }
+  &--danger { @include shared.btn-danger; }
+}
+
+// ── États (chargement / erreur / vide) ─────────────────────────────
+.alert { @include shared.alert-base; &--error { @include shared.alert-error; } }
+
+.state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 2.5rem auto;
+  color: theme.$text-dim;
+  text-align: center;
+
+  mat-icon { color: theme.$gold; opacity: 0.75; }
+  &--error { color: theme.$coral; mat-icon { color: theme.$coral; } }
+}
+
+.empty-state {
+  max-width: 420px;
+  margin: 3rem auto;
+  text-align: center;
+  color: theme.$text-dim;
+
+  &__icon { font-size: 2.5rem; width: 2.5rem; height: 2.5rem; color: theme.$gold; margin-bottom: 0.75rem; }
+  p { line-height: 1.6; margin: 0; }
+}
+
+.skeleton-row { @include shared.skeleton; height: 4.5rem; margin-bottom: 0.75rem; }
+
+// ── Badge de statut (type de conversation, non lus) ────────────────
+.status-badge {
+  @include shared.status-badge;
+  &--direct { color: theme.$violet; border-color: rgba(141, 127, 224, 0.35); }
+  &--faction { color: theme.$gold; border-color: rgba(197, 160, 89, 0.35); }
+}
+
+// ── Liste des conversations ─────────────────────────────────────────
+.conversations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.thread {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  border: none;
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  @include theme.facet-corner-sm;
+  @include shared.reveal;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(197, 160, 89, 0.55);
+    background: theme.$surface-raised;
+  }
+
+  &__avatar {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 50%;
+    border: 2px solid theme.$gold;
+    background: theme.$surface-raised;
+    color: theme.$gold;
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  &__title {
+    font-family: theme.$font-display;
+    font-weight: 700;
+    color: theme.$text;
+  }
+
+  &__preview {
+    overflow: hidden;
+    color: theme.$text-dim;
+    font-size: 0.86rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.unread {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: theme.$gold;
+  color: theme.$ink;
+  font-family: theme.$font-mono;
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+// ── Fil de discussion ────────────────────────────────────────────
+.conversation-detail-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid theme.$line;
+  }
+}
+
+.conversation-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-height: 45vh;
+  margin-bottom: 1.5rem;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-self: flex-start;
+  max-width: 78%;
+  padding: 0.8rem 1rem;
+  background: theme.$surface;
+  border: 1px solid theme.$line;
+  @include theme.facet-corner-sm;
+  @include shared.reveal;
+
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+
+    strong {
+      font-family: theme.$font-display;
+      font-weight: 700;
+      color: theme.$gold;
+      font-size: 0.88rem;
+    }
+
+    time { @include theme.meta-mono; font-size: 0.72rem; }
+  }
+
+  p { margin: 0; line-height: 1.5; color: theme.$text; }
+
+  small { @include theme.meta-mono; font-size: 0.72rem; color: theme.$text-faint; }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0;
+      border: none;
+      background: none;
+      color: theme.$text-dim;
+      font-family: theme.$font-display;
+      font-size: 0.76rem;
+      cursor: pointer;
+      transition: color 0.15s ease;
+
+      mat-icon { font-size: 0.95rem; width: 0.95rem; height: 0.95rem; }
+      &:hover { color: theme.$gold; }
+    }
+  }
+
+  &--me {
+    align-self: flex-end;
+    background: linear-gradient(135deg, rgba(197, 160, 89, 0.16), theme.$surface-raised);
+    border-color: rgba(197, 160, 89, 0.35);
+
+    header strong { color: theme.$text; }
+  }
+}
+
+.load-older {
+  display: flex;
+  margin: 0 auto 1.25rem;
+}
+
+// ── Zone de composition ──────────────────────────────────────────
+.conversation-compose {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid theme.$line;
+  background: theme.$surface;
+  @include theme.facet-corner-sm;
+
+  textarea {
+    @include shared.form-field-input;
+    flex: 1;
+    resize: none;
+    min-height: 2.6rem;
+  }
+
+  .btn {
+    flex-shrink: 0;
+    height: 2.85rem;
+  }
+}
+
+// ── Accessibilité / responsive ─────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .thread, .message { animation: none; opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  .messages-page { padding: 2.5rem 1rem 6rem; }
+  .thread__preview { max-width: 46vw; }
+  .message { max-width: 92%; }
+  .conversation-compose { flex-direction: column; align-items: stretch; }
+  .conversation-compose .btn { justify-content: center; }
+}

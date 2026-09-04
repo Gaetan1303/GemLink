@@ -2,13 +2,14 @@ import { Component } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon'; 
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
+import { RouterLink } from '@angular/router';
 
 
 
 @Component({
   selector: 'app-hero-section',
-  imports: [MatIconModule, MatToolbarModule, MatButtonModule],
+  imports: [MatIconModule, MatToolbarModule, MatButtonModule, RouterLink],
   templateUrl: './hero-section.html',
   styleUrls: ['./hero-section.scss'],
 })
-export class HeroSectionComponent {}
+export class HeroSection {}

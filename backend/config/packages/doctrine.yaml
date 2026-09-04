@@ -1,7 +1,7 @@
 doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
-        server_version: '18.4'
+        server_version: '16'
         mapping_types:
             ai_model_status: string
             ai_model_type: string
@@ -18,15 +18,13 @@ doctrine:
             user_role: string
             user_status: string
             validation_action: string
+            vitrine_status: string
             vector: vector
+        schema_filter: '~^(?!idx_embedding_vector_hnsw|idx_publication_fts|idx_pierre_fts|idx_publication_feed|set_timestamp_|auto_moderate_|update_trust_score_|protect_audit_log_)~'
         types:
             vector: Pgvector\Doctrine\VectorType
             halfvec: Pgvector\Doctrine\HalfVectorType
             sparsevec: Pgvector\Doctrine\SparseVectorType
-
-        # IMPORTANT: You MUST configure your server version,
-        # either here or in the DATABASE_URL env var (see .env file)
-        #server_version: '16'
 
         profiling_collect_backtrace: '%kernel.debug%'
     orm:
@@ -59,10 +57,10 @@ when@prod:
                 type: pool
                 pool: doctrine.result_cache_pool
 
-    framework:
-        cache:
-            pools:
-                doctrine.result_cache_pool:
-                    adapter: cache.app
-                doctrine.system_cache_pool:
-                    adapter: cache.system
+framework:
+    cache:
+        pools:
+            doctrine.result_cache_pool:
+                adapter: cache.app
+            doctrine.system_cache_pool:
+                adapter: cache.system

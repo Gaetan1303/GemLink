@@ -1,0 +1,50 @@
+.notifications-page {
+  max-width: 760px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+header,
+li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+ul {
+  display: grid;
+  gap: .75rem;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: .75rem;
+}
+
+li.unread {
+  border-left: 4px solid #6f4aa8;
+  background: #faf7ff;
+}
+
+.notification {
+  display: grid;
+  gap: .3rem;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.error { color: #a40000; }
+.empty { justify-content: center; }

@@ -1,0 +1,7 @@
+backend/.env
+.env
+!.env.example
+backend/.env
+backend/.env
+Fastapi/checkpoints/*.pth
+Fastapi/checkpoints/*.pt

@@ -1,0 +1,510 @@
+@use '../post-theme' as theme;
+
+.post-detail-page {
+  min-height: 100vh;
+  background-color: theme.$ink;
+  color: theme.$text;
+  padding: 2.5rem 1.5rem 4rem;
+  @include theme.mobile-nav-clearance;
+
+  .post-detail-container {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  .post-detail-loading {
+    text-align: center;
+    color: theme.$text-dim;
+    padding: 3rem 0;
+  }
+
+  .alert--error {
+    padding: 0.85rem 1rem;
+    border-radius: 6px;
+    background: rgba(224, 122, 95, 0.15);
+    border: 1px solid rgba(224, 122, 95, 0.4);
+    color: theme.$coral;
+  }
+}
+
+.similar-posts {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid theme.$line;
+
+  &__heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.25rem;
+
+    h2 { margin: .2rem 0 0; color: theme.$gold; font-family: theme.$font-display; font-size: clamp(1.6rem, 3vw, 2.2rem); }
+    p { max-width: 420px; margin: 0; color: theme.$text-dim; line-height: 1.55; }
+  }
+
+  &__eyebrow { @include theme.catalog-label; color: theme.$violet; }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 1rem;
+  }
+}
+
+.similar-post {
+  overflow: hidden;
+  color: theme.$text;
+  text-decoration: none;
+  background: linear-gradient(150deg, theme.$surface-raised, theme.$surface);
+  border: 1px solid theme.$line;
+  transition: transform .2s ease, border-color .2s ease;
+  @include theme.facet-corner-sm;
+
+  &:hover { border-color: theme.$gold; transform: translateY(-4px); }
+
+  &__media {
+    position: relative;
+    height: 165px;
+
+    img, .similar-post__video { display: grid; place-items: center; width: 100%; height: 100%; object-fit: cover; color: theme.$gold; background: theme.$surface-raised; }
+    > strong { position: absolute; top: .65rem; right: .65rem; padding: .3rem .45rem; color: theme.$ink; background: rgba(197, 160, 89, .94); font-family: theme.$font-mono; font-size: .72rem; }
+  }
+
+  &__body {
+    display: grid;
+    gap: .35rem;
+    padding: .85rem;
+
+    small { @include theme.meta-mono; }
+    > span { overflow: hidden; color: theme.$text; font-family: theme.$font-display; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    em { display: flex; align-items: center; gap: .25rem; margin-top: .35rem; color: theme.$violet; font-size: .76rem; font-style: normal; }
+    mat-icon { width: 15px; height: 15px; font-size: 15px; }
+  }
+}
+
+.similar-post-skeleton {
+  height: 245px;
+  background: linear-gradient(100deg, theme.$surface 30%, theme.$surface-raised 50%, theme.$surface 70%);
+  background-size: 200% 100%;
+  animation: similarShimmer 1.5s ease-in-out infinite;
+  @include theme.facet-corner-sm;
+}
+
+@keyframes similarShimmer {
+  from { background-position: 140% 0; }
+  to { background-position: -40% 0; }
+}
+
+@media (max-width: 620px) {
+  .similar-posts__heading { align-items: start; flex-direction: column; gap: .5rem; }
+  .similar-posts__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .similar-post__media { height: 140px; }
+}
+
+@media (max-width: 400px) {
+  .similar-posts__grid { grid-template-columns: 1fr; }
+}
+
+// ── Fiche de spécimen : deux colonnes sur desktop ──────────────────
+.specimen-record {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.post-media {
+  position: relative;
+  overflow: hidden;
+  background: theme.$surface;
+  @include theme.facet-corner;
+  position: sticky;
+  top: 1.5rem;
+
+  @media (max-width: 860px) {
+    position: static;
+  }
+
+  img, video {
+    width: 100%;
+    max-height: 620px;
+    object-fit: cover;
+    display: block;
+  }
+
+  &__catalog {
+    position: absolute;
+    left: 0.9rem;
+    bottom: 0.9rem;
+    @include theme.catalog-label;
+    color: theme.$text;
+    background: rgba(4, 10, 32, 0.72);
+    backdrop-filter: blur(3px);
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+  }
+
+  // US 3.1 : pendant PENDING_ANALYSIS, une ligne de balayage traverse le
+  // média en boucle — retirée en fondu (@scanFade) dès que le statut change.
+  .scan-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -40%;
+      height: 40%;
+      background: linear-gradient(
+        180deg,
+        rgba(197, 160, 89, 0) 0%,
+        rgba(197, 160, 89, 0.35) 50%,
+        rgba(197, 160, 89, 0) 100%
+      );
+      animation: scanSweep 2.2s ease-in-out infinite;
+    }
+  }
+}
+
+.post-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  h1 {
+    font-family: theme.$font-display;
+    font-weight: 800;
+    font-size: 1.7rem;
+    color: theme.$gold;
+    margin: 0;
+  }
+}
+
+// Étiquette façon fiche de terrain : auteur / date / vues alignés en mono.
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+  margin: 0;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid theme.$line;
+
+  div {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+  }
+
+  dt {
+    @include theme.meta-mono;
+    color: theme.$text-faint;
+  }
+
+  dd {
+    @include theme.meta-mono;
+    color: theme.$text;
+    margin: 0;
+  }
+}
+
+.post-like {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid theme.$line;
+  border-radius: 999px;
+  background: transparent;
+  color: theme.$text-dim;
+  cursor: pointer;
+
+  mat-icon { width: 1.1rem; height: 1.1rem; font-size: 1.1rem; }
+  &:hover:not(:disabled), &--active { color: theme.$coral; border-color: rgba(224, 122, 95, 0.55); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+}
+
+// ── Fiche d'identification ──────────────────────────────────────────
+.identification-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1.25rem 1.3rem;
+  background: theme.$surface;
+  border: 1px solid rgba(123, 201, 154, 0.3);
+  @include theme.facet-corner-sm;
+  overflow: hidden;
+  position: relative;
+
+  &::before {
+    // Fine ligne de "tampon" en haut, écho du motif facetté.
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: linear-gradient(90deg, theme.$emerald, transparent 70%);
+  }
+
+  &__eyebrow {
+    @include theme.catalog-label;
+    color: theme.$emerald;
+  }
+
+  h2 {
+    font-family: theme.$font-display;
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: theme.$text;
+    margin: 0;
+  }
+}
+
+.identification-warning {
+  margin: 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: 6px;
+  background: theme.$gold-dim;
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  color: theme.$gold;
+  font-size: 0.82rem;
+}
+
+.identification-properties {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.6rem 1.2rem;
+  margin: 0;
+
+  dt {
+    @include theme.catalog-label;
+    color: theme.$text-faint;
+    margin-bottom: 0.15rem;
+  }
+
+  dd {
+    margin: 0;
+    color: theme.$text;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+}
+
+.identification-description-wrapper {
+  position: relative;
+}
+
+.identification-description {
+  margin: 0;
+  line-height: 1.6;
+  color: rgba(240, 240, 240, 0.85);
+  font-size: 0.92rem;
+
+  // US 3.1 : hauteur limitée + défilement doux au clic sur le bouton
+  // plutôt qu'une carte qui s'étire indéfiniment avec les descriptions
+  // longues générées par l'agent connaissance IA.
+  max-height: 4.8rem;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding-right: 2.25rem; // dégage la place du bouton flottant
+  scrollbar-width: thin;
+  scrollbar-color: theme.$gold transparent;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb {
+    background: theme.$gold;
+    border-radius: 999px;
+  }
+}
+
+.btn-scroll-description {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1px solid rgba(197, 160, 89, 0.35);
+  background: theme.$surface-raised;
+  color: theme.$gold;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  &:hover { background: theme.$gold-dim; }
+  &:active { transform: scale(0.92); }
+}
+
+// ── Reste de la fiche ────────────────────────────────────────────
+.post-description {
+  line-height: 1.7;
+  color: rgba(240, 240, 240, 0.9);
+}
+
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  .tag {
+    text-decoration: none;
+    background: theme.$gold-dim;
+    color: theme.$gold;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    transition: background .2s ease, color .2s ease;
+
+    &:hover { color: theme.$ink; background: theme.$gold; }
+  }
+}
+
+.post-actions {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid theme.$line;
+}
+
+.btn-delete {
+  background: transparent;
+  border: 1px solid rgba(224, 122, 95, 0.5);
+  color: theme.$coral;
+  border-radius: 6px;
+  padding: 0.5rem 1.2rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: rgba(224, 122, 95, 0.1); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(240, 240, 240, 0.3);
+  color: theme.$text;
+  border-radius: 6px;
+  padding: 0.5rem 1.2rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+
+  &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.05); }
+}
+
+.delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  span { color: rgba(240, 240, 240, 0.8); }
+}
+
+.field-error {
+  color: theme.$coral;
+  font-size: 0.85rem;
+}
+
+// US 6.1 — le signalement reste discret, mais le formulaire fournit aux
+// modérateurs le contexte nécessaire sans quitter la fiche du spécimen.
+.report-section {
+  margin-top: .5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid theme.$line;
+
+  h2 {
+    margin: 0;
+    color: theme.$text;
+    font-family: theme.$font-display;
+    font-size: 1.1rem;
+  }
+
+  > p {
+    margin: .35rem 0 .85rem;
+    color: theme.$text-dim;
+    font-size: .9rem;
+  }
+
+  .btn-secondary { margin-left: 0; }
+
+  &__message {
+    padding: .65rem .8rem;
+    border: 1px solid rgba(123, 201, 154, .35);
+    background: rgba(123, 201, 154, .08);
+    color: theme.$emerald;
+  }
+}
+
+.report-form {
+  display: grid;
+  gap: .45rem;
+
+  label {
+    margin-top: .5rem;
+    color: theme.$text;
+    font-size: .9rem;
+    font-weight: 600;
+  }
+
+  select, textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid theme.$line;
+    border-radius: 5px;
+    background: theme.$surface;
+    color: theme.$text;
+    font: inherit;
+    padding: .65rem .75rem;
+
+    &:focus { outline: 2px solid theme.$gold; outline-offset: 2px; }
+  }
+
+  textarea { resize: vertical; }
+  .optional, &__count { color: theme.$text-faint; font-size: .8rem; font-weight: 400; }
+  &__count { justify-self: end; }
+
+  &__actions {
+    display: flex;
+    gap: .5rem;
+    margin-top: .65rem;
+    .btn-secondary { margin-left: 0; }
+  }
+}
+
+@keyframes scanSweep {
+  0%   { top: -40%; }
+  100% { top: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-media .scan-overlay::before {
+    animation: none;
+    display: none;
+  }
+}

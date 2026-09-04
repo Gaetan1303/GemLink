@@ -5,10 +5,32 @@ framework:
         transports:
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 5
+                    delay: 1000
+                    multiplier: 2
+                    max_delay: 60000
 
-       
             failed:
                 dsn: '%env(MESSENGER_FAILED_TRANSPORT_DSN)%'
 
+            low_priority:
+                dsn: '%env(MESSENGER_LOW_PRIORITY_TRANSPORT_DSN)%'
+                retry_strategy:
+                    service: App\Messenger\AnalyzeMediaRetryStrategy
+
         routing:
             'App\Message\SendEmailMessage': async
+            'App\Message\AnalyzeMediaMessage': async
+            'App\Message\AnalyzePublicIdentificationMessage': low_priority
+            'App\Message\RecalculateConsensusMessage': async
+            'App\Message\RunFineTuningMessage': async
+            'App\Message\AwardPointsMessage': async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                async: 'in-memory://'
+                failed: 'in-memory://'
+                low_priority: 'in-memory://'

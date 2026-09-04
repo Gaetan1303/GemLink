@@ -1,0 +1,33 @@
+<main class="notifications-page">
+  <header>
+    <div>
+      <p class="eyebrow">Mon activité</p>
+      <h1>Notifications</h1>
+    </div>
+    @if (unreadCount() > 0) {
+      <button type="button" (click)="markAllRead()">Tout marquer comme lu</button>
+    }
+  </header>
+
+  @if (loading()) {
+    <p>Chargement…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  } @else {
+    <ul>
+      @for (notification of notifications(); track notification.id) {
+        <li [class.unread]="!notification.isRead">
+          <button type="button" class="notification" (click)="markRead(notification)">
+            <span>{{ notification.content || 'Nouvelle activité sur GemLink' }}</span>
+            <small>{{ notification.createdAt | date:'short' }}</small>
+          </button>
+          @if (notification.targetType === 'PUBLICATION' && notification.targetId) {
+            <a [routerLink]="['/posts', notification.targetId]">Voir</a>
+          }
+        </li>
+      } @empty {
+        <li class="empty">Aucune notification.</li>
+      }
+    </ul>
+  }
+</main>

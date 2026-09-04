@@ -1,0 +1,122 @@
+<div><app-header /></div>
+
+<app-header-image></app-header-image>
+
+
+<main class="post-list-page" id="main-content">
+
+  <div class="post-list-hero">
+    <div class="post-list-hero__content">
+      <span class="eyebrow">Collection communautaire</span>
+      <h1>Spécimens partagés</h1>
+      <p class="post-list-hero__subtitle">
+        @if (total() > 0) {
+          {{ total() }} pierre{{ total() > 1 ? 's' : '' }} cataloguée{{ total() > 1 ? 's' : '' }} par la communauté, identifiée{{ total() > 1 ? 's' : '' }} par notre IA.
+        } @else {
+          Chaque trouvaille, identifiée par l'IA et cataloguée par la communauté.
+        }
+      </p>
+      <a routerLink="/posts/new" class="btn-publish">
+        <mat-icon>add_a_photo</mat-icon>
+        Cataloguer une pierre
+      </a>
+    </div>
+
+    @if (heroPost(); as featured) {
+      <a class="hero-specimen-card" [routerLink]="['/posts', featured.id]" [attr.aria-label]="'Découvrir les pierres similaires à ' + (featured.title || featured.identification?.nom || 'ce spécimen')">
+        <div class="hero-specimen-card__media">
+          <img [src]="featured.mediaUrl" [alt]="featured.title || featured.identification?.nom || 'Spécimen minéralogique analysé'" />
+          <span><mat-icon>auto_awesome</mat-icon>Analyse terminée</span>
+        </div>
+        <div class="hero-specimen-card__body">
+          <small>Inspiration minérale</small>
+          <strong>{{ featured.title || featured.identification?.nom || 'Spécimen analysé' }}</strong>
+          <span>Voir sa fiche et les posts similaires <mat-icon>arrow_forward</mat-icon></span>
+        </div>
+      </a>
+    }
+  </div>
+
+  <div class="post-list-container">
+
+    @if (activeTag(); as tag) {
+      <div class="active-tag-filter"><span>Filtre actif : #{{ tag }}</span><button type="button" (click)="clearTag()"><mat-icon>close</mat-icon>Tout afficher</button></div>
+    }
+
+    @if (loadError()) {
+      <div class="alert alert--error" role="alert">{{ loadError() }}</div>
+    }
+    @if (likeError()) {
+      <div class="alert alert--error" role="alert">{{ likeError() }}</div>
+    }
+
+    @if (isLoading()) {
+      <div class="post-grid post-grid--skeleton" aria-hidden="true">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <div class="skeleton-card"></div>
+        }
+      </div>
+    } @else if (posts().length === 0) {
+      <div class="empty-state">
+        <mat-icon class="empty-state__icon">diamond</mat-icon>
+        <h2>Le tiroir est encore vide</h2>
+        <p>Aucun spécimen catalogué pour le moment. Soyez le premier à partager une découverte.</p>
+        <a routerLink="/posts/new" class="btn-publish">
+          <mat-icon>add_a_photo</mat-icon>
+          Publier la première pierre
+        </a>
+      </div>
+    } @else {
+      <div class="post-grid">
+        @for (post of posts(); track post.id; let i = $index) {
+          <article
+            class="post-card"
+            [style.animation-delay.ms]="i * 60"
+          >
+            <a [routerLink]="['/posts', post.id]" class="post-card__link" [attr.aria-label]="'Voir le post ' + (post.title || post.id)">
+              <div class="post-card__media">
+              @if (post.mediaType === 'IMAGE') {
+                <img [src]="post.mediaUrl" [alt]="post.title ?? 'Pierre publiée par ' + post.author.username" />
+              } @else {
+                <div class="post-card__video-thumb">
+                  <mat-icon>videocam</mat-icon>
+                </div>
+              }
+            </div>
+              <div class="post-card__info">
+                <span class="post-card__catalog">N° {{ post.id.slice(0, 8) | uppercase }}</span>
+                <span class="post-card__title">{{ post.title || 'Sans titre' }}</span>
+                <span class="post-card__author">{{ post.author.username }}</span>
+
+                @if (post.status !== 'ANALYZED') {
+                  <app-analysis-status [status]="post.status" size="sm" />
+                }
+              </div>
+            </a>
+            <button
+              type="button"
+              class="btn-like"
+              [class.btn-like--active]="post.likedByCurrentUser"
+              [disabled]="!authService.isAuthenticated() || likingPostIds().has(post.id)"
+              [attr.aria-pressed]="post.likedByCurrentUser"
+              [attr.aria-label]="post.likedByCurrentUser ? 'Retirer mon like' : 'Liker ce post'"
+              (click)="toggleLike(post)"
+            >
+              <mat-icon>{{ post.likedByCurrentUser ? 'favorite' : 'favorite_border' }}</mat-icon>
+              <span>{{ post.likeCount }}</span>
+            </button>
+          </article>
+        }
+      </div>
+
+      <div class="pagination">
+        <button type="button" (click)="goToPrevPage()" [disabled]="!hasPrevPage()">Précédent</button>
+        <span class="pagination__meta">Page {{ page() }}</span>
+        <button type="button" (click)="goToNextPage()" [disabled]="!hasNextPage()">Suivant</button>
+      </div>
+    }
+
+  </div>
+</main>
+
+<app-footer />

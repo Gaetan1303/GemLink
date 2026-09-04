@@ -1,0 +1,23 @@
+<app-header></app-header>
+<main class="identify-page">
+  <section class="identify-card">
+    <span class="eyebrow">Identification publique</span>
+    <h1>Identifier une pierre</h1>
+    <p>Deux analyses par jour. Votre image et son résultat sont supprimés après une heure.</p>
+    @if (!identification()) {
+      <label class="upload-zone"><input type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event)"><span>Choisir une photo (JPEG, PNG ou WebP · 1 Mo max)</span></label>
+      @if (preview()) { <img class="preview" [src]="preview()" alt="Aperçu de la pierre"> }
+      <button type="button" class="btn-identify" [disabled]="!canSubmit()" (click)="submit()">@if (isSubmitting()) { Analyse en file… } @else { Identifier ma pierre }</button>
+    } @else if (identification(); as item) {
+      @if (item.status === 'PENDING_ANALYSIS') { <p class="pending">Votre analyse est en attente. Elle sera traitée après les publications GemLink.</p> }
+      @else if (item.status === 'ANALYSIS_FAILED') { <p class="error">Nous n’avons pas pu identifier cette image.</p> }
+      @else if (item.result; as result) {
+        <app-pipeline-result [result]="result" />
+        <button type="button" class="btn-identify" (click)="publish()">Publier cette pierre</button>
+        @if (!auth.isAuthenticated()) { <p class="hint">Connectez-vous pour publier votre découverte.</p> }
+      }
+    }
+    @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  </section>
+</main>
+<app-footer></app-footer>

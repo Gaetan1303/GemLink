@@ -1,0 +1,27 @@
+# ==============================================================================
+# GEMLINK AI - CONFIGURATION CORE API & SERVEUR
+# ==============================================================================
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+python-multipart==0.0.32
+pydantic==2.13.5
+pydantic-settings==2.15.0
+open-clip-torch==3.3.0
+# ==============================================================================
+# PIPELINE VISION & TRAITEMENT D'IMAGES
+# ==============================================================================
+Pillow==12.3.0
+opencv-python-headless==4.14.0.94
+numpy==2.5.2
+aiohttp==3.14.3
+httpx==0.28.1
+
+# ==============================================================================
+# APPRENTISSAGE PROFOND & MODÈLES (Torchvision SSDLite, ViT et CLIP)
+# ==============================================================================
+# NOTE : Pour un déploiement CPU pur sur Railway sans explosion de RAM,
+# la directive --extra-index-url est fortement recommandée au début du fichier.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.14.0+cpu
+torchvision==0.29.0+cpu

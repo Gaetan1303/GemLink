@@ -1,11 +1,18 @@
 <div class="section">
-  
   <div class="header-and-hero-container">
     <app-header></app-header>
     <app-hero-section></app-hero-section>
   </div>
-
-  
+  <div class="section">
+    <section class="latest-discoveries">
+      <app-latest-discoveries></app-latest-discoveries>
+      <app-key-figures [figures]="keyFiguresData"></app-key-figures>
+      <app-how-it-works></app-how-it-works>
+    </section>
+  </div>
   <app-footer></app-footer>
 
+  @if (showCookieBanner$ | async) {
+    <app-cookie-consent-banner></app-cookie-consent-banner>
+  }
 </div>

@@ -1,4 +1,4 @@
-<section class="hero">
+<section class="hero" role="region" aria-labelledby="hero-title"> <!--role="region" est un repère (landmark) ARIA. Il indique aux technologies d'assistance (comme les lecteurs d'écran) que cette partie de la page constitue une région importante que l'utilisateur peut atteindre rapidement.-->
 
   <!-- Background -->
   <div class="hero-bg"></div>
@@ -9,18 +9,18 @@
   <!-- CONTENT -->
   <div class="hero-content">
 
-<h1 class="hero-title">
-  VENEZ<br>
-  <span class="accent">À LA DÉCOUVERTE</span><br>
-  DES PIERRES
-</h1>
+    <h1 id="hero-title" class="hero-title">
+      VENEZ<br>
+      <span class="accent">À LA DÉCOUVERTE</span><br>
+      DES PIERRES
+    </h1>
     <p class="hero-description">
       Le site est en cours de développement, certaines fonctionnalités peuvent ne pas être disponibles. Nous vous remercions pour votre compréhension.
     </p>
 
-    <button class="hero-button">
+    <a class="hero-button" routerLink="/identifier">
       IDENTIFIER MA PIERRE !
-    </button>
+    </a>
 
   </div>
 

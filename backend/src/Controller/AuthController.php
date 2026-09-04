@@ -6,6 +6,7 @@ use App\Exception\LoginFailedException;
 use App\Exception\LoginThrottledException;
 use App\Service\AuthService;
 use InvalidArgumentException;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,15 +23,13 @@ class AuthController extends AbstractController
 
         try {
             $authService->register($data);
-        } catch (InvalidArgumentException $e) {
-            // CA-3 : message générique
+        } catch (InvalidArgumentException) {
             return $this->json(
                 ['message' => 'Si ces informations sont valides, un email de confirmation a été envoyé.'],
                 Response::HTTP_BAD_REQUEST
             );
         }
 
-        // CA-3 : même réponse en cas de succès réel ou de conflit email/username
         return $this->json(
             ['message' => 'Si ces informations sont valides, un email de confirmation a été envoyé.'],
             Response::HTTP_CREATED
@@ -43,15 +42,44 @@ class AuthController extends AbstractController
         try {
             $authService->validateEmail($token);
         } catch (InvalidArgumentException $e) {
-            return $this->json(
-                ['message' => $e->getMessage()],
-                Response::HTTP_BAD_REQUEST
-            );
+            return $this->json(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
 
         return $this->json([
-            'message' => 'Email valide avec succes.',
+            'message' => AuthService::EMAIL_VALIDATION_SUCCESS_MESSAGE,
+            'redirectTo' => '/auth/login?validated=1',
         ]);
+    }
+
+    #[Route('/auth/resend-validation-email', name: 'app_resend_validation_email', methods: ['POST'])]
+    public function resendValidationEmail(
+        Request $request,
+        AuthService $authService,
+        #[Autowire(service: 'limiter.email_validation_resend')] mixed $resendLimiter,
+    ): JsonResponse {
+        $ip = $request->getClientIp() ?? 'unknown';
+        $limit = $resendLimiter->create($ip)->consume(1);
+
+        if (!$limit->isAccepted()) {
+            return $this->json(
+                ['message' => 'Trop de demandes de renvoi depuis cette adresse IP. Réessayez plus tard.'],
+                Response::HTTP_TOO_MANY_REQUESTS
+            );
+        }
+
+        $data = json_decode($request->getContent(), true) ?? [];
+        $email = is_string($data['email'] ?? null) ? mb_strtolower(trim($data['email'])) : '';
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['message' => 'Adresse email invalide.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $authService->resendValidationEmail($email);
+
+        return $this->json(
+            ['message' => 'Si ce compte existe et est en attente, un nouvel email de validation a été envoyé.'],
+            Response::HTTP_ACCEPTED
+        );
     }
 
     #[Route('/auth/login', name: 'app_login', methods: ['POST'])]
@@ -62,26 +90,144 @@ class AuthController extends AbstractController
         try {
             $tokens = $authService->login($data);
         } catch (LoginThrottledException) {
-            return $this->json(
-                ['message' => AuthService::LOGIN_ERROR_MESSAGE],
-                Response::HTTP_TOO_MANY_REQUESTS
-            );
+            return $this->json(['message' => AuthService::LOGIN_ERROR_MESSAGE], Response::HTTP_TOO_MANY_REQUESTS);
         } catch (LoginFailedException) {
+            return $this->json(['message' => AuthService::LOGIN_ERROR_MESSAGE], Response::HTTP_UNAUTHORIZED);
+        }
+
+        return $this->buildTokenResponse($tokens['token'], $tokens['refreshToken'], $tokens['refreshTokenExpiresAt']);
+    }
+
+    /**
+     * US 1.4 : Renouvellement silencieux de session.
+     *
+     * Route PUBLIQUE (hors firewall JWT) : le JWT client est expiré, il ne peut pas
+     * être présenté dans Authorization. Le refresh token httpOnly suffit à prouver
+     * l'identité de la session.
+     *
+     * CA-1 : transparent pour l'utilisateur — appelé par l'intercepteur Angular.
+     * CA-2 : rotation de refresh token — l'ancien est révoqué, un nouveau cookie est posé.
+     * CA-3 : en cas de token invalide/expiré/révoqué → 401, l'intercepteur redirige vers /auth/login.
+     */
+    #[Route('/auth/refresh', name: 'app_refresh', methods: ['POST'])]
+    public function refresh(Request $request, AuthService $authService): JsonResponse
+    {
+        $rawRefreshToken = $request->cookies->get('refresh_token', '');
+
+        try {
+            $tokens = $authService->refresh($rawRefreshToken);
+        } catch (InvalidArgumentException) {
+            // CA-3 : token absent, expiré ou révoqué → 401 → intercepteur Angular redirige vers /auth/login
             return $this->json(
-                ['message' => AuthService::LOGIN_ERROR_MESSAGE],
+                ['message' => 'Session expirée. Veuillez vous reconnecter.'],
                 Response::HTTP_UNAUTHORIZED
             );
         }
 
-        $response = $this->json(['token' => $tokens['token']]);
+        // CA-2 : nouveau cookie httpOnly avec le nouveau refresh token (rotation)
+        return $this->buildTokenResponse($tokens['token'], $tokens['refreshToken'], $tokens['refreshTokenExpiresAt']);
+    }
+
+    /**
+     * US 1.5 : Déconnexion.
+     *
+     * Protégé par le firewall `api` (JWT requis dans Authorization: Bearer).
+     * CA-1 : révoque le refresh token en base + vide le cookie client.
+     * CA-2 : inscrit le JWT en blocklist Redis (TTL = durée résiduelle).
+     * CA-3 : renvoi 200 → l'Angular AuthService navigue vers "/".
+     */
+    #[Route('/auth/logout', name: 'app_logout', methods: ['POST'])]
+    public function logout(Request $request, AuthService $authService): JsonResponse
+    {
+        $rawRefreshToken = $request->cookies->get('refresh_token', '');
+
+        $rawJwt = '';
+        $authHeader = $request->headers->get('Authorization', '');
+        if (str_starts_with($authHeader, 'Bearer ')) {
+            $rawJwt = substr($authHeader, 7);
+        }
+
+        $authService->logout($rawRefreshToken, $rawJwt);
+
+        $expiredCookie = Cookie::create('refresh_token')
+            ->withValue('')
+            ->withExpires(1)
+            ->withPath('/')
+            ->withSecure(true)
+            ->withHttpOnly(true)
+            ->withSameSite(Cookie::SAMESITE_STRICT);
+
+        $response = $this->json(['message' => 'Déconnexion réussie.']);
+        $response->headers->setCookie($expiredCookie);
+
+        return $response;
+    }
+        /**
+     * US 1.6 — Étape 1 : demande de réinitialisation.
+     *
+     * CA-1 : réponse identique qu'importe si l'email est connu ou non.
+     * Route publique, pas de JWT requis.
+     */
+    #[Route('/auth/reset-password/request', name: 'app_reset_password_request', methods: ['POST'])]
+    public function resetPasswordRequest(Request $request, AuthService $authService): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true) ?? [];
+        $email = is_string($data['email'] ?? null) ? $data['email'] : '';
+ 
+        // Le service ne lève jamais d'exception ici (CA-1)
+        $authService->requestPasswordReset($email);
+ 
+        // CA-1 : message générique systématique
+        return $this->json(
+            ['message' => 'Si cette adresse est associée à un compte, un email de réinitialisation vient d\'être envoyé.'],
+            Response::HTTP_ACCEPTED
+        );
+    }
+ 
+    /**
+     * US 1.6 — Étape 2 : application du nouveau mot de passe.
+     *
+     * CA-2 : valide que le token est à usage unique, non expiré (TTL 1 h).
+     * CA-3 : révoque tous les refresh tokens actifs de l'utilisateur.
+     * CA-4 : le service applique la même politique de mot de passe qu'à l'inscription.
+     * Route publique, pas de JWT requis.
+     */
+    #[Route('/auth/reset-password/confirm', name: 'app_reset_password_confirm', methods: ['POST'])]
+    public function resetPasswordConfirm(Request $request, AuthService $authService): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true) ?? [];
+        $token    = is_string($data['token']    ?? null) ? $data['token']    : '';
+        $password = is_string($data['password'] ?? null) ? $data['password'] : '';
+ 
+        try {
+            $authService->resetPassword($token, $password);
+        } catch (InvalidArgumentException $e) {
+            return $this->json(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+ 
+        return $this->json(
+            ['message' => 'Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter.'],
+            Response::HTTP_OK
+        );
+    }
+
+
+    // ── Helper ────────────────────────────────────────────────────────────────
+
+    private function buildTokenResponse(
+        string $jwt,
+        string $rawRefreshToken,
+        \DateTimeImmutable $expiresAt
+    ): JsonResponse {
+        $response = $this->json(['token' => $jwt]);
         $response->headers->setCookie(Cookie::create(
             'refresh_token',
-            $tokens['refreshToken'],
-            time() + AuthService::REFRESH_TOKEN_TTL_SECONDS,
+            $rawRefreshToken,
+            $expiresAt,
             '/',
             null,
-            true,
-            true,
+            true,  // Secure
+            true,  // httpOnly
             false,
             Cookie::SAMESITE_STRICT
         ));

@@ -1,0 +1,78 @@
+<div class="validation-widget">
+  @if (!isLoading()) {
+
+    @if (!isCorrecting()) {
+      <div class="validation-actions">
+        <button
+          type="button"
+          class="validation-btn validation-btn--confirm"
+          [class.is-active]="currentAction() === 'CONFIRM'"
+          [disabled]="isSubmitting()"
+          (click)="confirm()"
+        >
+          <mat-icon>check_circle</mat-icon>
+          Confirmer
+        </button>
+
+        <button
+          type="button"
+          class="validation-btn validation-btn--correct"
+          [class.is-active]="currentAction() === 'CORRECT'"
+          [disabled]="isSubmitting()"
+          (click)="startCorrecting()"
+        >
+          <mat-icon>edit</mat-icon>
+          Corriger
+        </button>
+
+        <button
+          type="button"
+          class="validation-btn validation-btn--reject"
+          [class.is-active]="currentAction() === 'REJECT'"
+          [disabled]="isSubmitting()"
+          (click)="reject()"
+        >
+          <mat-icon>cancel</mat-icon>
+          Invalider
+        </button>
+      </div>
+
+      @if (currentAction() === 'CORRECT' && myValidation()?.proposedLabel) {
+        <p class="validation-current-proposal">
+          Votre proposition actuelle : <strong>{{ myValidation()?.proposedLabel }}</strong>
+        </p>
+      }
+    } @else {
+      <div class="validation-correction-form">
+        <mat-form-field appearance="outline" class="validation-correction-field">
+          <mat-label>Label proposé</mat-label>
+          <input
+            matInput
+            type="text"
+            [formControl]="proposedLabelControl"
+            [matAutocomplete]="pierreAutocomplete"
+            placeholder="Ex. Améthyste"
+          />
+          <mat-autocomplete #pierreAutocomplete="matAutocomplete">
+            @for (suggestion of suggestions(); track suggestion.id) {
+              <mat-option [value]="suggestion.nom">{{ suggestion.nom }}</mat-option>
+            }
+          </mat-autocomplete>
+        </mat-form-field>
+
+        <div class="validation-correction-actions">
+          <button type="button" class="validation-btn validation-btn--cancel" (click)="cancelCorrecting()" [disabled]="isSubmitting()">
+            Annuler
+          </button>
+          <button type="button" class="validation-btn validation-btn--submit" (click)="submitCorrection()" [disabled]="isSubmitting()">
+            Envoyer la correction
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (submitError()) {
+      <p class="validation-error" role="alert">{{ submitError() }}</p>
+    }
+  }
+</div>

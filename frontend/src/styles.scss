@@ -1,5 +1,8 @@
 @use '@angular/material' as mat;
 @use 'sass:map';
+@use '@fontsource/plus-jakarta-sans/latin-400.css' as plusJakarta400;
+@use '@fontsource/plus-jakarta-sans/latin-800.css' as plusJakarta800;
+@use '@fontsource/material-icons/latin-400.css' as materialIcons400;
 
 
 * {
@@ -42,4 +45,28 @@ $gemlink-primary-palette: (
 // ─────────────────────────────────────────────
 :root {
   color-scheme: dark;
+
+  --background-color: #040A20;
+  --section-background-color: #0B1225;
+  --text-color: #FFFFFF;
+  --text-color-secondary: #adb5bd;
+  --primary-color: #C5A059;
+  --dark-contrast: #1A1625;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
 }

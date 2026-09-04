@@ -1,0 +1,71 @@
+<app-header />
+<main class="faction-detail-page community-page" id="main-content">
+  @if(loading()){
+    <p class="state state--loading"><mat-icon>hourglass_top</mat-icon>Chargement…</p>
+  } @else if(error()&&!faction()){
+    <p class="state state--error" role="alert"><mat-icon>error_outline</mat-icon>{{error()}}</p>
+  } @else if(faction();as f){
+    @if(f.bannerUrl){
+      <img class="faction-banner" [src]="f.bannerUrl" [alt]="'Bannière de '+f.name" />
+    }
+    <section class="faction-header">
+      <div class="faction-header__avatar">
+        @if(f.avatarUrl){
+          <img [src]="f.avatarUrl" [alt]="'Avatar de '+f.name" />
+        } @else {
+          <mat-icon>groups</mat-icon>
+        }
+      </div>
+      <div>
+        <h1>{{f.name}}</h1>
+        <p>{{f.description||'Aucune description.'}}</p>
+        <span class="status-badge" [class.status-badge--private]="f.visibility==='PRIVATE'" [class.status-badge--public]="f.visibility!=='PRIVATE'">
+          <mat-icon>{{f.visibility==='PRIVATE'?'lock':'public'}}</mat-icon>{{f.visibility==='PRIVATE'?'Faction privée':'Faction publique'}}
+        </span>
+        <span class="status-badge"><mat-icon>group</mat-icon>{{f.memberCount}} membres</span>
+        <small class="faction-header__owner">Propriétaire : {{f.owner?.username}}</small>
+      </div>
+    </section>
+
+    @if(notice()){<p class="state" role="status"><mat-icon>check_circle</mat-icon>{{notice()}}</p>}
+    @if(error()){<p class="state state--error" role="alert"><mat-icon>error_outline</mat-icon>{{error()}}</p>}
+
+    <nav class="faction-actions" aria-label="Actions de la faction">
+      @if(!f.membership){
+        <button class="btn btn--primary" type="button" [disabled]="actionPending()" (click)="join()">
+          <mat-icon>{{f.visibility==='PRIVATE'?'front_hand':'person_add'}}</mat-icon>{{f.visibility==='PRIVATE'?'Demander à rejoindre':'Rejoindre'}}
+        </button>
+      } @else if(f.membership.role!=='OWNER'){
+        <button class="btn btn--danger" type="button" (click)="leave()"><mat-icon>logout</mat-icon>Quitter</button>
+      }
+      @if(f.permissions.includes('FACTION_ACCESS_CHAT')){
+        <button class="btn" type="button" (click)="openChat()"><mat-icon>chat</mat-icon>Ouvrir le chat</button>
+      }
+      @if(f.permissions.includes('FACTION_MANAGE_MEMBERS')){
+        <a class="btn" [routerLink]="['/factions',f.id,'manage']"><mat-icon>admin_panel_settings</mat-icon>Gérer</a>
+      }
+    </nav>
+
+    <section class="faction-section">
+      <h2>Membres</h2>
+      <ul class="member-list">
+        @for(member of members(); track member.id){
+          <li class="member-row">
+            <div class="member-row__avatar">
+              @if(member.user.avatarUrl){
+                <img [src]="member.user.avatarUrl" [alt]="'Avatar de '+member.user.username" />
+              } @else {
+                <mat-icon>person</mat-icon>
+              }
+            </div>
+            <span class="member-row__name">{{member.user.username}}</span>
+            <span class="status-badge" [class.status-badge--owner]="member.role==='OWNER'">{{member.role}}</span>
+          </li>
+        } @empty {
+          <li class="empty-state"><mat-icon class="empty-state__icon">visibility_off</mat-icon><p>Aucun membre visible.</p></li>
+        }
+      </ul>
+    </section>
+  }
+</main>
+<app-footer />
