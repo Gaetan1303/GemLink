@@ -14,7 +14,7 @@
           [attr.aria-label]="item.label"
           [attr.aria-current]="isActive(item.route) ? 'page' : null"
         >
-          <mat-icon class="nav-bar-mobile__icon" [fontIcon]="item.iconClass" />
+          <mat-icon class="nav-bar-mobile__icon" aria-hidden="true">{{ item.iconClass }}</mat-icon>
               </a>
       </li>
     }

@@ -25,7 +25,7 @@
               routerLinkActive="active"
               [routerLinkActiveOptions]="{ exact: item.route === '/' }"
               (click)="closeMenu()">
-              <mat-icon class="menu-icon">{{ item.iconClass }}</mat-icon>
+              <mat-icon class="menu-icon" aria-hidden="true">{{ item.iconClass }}</mat-icon>
               <span class="menu-label">{{ item.label }}</span>
             </a>
           </li>

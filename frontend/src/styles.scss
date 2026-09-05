@@ -8,6 +8,25 @@
 * {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
+
+/* Angular Material icons are bundled locally with @fontsource/material-icons.
+   The global application font must not override the ligature font used by mat-icon. */
+.mat-icon,
+.material-icons {
+  font-family: 'Material Icons' !important;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
 // ─────────────────────────────────────────────
 // palette de couleur du site : GEMLINK
 // ─────────────────────────────────────────────

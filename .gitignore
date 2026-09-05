@@ -5,3 +5,4 @@ backend/.env
 backend/.env
 Fastapi/checkpoints/*.pth
 Fastapi/checkpoints/*.pt
+.env.production
