@@ -8,7 +8,9 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "format": "prettier --write \"src/**/*.{ts,html,scss}\""
+    "format": "prettier --write \"src/**/*.{ts,html,scss}\"",
+    "prestart": "node scripts/copy-material-icons.mjs",
+    "prebuild": "node scripts/copy-material-icons.mjs"
   },
   "private": true,
   "packageManager": "npm@10.8.2",
