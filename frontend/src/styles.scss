@@ -2,39 +2,32 @@
 @use 'sass:map';
 @use '@fontsource/plus-jakarta-sans/latin-400.css' as plusJakarta400;
 @use '@fontsource/plus-jakarta-sans/latin-800.css' as plusJakarta800;
+@use '@fontsource/material-icons/latin-400.css' as materialIcons400;
 
 
-html, body {
+html,
+body {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-button, input, textarea, select {
-  font: inherit;
-}
-
-/* Material Icons are self-hosted through @fontsource/material-icons.
-   Fontsource v5 no longer ships the .material-icons helper class, so we define
-   it explicitly. Angular Material applies this class to ligature mat-icon nodes. */
-.material-icons,
-.mat-icon.mat-ligature-font {
+// Angular Material Icons utilise des ligatures : la police d'icônes ne doit
+// jamais être écrasée par la police de texte globale.
+.mat-icon,
+.material-icons {
   font-family: 'Material Icons' !important;
   font-weight: normal !important;
   font-style: normal !important;
-  font-size: 24px;
-  display: inline-block;
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
   font-feature-settings: 'liga';
   -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
-
 // ─────────────────────────────────────────────
 // palette de couleur du site : GEMLINK
 // ─────────────────────────────────────────────
