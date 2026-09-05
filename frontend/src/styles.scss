@@ -2,31 +2,38 @@
 @use 'sass:map';
 @use '@fontsource/plus-jakarta-sans/latin-400.css' as plusJakarta400;
 @use '@fontsource/plus-jakarta-sans/latin-800.css' as plusJakarta800;
-@use '@fontsource/material-icons/latin-400.css' as materialIcons400;
 
+
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('/assets/fonts/MaterialIcons-Regular.woff2') format('woff2');
+}
+
+.material-icons,
+.mat-icon {
+  font-family: 'Material Icons' !important;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
 
 html,
 body {
   font-family: 'Plus Jakarta Sans', sans-serif;
-}
-
-// Angular Material Icons utilise des ligatures : la police d'icônes ne doit
-// jamais être écrasée par la police de texte globale.
-.mat-icon,
-.material-icons {
-  font-family: 'Material Icons' !important;
-  font-weight: normal !important;
-  font-style: normal !important;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  font-feature-settings: 'liga';
-  -webkit-font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
 // ─────────────────────────────────────────────
 // palette de couleur du site : GEMLINK
