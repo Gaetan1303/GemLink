@@ -14,3 +14,7 @@ R2_ENDPOINT=<https-r2-endpoint>
 R2_PUBLIC_BASE_URL=<https-public-media-domain>
 INFOMANIAK_NEWSLETTER_TOKEN=<token-and-seal>
 INFOMANIAK_NEWSLETTER_DOMAIN_ID=<domain-id>
+
+# Optional Workers AI reviewer; keep the token in Railway secrets.
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_AI_API_TOKEN=

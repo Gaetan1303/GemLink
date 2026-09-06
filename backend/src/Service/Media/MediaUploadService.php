@@ -18,6 +18,7 @@ class MediaUploadService
     public function __construct(
         private readonly MediaValidatorService $validator,
         private readonly MediaUploaderInterface $uploader,
+        private readonly ?AiImageSanitizer $images = null,
     ) {
     }
 
@@ -32,13 +33,14 @@ class MediaUploadService
         }
 
         $validation = $this->validator->validate($file);
+        $sizeBytes = $validation->isImage() ? $this->sanitizeUpload($file) : $validation->sizeBytes;
         $mediaUrl = $this->uploader->upload($file, $directory);
 
         return new UploadedMedia(
             $mediaUrl,
             $validation->mediaType,
             $validation->mimeType,
-            $validation->sizeBytes,
+            $sizeBytes,
             $validation->durationSeconds,
         );
     }
@@ -48,6 +50,17 @@ class MediaUploadService
     {
         if ($file === null) throw new InvalidMediaException('Une image est obligatoire.');
         $validation = $this->validator->validatePublicIdentificationImage($file);
-        return new UploadedMedia($this->uploader->upload($file, $directory), $validation->mediaType, $validation->mimeType, $validation->sizeBytes);
+        $sizeBytes = $this->sanitizeUpload($file, 1024 * 1024);
+        return new UploadedMedia($this->uploader->upload($file, $directory), $validation->mediaType, $validation->mimeType, $sizeBytes);
+    }
+    private function sanitizeUpload(UploadedFile $file, int $maxBytes = MediaValidatorService::MAX_IMAGE_SIZE_BYTES): int
+    {
+        $content = file_get_contents($file->getPathname());
+        if ($content === false) throw new InvalidMediaException('Image indisponible.');
+        $images = $this->images ?? throw new InvalidMediaException('Validation image non configurée.');
+        [$clean] = $images->sanitize($content);
+        if (strlen($clean) > $maxBytes) throw new InvalidMediaException('Image nettoyée trop volumineuse.');
+        if (file_put_contents($file->getPathname(), $clean) === false) throw new InvalidMediaException('Impossible de nettoyer l’image.');
+        return strlen($clean);
     }
 }

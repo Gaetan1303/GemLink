@@ -281,6 +281,7 @@ final class PublicationController extends AbstractController
     private function serializePost(Publication $publication): array
     {
         $author = $publication->getUser();
+        $identification = $this->serializeIdentification($publication);
 
         return [
             'id' => $publication->getId()->toRfc4122(),
@@ -305,7 +306,8 @@ final class PublicationController extends AbstractController
             ),
             // US 3.1 : résultat de l'identification IA (vide tant que le
             // statut n'est pas ANALYZED, ou si aucun match n'a été persisté).
-            'identification' => $this->serializeIdentification($publication),
+            'identification' => $identification,
+            'identificationDecision' => $identification !== null ? 'candidate' : ($publication->getStatus() === Publication::STATUS_ANALYZED ? 'unknown' : null),
             'createdAt' => $publication->getCreatedAt()->format(DATE_ATOM),
         ];
     }

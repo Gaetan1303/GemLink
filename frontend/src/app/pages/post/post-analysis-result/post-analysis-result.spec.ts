@@ -39,6 +39,13 @@ describe('PostAnalysisResult', () => {
     expect(element.querySelector('.identification-card')).toBeNull();
   });
 
+  it('affiche une demande de nouvelle photo quand le résultat est inconnu', () => {
+    const element = render('ANALYZED', null);
+    expect(element.textContent).toContain('Pierre non identifiée');
+    expect(element.querySelector('.analysis-skeleton')).toBeNull();
+    expect(element.querySelector('.identification-card')).toBeNull();
+  });
+
   it('affiche le label et le score après analyse (CA-2)', () => {
     const element = render('ANALYZED', identification);
 

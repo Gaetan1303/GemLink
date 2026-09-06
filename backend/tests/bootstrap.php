@@ -31,7 +31,15 @@ if (!class_exists('Redis')) {
 require dirname(__DIR__).'/vendor/autoload.php';
 
 if (method_exists(Dotenv::class, 'bootEnv')) {
-    (new Dotenv())->bootEnv(dirname(__DIR__).'/.env');
+    $base = dirname(__DIR__).'/.env';
+    $testEnv = dirname(__DIR__).'/.env.test';
+    $testExample = dirname(__DIR__).'/.env.test.example';
+    if (is_file($base)) {
+        (new Dotenv())->bootEnv($base);
+        if (!is_file($testEnv)) (new Dotenv())->load($testExample);
+    } else {
+        (new Dotenv())->load(dirname(__DIR__).'/.env.example', is_file($testEnv) ? $testEnv : $testExample);
+    }
 }
 
 if ($_SERVER['APP_DEBUG']) {

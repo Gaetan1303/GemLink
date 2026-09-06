@@ -1,4 +1,16 @@
 parameters:
+    env(CLOUDFLARE_AI_ENABLED): 'false'
+    env(CLOUDFLARE_ACCOUNT_ID): ''
+    env(CLOUDFLARE_AI_API_TOKEN): ''
+    env(CLOUDFLARE_AI_MODEL): ''
+    env(CLOUDFLARE_AI_FALLBACK_MODEL): ''
+    env(CLOUDFLARE_AI_TIMEOUT): '20'
+    env(CLOUDFLARE_AI_MAX_RETRIES): '1'
+    env(STONE_AI_AUTO_ACCEPT_THRESHOLD): '0.85'
+    env(STONE_AI_REVIEW_THRESHOLD): '0.55'
+    env(CLOUDFLARE_AI_RATE_LIMIT_PER_USER): '10'
+    env(CLOUDFLARE_AI_USER_DAILY_QUOTA): '20'
+    env(CLOUDFLARE_AI_DAILY_QUOTA): '500'
     app.admin_fixture_password_default: ''
     # MAILER
     app.mailer_from_email: '%env(MAILER_FROM_EMAIL)%'
@@ -154,3 +166,38 @@ services:
             $corsAllowOrigin: '%env(CORS_ALLOW_ORIGIN)%'
             $frontendUrl: '%app.frontend_url%'
             $aiServiceUrl: '%app.ai_service_url%'
+
+    App\Service\SecondaryAiReviewerInterface:
+        alias: App\Service\CloudflareAiService
+
+    App\Service\Ai\CloudflareAiConfiguration:
+        arguments:
+            $enabled: '%env(bool:CLOUDFLARE_AI_ENABLED)%'
+            $accountId: '%env(CLOUDFLARE_ACCOUNT_ID)%'
+            $apiToken: '%env(CLOUDFLARE_AI_API_TOKEN)%'
+            $model: '%env(CLOUDFLARE_AI_MODEL)%'
+            $fallbackModel: '%env(CLOUDFLARE_AI_FALLBACK_MODEL)%'
+            $timeout: '%env(int:CLOUDFLARE_AI_TIMEOUT)%'
+            $maxRetries: '%env(int:CLOUDFLARE_AI_MAX_RETRIES)%'
+            $autoAcceptThreshold: '%env(float:STONE_AI_AUTO_ACCEPT_THRESHOLD)%'
+            $reviewThreshold: '%env(float:STONE_AI_REVIEW_THRESHOLD)%'
+            $perUserMinute: '%env(int:CLOUDFLARE_AI_RATE_LIMIT_PER_USER)%'
+            $perUserDay: '%env(int:CLOUDFLARE_AI_USER_DAILY_QUOTA)%'
+            $dailyQuota: '%env(int:CLOUDFLARE_AI_DAILY_QUOTA)%'
+
+    App\Service\Media\AiMediaReader:
+        arguments:
+            $mediaStorageMode: '%media.storage_mode%'
+            $uploadDir: '%media.upload_dir%'
+            $localPublicBaseUrl: '%media.public_base_url%'
+            $r2PublicBaseUrl: '%media.r2_public_base_url%'
+
+    App\Service\CloudflareAiService:
+        arguments:
+            # Reuse Symfony transport without profiler capture of bearer/image data.
+            $httpClient: '@http_client.transport'
+            $logger: '@monolog.logger.secondary_ai'
+
+    App\Service\AiOrchestrationService:
+        arguments:
+            $logger: '@monolog.logger.secondary_ai'
