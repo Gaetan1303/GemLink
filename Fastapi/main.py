@@ -142,7 +142,7 @@ async def lifespan(app: FastAPI):
                 startup_vit_path = registered_path
                 break
         logger.info(f" Chargement des checkpoints depuis {startup_vit_path}...")
-        checkpoint = torch.load(startup_vit_path, map_location=device)
+        checkpoint = torch.load(startup_vit_path, map_location=device, weights_only=False)
         app.state.classes = checkpoint["classes"]
         logger.info(f" Classes détectées : {len(app.state.classes)} classes")
 
@@ -222,7 +222,7 @@ async def vit_versions():
 
 
 def _load_vit_checkpoint(checkpoint_path: str):
-    checkpoint = torch.load(checkpoint_path, map_location=app.state.device)
+    checkpoint = torch.load(checkpoint_path, map_location=app.state.device, weights_only=False)
     if not isinstance(checkpoint, dict) or 'model' not in checkpoint or 'classes' not in checkpoint:
         raise ValueError('Le checkpoint ViT est invalide.')
     classes = checkpoint['classes']

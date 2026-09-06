@@ -67,7 +67,9 @@ class PublicationPierreRepository extends ServiceEntityRepository
     {
         return (int) $this->createQueryBuilder('pp')
             ->join('pp.publication', 'p')
-            ->select('COUNT(pp)')->andWhere('p.user = :user')->setParameter('user', $user)
+            ->select('COUNT(p.id)')
+            ->andWhere('p.user = :user')
+            ->setParameter('user', $user)
             ->getQuery()->getSingleScalarResult();
     }
 
@@ -75,8 +77,11 @@ class PublicationPierreRepository extends ServiceEntityRepository
     {
         return (int) $this->createQueryBuilder('pp')
             ->join('pp.publication', 'p')
-            ->select('COUNT(pp)')->andWhere('p.user = :user')->andWhere('pp.pierre = :pierre')
-            ->setParameter('user', $user)->setParameter('pierre', $pierre)
+            ->select('COUNT(p.id)')
+            ->andWhere('p.user = :user')
+            ->andWhere('pp.pierre = :pierre')
+            ->setParameter('user', $user)
+            ->setParameter('pierre', $pierre)
             ->getQuery()->getSingleScalarResult();
     }
 }

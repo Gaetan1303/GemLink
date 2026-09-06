@@ -40,7 +40,11 @@ class MediaValidatorService
     public function validate(UploadedFile $file): MediaValidationResult
     {
         if (!$file->isValid()) {
-            throw new InvalidMediaException('Le fichier média est invalide ou incomplet.');
+            throw new InvalidMediaException(sprintf(
+                'Le fichier média est invalide : %s (code upload %d).',
+                $file->getErrorMessage(),
+                $file->getError(),
+            ));
         }
 
         $pathname = $file->getPathname();
