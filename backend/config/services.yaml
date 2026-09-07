@@ -12,6 +12,9 @@ parameters:
     env(CLOUDFLARE_AI_USER_DAILY_QUOTA): '20'
     env(CLOUDFLARE_AI_DAILY_QUOTA): '500'
     app.admin_fixture_password_default: ''
+    app.admin_seed_email_default: 'admin@gemlink.local'
+    app.admin_seed_username_default: 'admin'
+    app.admin_seed_password_default: ''
     # MAILER
     app.mailer_from_email: '%env(MAILER_FROM_EMAIL)%'
     app.mailer_from_name: '%env(MAILER_FROM_NAME)%'
@@ -51,6 +54,9 @@ services:
             string $internalApiKey: '%app.internal_api_key%'
             bool $aiEnabled: '%app.ai_enabled%'
             string $adminFixturePassword: '%env(default:app.admin_fixture_password_default:ADMIN_FIXTURE_PASSWORD)%'
+            string $adminSeedEmail: '%env(default:app.admin_seed_email_default:ADMIN_SEED_EMAIL)%'
+            string $adminSeedUsername: '%env(default:app.admin_seed_username_default:ADMIN_SEED_USERNAME)%'
+            string $adminSeedPassword: '%env(default:app.admin_seed_password_default:ADMIN_SEED_PASSWORD)%'
 
     App\:
         resource: '../src/'

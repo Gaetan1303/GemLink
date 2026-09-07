@@ -3,20 +3,21 @@
 namespace App\DataFixtures;
 
 use App\Entity\User;
+use App\Repository\UserRepository;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Compte de développement chargé avec `doctrine:fixtures:load`.
- *
- * L'adresse est fixe et locale, mais le mot de passe doit être fourni
- * explicitement via ADMIN_FIXTURE_PASSWORD.
+ * Development fixture. For production/demo environments prefer:
+ *   php bin/console app:seed-admin
+ * which is idempotent and does not purge unrelated data.
  */
 final class AdminFixture extends Fixture
 {
     public function __construct(
         private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly UserRepository $users,
         private readonly string $adminFixturePassword,
     ) {
     }
@@ -27,10 +28,12 @@ final class AdminFixture extends Fixture
             throw new \RuntimeException('ADMIN_FIXTURE_PASSWORD must contain at least 12 characters.');
         }
 
-        $admin = new User();
+        $email = 'admin@gemlink.local';
+        $admin = $this->users->findOneBy(['email' => $email]) ?? new User();
+
         $admin
             ->setUsername('admin')
-            ->setEmail('admin@gemlink.local')
+            ->setEmail($email)
             ->setPasswordHash($this->passwordHasher->hashPassword($admin, $this->adminFixturePassword))
             ->setRole('ADMIN')
             ->setStatus('ACTIVE');
