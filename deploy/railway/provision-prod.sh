@@ -172,7 +172,7 @@ set_vars backend \
   "APP_URL=https://$BACKEND_DOMAIN" \
   "DEFAULT_URI=https://$BACKEND_DOMAIN" \
   "FRONTEND_URL=$FRONTEND_URL" \
-  'TRUSTED_PROXIES=127.0.0.1,REMOTE_ADDR' \
+  'TRUSTED_PROXIES=127.0.0.1' \
   'TRUSTED_HOSTS=^(caverne\.gem-link\.org|.+\.up\.railway\.app|backend\.railway\.internal)$' \
   "CORS_ALLOW_ORIGIN=$CORS_ALLOW_ORIGIN" \
   'DATABASE_URL=${{pgvector.DATABASE_URL}}?serverVersion=16&charset=utf8' \
@@ -219,7 +219,7 @@ set_vars worker \
   "APP_URL=https://$BACKEND_DOMAIN" \
   "DEFAULT_URI=https://$BACKEND_DOMAIN" \
   "FRONTEND_URL=$FRONTEND_URL" \
-  'TRUSTED_PROXIES=127.0.0.1,REMOTE_ADDR' \
+  'TRUSTED_PROXIES=127.0.0.1' \
   'TRUSTED_HOSTS=^(worker\.railway\.internal)$' \
   "CORS_ALLOW_ORIGIN=$CORS_ALLOW_ORIGIN" \
   'DATABASE_URL=${{pgvector.DATABASE_URL}}?serverVersion=16&charset=utf8' \

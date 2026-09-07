@@ -10,7 +10,8 @@
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\"",
     "prestart": "node scripts/copy-material-icons.mjs",
-    "prebuild": "node scripts/copy-material-icons.mjs"
+    "prebuild": "node scripts/copy-material-icons.mjs",
+    "postbuild": "node scripts/verify-production-build.mjs"
   },
   "private": true,
   "packageManager": "npm@10.8.2",

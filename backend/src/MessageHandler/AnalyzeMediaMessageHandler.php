@@ -19,6 +19,8 @@ use App\Repository\PublicationRepository;
 use App\Repository\TagRepository;
 use App\Repository\VersionModeleIaRepository;
 use App\Service\BadgeAwardService;
+use App\Service\AiOrchestrationService;
+use App\Service\Media\AiMediaReader;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Mime\Part\DataPart;
@@ -65,6 +67,8 @@ final class AnalyzeMediaMessageHandler
         private readonly string $localPublicBaseUrl,  // 'http://localhost:8000/uploads'
         private readonly ?BadgeAwardService $badgeAwards = null,
         private readonly ?TagRepository $tags = null,
+        private readonly ?AiOrchestrationService $aiOrchestration = null,
+        private readonly ?AiMediaReader $mediaReader = null,
     ) {
     }
 
@@ -79,7 +83,18 @@ final class AnalyzeMediaMessageHandler
 
         $result = $this->requestAnalysis($publication);
 
-        [$pierre, $isNewMineral] = $this->findOrCreatePierre($result);
+        if ($result->isUnknown()) {
+            // Completed analysis with no identification: no fictitious Pierre,
+            // identified tag or badge. Keep existing links on explicit reanalysis.
+            $this->persistEmbedding($publication, $result);
+            $publication->setStatus(Publication::STATUS_ANALYZED);
+            $this->em->flush();
+            return;
+        }
+
+        [$pierre, $isNewMineral] = $result->getReviewedPierre() !== null
+            ? [$result->getReviewedPierre(), false]
+            : $this->findOrCreatePierre($result);
         // Flush immédiat : upsertMatch() ci-dessous écrit en SQL brut, hors de
         // l'Unit of Work Doctrine — si $pierre vient d'être créée, sa ligne
         // doit déjà exister en base avant l'INSERT sur publication_pierre,
@@ -115,7 +130,7 @@ final class AnalyzeMediaMessageHandler
      */
     private function requestAnalysis(Publication $publication): AiAnalysisResult
     {
-        [$content, $mimeType] = $this->fetchMedia($publication->getMediaUrl());
+        [$content, $mimeType] = $this->fetchMedia($publication->getMediaUrl(), $publication->getMediaType() === Publication::MEDIA_TYPE_VIDEO);
 
         $formData = new FormDataPart([
             'file' => new DataPart($content, 'media', $mimeType),
@@ -139,7 +154,9 @@ final class AnalyzeMediaMessageHandler
             throw AiAnalysisException::invalidHttpStatus($response->getStatusCode());
         }
 
-        return AiAnalysisResult::fromArray($response->toArray());
+        $result = AiAnalysisResult::fromArray($response->toArray());
+        return $this->aiOrchestration?->reviewAnalysis($result, $content, $mimeType,
+            $publication->getId()->toRfc4122(), 'user:' . $publication->getUser()->getId()->toRfc4122()) ?? $result;
     }
 
     /**
@@ -148,57 +165,10 @@ final class AnalyzeMediaMessageHandler
      * @throws AiAnalysisException si le média est introuvable/inaccessible.
      *         Cette exception déclenche le retry exponentiel de Messenger.
      */
-    private function fetchMedia(string $mediaUrl): array
+    private function fetchMedia(string $mediaUrl, bool $allowVideo): array
     {
-        if ($this->mediaStorageMode === self::STORAGE_MODE_LOCAL) {
-            return $this->readFromLocalDisk($mediaUrl);
-        }
-
-        return $this->downloadFromCdn($mediaUrl);
-    }
-
-    /**
-     * Mode dev : le worker (messenger:consume) tourne dans le même
-     * conteneur que le serveur qui a écrit le fichier (voir LocalMediaUploader).
-     * On reconstruit le chemin absolu sur le disque partagé plutôt que de
-     * faire un GET HTTP sur une URL "localhost" qui ne veut rien dire à
-     * l'intérieur du conteneur (le port mapping Docker n'existe que côté host).
-     */
-    private function readFromLocalDisk(string $mediaUrl): array
-    {
-        $relativePath = str_replace(rtrim($this->localPublicBaseUrl, '/') . '/', '', $mediaUrl);
-        $absolutePath = rtrim($this->uploadDir, '/') . '/' . ltrim($relativePath, '/');
-
-        if (!is_file($absolutePath)) {
-            throw AiAnalysisException::unreachableMedia($mediaUrl, 404);
-        }
-
-        $content = file_get_contents($absolutePath);
-
-        if ($content === false) {
-            throw AiAnalysisException::unreachableMedia($mediaUrl, 500);
-        }
-
-        $mimeType = mime_content_type($absolutePath) ?: 'image/jpeg';
-
-        return [$content, $mimeType];
-    }
-
-    /**
-     * Mode prod (R2) : l'URL est publique et accessible depuis n'importe
-     * quel réseau, un GET HTTP classique reste la bonne approche.
-     */
-    private function downloadFromCdn(string $mediaUrl): array
-    {
-        $media = $this->httpClient->request('GET', $mediaUrl, ['timeout' => 15]);
-
-        if ($media->getStatusCode() >= 400) {
-            throw AiAnalysisException::unreachableMedia($mediaUrl, $media->getStatusCode());
-        }
-
-        $mimeType = $media->getHeaders()['content-type'][0] ?? 'image/jpeg';
-
-        return [$media->getContent(), $mimeType];
+        $reader = $this->mediaReader ?? throw new AiAnalysisException('Lecteur média non configuré.');
+        return $reader->read($mediaUrl, $allowVideo);
     }
 
     /**

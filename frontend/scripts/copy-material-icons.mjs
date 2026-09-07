@@ -4,15 +4,13 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const frontendDir = resolve(scriptDir, '..');
+const source = resolve(
+  frontendDir,
+  'node_modules/@fontsource/material-icons/files/material-icons-latin-400-normal.woff2',
+);
 
-const candidates = [
-  resolve(frontendDir, 'node_modules/@fontsource/material-icons/files/material-icons-latin-400-normal.woff2'),
-  resolve(frontendDir, 'node_modules/@fontsource/material-icons/files/material-icons-latin-400-normal.woff'),
-];
-
-const source = candidates.find(existsSync);
-if (!source) {
-  console.error('[material-icons] Font file not found. Run npm ci/npm install first.');
+if (!existsSync(source)) {
+  console.error('[material-icons] Expected local WOFF2 font is missing. Run npm ci first.');
   process.exit(1);
 }
 

@@ -1,18 +1,22 @@
-/index.html
-  Cache-Control: no-cache, no-store, must-revalidate
-
-/*.js
-  Cache-Control: public, max-age=31536000, immutable
-
-/*.css
-  Cache-Control: public, max-age=31536000, immutable
-
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
-
+# All SPA documents/routes must be revalidated so a deployment cannot leave
+# cached HTML pointing at chunks from a previous release.
 /*
+  Cache-Control: no-cache, no-store, must-revalidate
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: default-src 'self'; connect-src 'self' https://caverne.gem-link.org; img-src 'self' data: blob: https:; media-src 'self' blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://caverne.gem-link.org https://cloudflareinsights.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' https://static.cloudflareinsights.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+
+# Fingerprinted build assets are immutable. More-specific rules override the
+# generic SPA cache policy above.
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: application/javascript; charset=utf-8
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css; charset=utf-8
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

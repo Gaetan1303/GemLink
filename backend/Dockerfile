@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y \
 # rasteriser le PNG). install-php-extensions résout lui-même les libs
 # système nécessaires (libpng, libjpeg, libwebp...), pas besoin de les
 # lister manuellement via apt-get comme pour une install PHP classique.
-RUN install-php-extensions redis pdo_pgsql intl gd
+RUN install-php-extensions redis pdo_pgsql intl gd exif
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

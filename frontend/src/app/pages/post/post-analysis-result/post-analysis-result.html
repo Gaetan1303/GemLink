@@ -32,6 +32,8 @@
       </div>
     }
   </section>
+} @else if (isCompleted() && !identification()) {
+  <p class="identification-warning" role="status">Pierre non identifiée. Essayez une nouvelle photo plus nette, sous un autre angle.</p>
 } @else if (status() === 'ANALYSIS_FAILED') {
   <p class="analysis-failed" role="status">L’analyse IA n’a pas pu aboutir.</p>
 }

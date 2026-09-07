@@ -2,6 +2,7 @@
 namespace App\Dto;
 
 use App\Exception\AiAnalysisException;
+use App\Entity\Pierre;
 
 /**
  * US 3.1 CA-2 : représentation typée de la réponse JSON de FastAPI POST
@@ -27,6 +28,9 @@ final class AiAnalysisResult
         private readonly array $embedding,
         private readonly array $modelVersion,
         private readonly array $detections,
+        private readonly array $candidateScores = [],
+        private readonly bool $unknown = false,
+        private readonly ?Pierre $reviewedPierre = null,
     ) {
     }
 
@@ -52,6 +56,12 @@ final class AiAnalysisResult
             }
         }
 
+        self::validateScore($data['confidence']);
+        self::validateScore($data['detector_confidence']);
+        self::validateName($data['nom']);
+        foreach ($data['embedding'] as $value) {
+            if ((!is_int($value) && !is_float($value)) || !is_finite((float) $value)) throw AiAnalysisException::invalidEmbedding(512);
+        }
         $physique = $data['physique'] ?? [];
 
         return new self(
@@ -66,7 +76,56 @@ final class AiAnalysisResult
             embedding: array_map('floatval', $data['embedding']),
             modelVersion: array_map('strval', $data['model_version']),
             detections: self::normalizeDetections($data),
+            candidateScores: self::extractCandidateScores($data),
         );
+    }
+
+    public function getReviewedPierre(): ?Pierre { return $this->reviewedPierre; }
+
+    public function isUnknown(): bool { return $this->unknown; }
+
+    /** @return array<string, float> Probabilities for the primary crop only. */
+    public function getCandidateScores(): array { return $this->candidateScores; }
+
+    public function reviewed(?Pierre $pierre, float $confidence = 0): self
+    {
+        $same = $pierre !== null && mb_strtolower($pierre->getName()) === mb_strtolower($this->label);
+        return new self(
+            $pierre?->getName() ?? 'UNKNOWN',
+            $same ? $this->category : $pierre?->getCategory(),
+            $same ? $this->hardnessRange : ($pierre?->getHardness() !== null ? (string) $pierre->getHardness() : null),
+            $same ? $this->crystalSystem : $pierre?->getCrystalSystem(),
+            $same ? $this->composition : $pierre?->getComposition(),
+            $same ? $this->description : $pierre?->getDescription(),
+            $pierre === null ? 0 : min($this->confidence, $confidence),
+            $this->detectorConfidence, $this->embedding, $this->modelVersion,
+            // Other crops remain observations of the primary pipeline, not secondary verdicts.
+            $this->detections, $this->candidateScores, $pierre === null, $pierre,
+        );
+    }
+
+    private static function validateScore(mixed $value): void
+    {
+        if ((!is_float($value) && !is_int($value)) || !is_finite((float) $value) || $value < 0 || $value > 1) throw AiAnalysisException::missingField('valid confidence');
+    }
+
+    private static function validateName(mixed $name): void
+    {
+        if (!is_string($name) || trim($name) === '' || mb_strlen($name) > 100) throw AiAnalysisException::missingField('valid label');
+    }
+
+    private static function extractCandidateScores(array $data): array
+    {
+        // FastAPI sorts crops by detector confidence and uses detections[0] as primary.
+        $scores = $data['detections'][0]['all_probabilities'] ?? [];
+        if (!is_array($scores) || count($scores) > 1000) throw AiAnalysisException::missingField('valid probabilities');
+        foreach ($scores as $label => $score) {
+            self::validateName($label);
+            self::validateScore($score);
+        }
+        if ($scores === []) $scores = [$data['nom'] => $data['confidence']];
+        arsort($scores, SORT_NUMERIC);
+        return array_map('floatval', array_slice($scores, 0, 10, true));
     }
 
     public function getLabel(): string
@@ -155,6 +214,9 @@ final class AiAnalysisResult
                 throw AiAnalysisException::missingField(sprintf('detections.%s.bbox', $index));
             }
 
+            self::validateName($detection['label']);
+            self::validateScore($detection['confidence']);
+            self::validateScore($detection['detector_confidence']);
             $detections[] = [
                 'nom' => (string) $detection['label'],
                 'confidence' => (float) $detection['confidence'],

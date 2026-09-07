@@ -13,6 +13,8 @@
     <php>
         <ini name="display_errors" value="1" />
         <ini name="error_reporting" value="-1" />
+        <server name="TRUSTED_PROXIES" value="127.0.0.1" force="true" />
+        <server name="CLOUDFLARE_AI_ENABLED" value="false" force="true" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
         <server name="KERNEL_CLASS" value="App\Kernel" />
